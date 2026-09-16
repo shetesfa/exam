@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,75 +6,152 @@ $message = '';
 $error = '';
 
 // Handle Add/Edit/Delete
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if(isset($_POST['add_teacher'])) {
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $username = mysqli_real_escape_string($conn, $_POST['username']);
-        $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-        $password = hashPassword('123');
-        
-        // Check if username exists
-        $check_username = mysqli_query($conn, "SELECT id FROM users WHERE username = '$username'");
-        if(mysqli_num_rows($check_username) > 0) {
-            $error = "ይህ የተጠቃሚ ስም ቀድሞውኑ አለ! (Username already exists!)";
-        } else {
-            $query = "INSERT INTO users (name, username, phone, role, password, first_login) 
-                      VALUES ('$name', '$username', '$phone', 'teacher', '$password', TRUE)";
-            if(mysqli_query($conn, $query)) {
-                $message = "መምህር በተሳካ ሁኔታ ተመዝግቧል! የተጠቃሚ ስም: $username | የይለፍ ቃል: 123";
-            } else {
-                $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
-            }
-        }
-    }
-    
-    if(isset($_POST['edit_teacher'])) {
-        $teacher_id = mysqli_real_escape_string($conn, $_POST['teacher_id']);
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $username = mysqli_real_escape_string($conn, $_POST['username']);
-        $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-        
-        // Check username uniqueness (excluding current teacher)
-        $check = mysqli_query($conn, "SELECT id FROM users WHERE username = '$username' AND id != $teacher_id");
-        if(mysqli_num_rows($check) > 0) {
-            $error = "ይህ የተጠቃሚ ስም በሌላ ተጠቃሚ ተይዟል!";
-        } else {
-            $query = "UPDATE users SET name='$name', username='$username', phone='$phone' WHERE id=$teacher_id AND role='teacher'";
-            if(mysqli_query($conn, $query)) {
-                $message = "የመምህር መረጃ ተሻሽሏል!";
-            } else {
-                $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
-            }
-        }
-    }
-    
-    if(isset($_POST['delete_teacher'])) {
-        $teacher_id = mysqli_real_escape_string($conn, $_POST['teacher_id']);
-        
-        mysqli_begin_transaction($conn);
-        
-        try {
-            mysqli_query($conn, "DELETE FROM marks WHERE teacher_id = $teacher_id");
-            mysqli_query($conn, "DELETE FROM teacher_class WHERE teacher_id = $teacher_id");
-            mysqli_query($conn, "DELETE FROM users WHERE id = $teacher_id AND role = 'teacher'");
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (isset($_POST['add_teacher'])) {
+            $name = trim($_POST['name'] ?? '');
+            $username = trim($_POST['username'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $password = hashPassword('123');
             
-            mysqli_commit($conn);
-            $message = "መምህር በተሳካ ሁኔታ ተሰርዟል!";
-        } catch (Exception $e) {
-            mysqli_rollback($conn);
-            $error = "መምህሩን መሰረዝ አልተቻለም! " . mysqli_error($conn);
+            if (!empty($name) && !empty($username)) {
+                // Check if username exists
+                $check_username = dbFetchOne($conn, "SELECT id FROM users WHERE username = ?", "s", [$username]);
+                if ($check_username) {
+                    $error = "ይህ የተጠቃሚ ስም ቀድሞውኑ አለ! (Username already exists!)";
+                } else {
+                    $saved = dbExecute(
+                        $conn,
+                        "INSERT INTO users (name, username, phone, role, password, first_login) 
+                         VALUES (?, ?, ?, 'teacher', ?, 1)",
+                        "ssss",
+                        [$name, $username, $phone, $password]
+                    );
+                    if ($saved) {
+                        $message = "መምህር በተሳካ ሁኔታ ተመዝግቧል! የተጠቃሚ ስም: $username | የይለፍ ቃል: 123";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
+            } else {
+                $error = "እባክዎ ስም እና የተጠቃሚ ስም ያስገቡ!";
+            }
         }
-    }
-    
-    if(isset($_POST['reset_password'])) {
-        $teacher_id = mysqli_real_escape_string($conn, $_POST['teacher_id']);
-        $new_password = hashPassword('123');
         
-        $query = "UPDATE users SET password='$new_password', first_login=TRUE WHERE id=$teacher_id";
-        if(mysqli_query($conn, $query)) {
-            $message = "የይለፍ ቃል ወደ 123 ተመልሷል!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+        if (isset($_POST['edit_teacher'])) {
+            $teacher_id = intval($_POST['teacher_id'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $username = trim($_POST['username'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            
+            if ($teacher_id > 0 && !empty($name) && !empty($username)) {
+                // Check username uniqueness (excluding current teacher)
+                $check = dbFetchOne($conn, "SELECT id FROM users WHERE username = ? AND id != ?", "si", [$username, $teacher_id]);
+                if ($check) {
+                    $error = "ይህ የተጠቃሚ ስም በሌላ ተጠቃሚ ተይዟል!";
+                } else {
+                    $updated = dbExecute(
+                        $conn,
+                        "UPDATE users SET name = ?, username = ?, phone = ? WHERE id = ? AND role = 'teacher'",
+                        "sssi",
+                        [$name, $username, $phone, $teacher_id]
+                    );
+                    if ($updated) {
+                        $message = "የመምህር መረጃ ተሻሽሏል!";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
+            }
+        }
+        
+        if (isset($_POST['delete_teacher'])) {
+            $teacher_id = intval($_POST['teacher_id'] ?? 0);
+            
+            if ($teacher_id > 0) {
+                mysqli_begin_transaction($conn);
+                try {
+                    dbExecute($conn, "DELETE FROM marks WHERE teacher_id = ?", "i", [$teacher_id]);
+                    dbExecute($conn, "DELETE FROM teacher_class WHERE teacher_id = ?", "i", [$teacher_id]);
+                    dbExecute($conn, "DELETE FROM users WHERE id = ? AND role = 'teacher'", "i", [$teacher_id]);
+                    
+                    mysqli_commit($conn);
+                    $message = "መምህር በተሳካ ሁኔታ ተሰርዟል!";
+                } catch (Exception $e) {
+                    mysqli_rollback($conn);
+                    $error = "መምህሩን መሰረዝ አልተቻለም!";
+                }
+            }
+        }
+        
+        if (isset($_POST['reset_password'])) {
+            $teacher_id = intval($_POST['teacher_id'] ?? 0);
+            $new_password = hashPassword('123');
+            
+            if ($teacher_id > 0) {
+                $reset = dbExecute(
+                    $conn,
+                    "UPDATE users SET password = ?, first_login = 1 WHERE id = ?",
+                    "si",
+                    [$new_password, $teacher_id]
+                );
+                if ($reset) {
+                    $message = "የይለፍ ቃል ወደ 123 ተመልሷል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
+        }
+
+        if (isset($_POST['approve_profile_request'])) {
+            $req_id = intval($_POST['request_id'] ?? 0);
+            $req = dbFetchOne($conn, "SELECT r.*, u.name as current_name FROM profile_change_requests r JOIN users u ON r.teacher_id = u.id WHERE r.id = ? AND r.status = 'pending'", "i", [$req_id]);
+            if ($req) {
+                $upName = $req['requested_name'] ?: $req['current_name'];
+                $upPhone = $req['requested_phone'];
+                $upPhoto = $req['requested_photo'];
+                
+                if ($upPhoto) {
+                    dbExecute($conn, "UPDATE users SET name = ?, phone = ?, photo = ? WHERE id = ?", "sssi", [$upName, $upPhone, $upPhoto, $req['teacher_id']]);
+                } else {
+                    dbExecute($conn, "UPDATE users SET name = ?, phone = ? WHERE id = ?", "ssi", [$upName, $upPhone, $req['teacher_id']]);
+                }
+                
+                dbExecute($conn, "UPDATE profile_change_requests SET status = 'approved', reviewed_by = ?, reviewed_at = NOW() WHERE id = ?", "ii", [$_SESSION['user_id'], $req_id]);
+                
+                createNotification(
+                    $conn,
+                    "✅ የመረጃ ለውጥ ጥያቄዎ ጸድቋል",
+                    "ያቀረቡት የመረጃ ለውጥ ጥያቄ በአስተዳዳሪው ተቀባይነት አግኝቶ መረጃዎ ተሻሽሏል።",
+                    ['user_id' => $req['teacher_id']],
+                    'normal',
+                    null,
+                    'teacher_profile.php'
+                );
+                $message = "የመምህር መረጃ ለውጥ ጥያቄ በተሳካ ሁኔታ ጸድቋል!";
+            }
+        }
+        
+        if (isset($_POST['reject_profile_request'])) {
+            $req_id = intval($_POST['request_id'] ?? 0);
+            $notes = trim($_POST['admin_notes'] ?? '');
+            $req = dbFetchOne($conn, "SELECT * FROM profile_change_requests WHERE id = ? AND status = 'pending'", "i", [$req_id]);
+            if ($req) {
+                dbExecute($conn, "UPDATE profile_change_requests SET status = 'rejected', admin_notes = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?", "sii", [$notes, $_SESSION['user_id'], $req_id]);
+                
+                createNotification(
+                    $conn,
+                    "⚠️ የመረጃ ለውጥ ጥያቄዎ ውድቅ ተደርጓል",
+                    "ያቀረቡት የመረጃ ለውጥ ጥያቄ ተቀባይነት አላገኘም። " . ($notes ? "ማብራሪያ: $notes" : ""),
+                    ['user_id' => $req['teacher_id']],
+                    'normal',
+                    null,
+                    'teacher_profile.php'
+                );
+                $message = "የመረጃ ለውጥ ጥያቄው ውድቅ ተደርጓል፤ ለመምህሩ ማሳወቂያ ተልኳል!";
+            }
         }
     }
 }
@@ -128,14 +204,25 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
     $semester_key = 'semester' . $assignment['semester_number'];
     $teacher_history[$teacher_id][$year][$semester_key][] = $assignment;
 }
+
+// Get pending profile change requests
+$pending_requests = dbFetchAll(
+    $conn,
+    "SELECT r.*, u.name as current_name, u.phone as current_phone, u.photo as current_photo, u.username
+     FROM profile_change_requests r
+     JOIN users u ON r.teacher_id = u.id
+     WHERE r.status = 'pending'
+     ORDER BY r.created_at ASC"
+);
+
+$nav_active = 'manage_teachers';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>መምህራን አስተዳደር | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -361,6 +448,21 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
             font-size: 12px;
         }
 
+        .request-review-card {
+            background: white;
+            border: 1.5px solid #FCD34D;
+        }
+        .request-review-header {
+            border-bottom: 1px solid #F3F4F6;
+        }
+        .request-detail-box {
+            background: #F9FAFB;
+        }
+        .request-reason-box {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
         .btn-profile {
             background: #8B5CF6;
             color: white;
@@ -410,7 +512,7 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
         /* Teacher Cards Grid */
         .teachers-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 25px;
             margin-top: 20px;
         }
@@ -693,9 +795,18 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
         }
 
         @media (max-width: 768px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
+            .section-header h2 { font-size: 17px; }
             .teachers-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
             }
+            .teacher-card { padding: 15px 12px; }
+            .teacher-header { gap: 10px; }
+            .teacher-avatar { width: 50px; height: 50px; font-size: 20px; }
+            .teacher-actions { flex-direction: column; }
+            .teacher-actions .btn { width: 100%; justify-content: center; min-height: 38px; }
             
             .semester-row {
                 flex-direction: column;
@@ -709,56 +820,396 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
             .form-grid {
                 grid-template-columns: 1fr;
             }
+            .add-teacher-form { padding: 16px 12px; }
+            .modal-content { width: 95%; margin: 20px auto; padding: 20px 14px; border-radius: 12px; }
+        }
+
+        .requests-section {
+            border: 2px solid #E5E7EB;
+            background: white;
+            margin-bottom: 25px;
+        }
+        .requests-section.has-pending {
+            border-color: var(--warning-yellow);
+            background: #FFFDF5;
+        }
+
+        .count-badge {
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .reject-box {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+        }
+
+        /* ── DIRECT DARK-MODE OVERRIDES FOR MANAGE_TEACHERS.PHP ── */
+        html.dark-mode body {
+            background-color: #0B1120 !important;
+        }
+
+        html.dark-mode .section {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4) !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .requests-section {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+        }
+
+        html.dark-mode .requests-section.has-pending {
+            background: linear-gradient(135deg, #1E293B 0%, #261E0A 100%) !important;
+            border-color: #D97706 !important;
+        }
+
+        html.dark-mode .section-header {
+            border-bottom: 2px solid #334155 !important;
+        }
+
+        html.dark-mode .section-header h2 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .count-badge {
+            background: #0F172A !important;
+            color: #FCD34D !important;
+            border: 1px solid #F59E0B !important;
+        }
+
+        html.dark-mode .form-group label {
+            color: #CBD5E1 !important;
+        }
+
+        html.dark-mode .form-control {
+            background-color: #0F172A !important;
+            border: 1.5px solid #475569 !important;
+            color: #F8FAFC !important;
+        }
+
+        html.dark-mode .form-control:focus {
+            border-color: #F59E0B !important;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+        }
+
+        html.dark-mode .add-teacher-form {
+            background-color: #0F172A !important;
+            border: 2px dashed #F59E0B !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .info-box {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            border-left: 4px solid #3B82F6 !important;
+            color: #BFDBFE !important;
+        }
+
+        html.dark-mode .info-box strong {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .teacher-card {
+            background-color: #1E293B !important;
+            border: 1.5px solid #334155 !important;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3) !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .teacher-card:hover {
+            border-color: #F59E0B !important;
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2) !important;
+        }
+
+        html.dark-mode .teacher-header {
+            border-bottom: 1.5px solid #334155 !important;
+        }
+
+        html.dark-mode .teacher-avatar {
+            border: 2.5px solid #F59E0B !important;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        html.dark-mode .teacher-name {
+            color: #F8FAFC !important;
+        }
+
+        html.dark-mode .teacher-name:hover {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .teacher-username {
+            background-color: #2E1065 !important;
+            color: #DDD6FE !important;
+            border: 1px solid #6D28D9 !important;
+        }
+
+        html.dark-mode .teacher-phone {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .status-new {
+            background-color: #78350F !important;
+            color: #FDE68A !important;
+            border: 1px solid #D97706 !important;
+        }
+
+        html.dark-mode .status-active {
+            background-color: #064E3B !important;
+            color: #A7F3D0 !important;
+            border: 1px solid #059669 !important;
+        }
+
+        html.dark-mode .year-group {
+            border-left: 3px solid #F59E0B !important;
+        }
+
+        html.dark-mode .year-header {
+            background-color: #0F172A !important;
+            border: 1px solid #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .year-header:hover {
+            background-color: #26354A !important;
+        }
+
+        html.dark-mode .year-badge {
+            background: #D97706 !important;
+            color: #FFFFFF !important;
+        }
+
+        html.dark-mode .year-status {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .semester-row {
+            background-color: #0F172A !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .semester-badge.semester-1 {
+            background-color: #1E3A8A !important;
+            color: #BFDBFE !important;
+            border: 1px solid #2563EB !important;
+        }
+
+        html.dark-mode .semester-badge.semester-2 {
+            background-color: #78350F !important;
+            color: #FDE68A !important;
+            border: 1px solid #D97706 !important;
+        }
+
+        html.dark-mode .class-tag {
+            background-color: #1E293B !important;
+            border: 1px solid #F59E0B !important;
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .class-tag.locked {
+            background-color: #3B1212 !important;
+            border-color: #DC2626 !important;
+            color: #FCA5A5 !important;
+        }
+
+        html.dark-mode .no-data {
+            color: #64748B !important;
+        }
+
+        html.dark-mode .empty-state {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .modal-content {
+            background-color: #1E293B !important;
+            border: 2px solid #F59E0B !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .modal-content h2,
+        html.dark-mode .modal-title {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .close {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .close:hover {
+            color: #EF4444 !important;
+        }
+
+        /* Profile Requests Review Cards */
+        html.dark-mode .request-review-card {
+            background-color: #0F172A !important;
+            border: 1.5px solid #334155 !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        html.dark-mode .request-review-header {
+            border-bottom: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .request-review-header strong {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .request-detail-box {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            color: #E2E8F0 !important;
+        }
+
+        html.dark-mode .request-reason-box {
+            background-color: #78350F !important;
+            border: 1px solid #D97706 !important;
+            color: #FDE68A !important;
+        }
+
+        html.dark-mode .reject-box {
+            background-color: #3B1212 !important;
+            border: 1px solid #7F1D1D !important;
+            color: #FECACA !important;
+        }
+
+        html.dark-mode .reject-box label {
+            color: #FCA5A5 !important;
+        }
+
+        html.dark-mode .reject-box input {
+            background-color: #0F172A !important;
+            border-color: #475569 !important;
+            color: #F8FAFC !important;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">⛪</div>
-                <div class="title">
-                    <h1>አጸደ ተጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>መምህራን አስተዳደር | Teacher Management</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="btn btn-primary">← ወደ ዳሽቦርድ</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-    <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-    <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-    <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-    <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-    <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-    <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-    <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-    <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-    <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-    <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-    <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-    <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-    <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-</div>
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
         <div class="message success">
             <span>✅</span>
-            <?php echo $message; ?>
+            <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
 
         <?php if($error): ?>
         <div class="message error">
             <span>⚠️</span>
-            <?php echo $error; ?>
+            <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
 
         <!-- Current Academic Year Info -->
         <div class="current-year-badge" style="margin-bottom: 20px;">
             ንቁ ዘመን: <?php echo $current_ethiopian_year; ?> ዓ.ም
+        </div>
+
+        <!-- Profile Change Requests from Teachers -->
+        <div class="section requests-section <?php echo !empty($pending_requests) ? 'has-pending' : ''; ?>" id="requests">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <h2>
+                    <span>📋</span> የመምህራን የመረጃ ለውጥ ጥያቄዎች
+                    <?php if (!empty($pending_requests)): ?>
+                        <span style="background: #DC2626; color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; margin-left: 8px;">
+                            <?php echo count($pending_requests); ?> አዲስ ጥያቄ
+                        </span>
+                    <?php endif; ?>
+                </h2>
+                <span style="font-size: 13px; color: #666;">
+                    <?php echo !empty($pending_requests) ? count($pending_requests) . ' ጥያቄዎች ውሳኔ ይጠብቃሉ' : 'ምንም በመጠባበቅ ላይ ያለ ጥያቄ የለም'; ?>
+                </span>
+            </div>
+
+            <?php if (!empty($pending_requests)): ?>
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 15px;">
+                    <?php foreach ($pending_requests as $req): ?>
+                        <div class="request-review-card" style="border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <div class="request-review-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                <div>
+                                    <strong style="color: var(--brown-dark); font-size: 15px;"><?php echo htmlspecialchars($req['current_name']); ?></strong>
+                                    <span style="color: #6B7280; font-size: 12px; margin-left: 6px;">(@<?php echo htmlspecialchars($req['username']); ?>)</span>
+                                </div>
+                                <span style="font-size: 12px; color: #9CA3AF;">የቀረበበት ቀን፡ <?php echo date('M d, Y h:i A', strtotime($req['created_at'])); ?></span>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; font-size: 13px;">
+                                <div class="request-detail-box" style="padding: 10px; border-radius: 8px;">
+                                    <span style="color: #6B7280; display: block; font-size: 11px; text-transform: uppercase;">ሙሉ ስም</span>
+                                    <div>የነበረው፡ <strong><?php echo htmlspecialchars($req['current_name']); ?></strong></div>
+                                    <div style="color: <?php echo ($req['requested_name'] && $req['requested_name'] !== $req['current_name']) ? '#D97706' : '#059669'; ?>; margin-top: 3px;">
+                                        የተጠየቀው፡ <strong><?php echo htmlspecialchars($req['requested_name'] ?: $req['current_name']); ?></strong>
+                                    </div>
+                                </div>
+
+                                <div class="request-detail-box" style="padding: 10px; border-radius: 8px;">
+                                    <span style="color: #6B7280; display: block; font-size: 11px; text-transform: uppercase;">ስልክ ቁጥር</span>
+                                    <div>የነበረው፡ <strong><?php echo htmlspecialchars($req['current_phone'] ?: '---'); ?></strong></div>
+                                    <div style="color: <?php echo ($req['requested_phone'] && $req['requested_phone'] !== $req['current_phone']) ? '#D97706' : '#059669'; ?>; margin-top: 3px;">
+                                        የተጠየቀው፡ <strong><?php echo htmlspecialchars($req['requested_phone'] ?: ($req['current_phone'] ?: '---')); ?></strong>
+                                    </div>
+                                </div>
+
+                                <?php if ($req['requested_photo']): ?>
+                                    <div class="request-detail-box" style="padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
+                                        <img src="<?php echo htmlspecialchars($req['requested_photo']); ?>" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-primary);" alt="New photo">
+                                        <div>
+                                            <span style="color: #6B7280; font-size: 11px; text-transform: uppercase; display: block;">አዲስ ፎቶ</span>
+                                            <a href="<?php echo htmlspecialchars($req['requested_photo']); ?>" target="_blank" style="color: #2563EB; font-size: 12px; text-decoration: underline;">በሙሉ እይ</a>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <?php if ($req['reason']): ?>
+                                <div class="request-reason-box" style="padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 14px;">
+                                    <strong>ምክንያት፡</strong> <?php echo htmlspecialchars($req['reason']); ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: flex-end;">
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('ይህን የመረጃ ለውጥ ማጽደቅ እርግጠኛ ነዎት?')">
+                                    <?php echo csrfField(); ?>
+                                    <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
+                                    <button type="submit" name="approve_profile_request" class="btn" style="background: #059669; color: white; padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                        ✅ ጥያቄውን አጽድቅ
+                                    </button>
+                                </form>
+
+                                <button type="button" class="btn" onclick="document.getElementById('reject-box-<?php echo $req['id']; ?>').style.display='block'" style="background: #DC2626; color: white; padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                    ❌ ውድቅ አድርግ
+                                </button>
+                            </div>
+
+                            <div id="reject-box-<?php echo $req['id']; ?>" class="reject-box" style="display: none; margin-top: 12px; padding: 12px; border-radius: 8px;">
+                                <form method="POST">
+                                    <?php echo csrfField(); ?>
+                                    <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
+                                    <label style="display: block; font-size: 12px; font-weight: 600; color: #991B1B; margin-bottom: 4px;">የውድቅ ማድረጊያ ምክንያት (ለመምህሩ የሚላክ)</label>
+                                    <input type="text" name="admin_notes" placeholder="ምሳሌ፡ መረጃው ትክክል አይደለም..." style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 13px; margin-bottom: 8px;">
+                                    <div style="display: flex; gap: 8px;">
+                                        <button type="submit" name="reject_profile_request" class="btn" style="background: #DC2626; color: white; padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">ውድቅ አድርግ</button>
+                                        <button type="button" class="btn" onclick="document.getElementById('reject-box-<?php echo $req['id']; ?>').style.display='none'" style="background: #6B7280; color: white; padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">ሰርዝ</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div style="padding: 15px; text-align: center; color: #9CA3AF; font-size: 13px;">
+                    ✨ በአሁኑ ሰዓት ምንም ያልተመለሰ የመረጃ ለውጥ ጥያቄ የለም።
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Add Teacher Form -->
@@ -769,19 +1220,20 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
             
             <div class="add-teacher-form">
                 <form method="POST">
+                    <?php echo csrfField(); ?>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>ሙሉ ስም (Full Name) <span style="color: var(--error-red);">*</span></label>
+                            <label>ሙሉ ስም <span style="color: var(--error-red);">*</span></label>
                             <input type="text" name="name" class="form-control" required 
                                    placeholder="ሙሉ ስም ያስገቡ">
                         </div>
                         <div class="form-group">
-                            <label>የተጠቃሚ ስም (Username) <span style="color: var(--error-red);">*</span></label>
+                            <label>የተጠቃሚ ስም <span style="color: var(--error-red);">*</span></label>
                             <input type="text" name="username" class="form-control" required 
                                    placeholder="ለምሳሌ: memhir_abebe">
                         </div>
                         <div class="form-group">
-                            <label>ስልክ ቁጥር (Phone)</label>
+                            <label>ስልክ ቁጥር</label>
                             <input type="text" name="phone" class="form-control" 
                                    placeholder="0912345678">
                         </div>
@@ -790,7 +1242,7 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
                     <div class="info-box">
                         <span>ℹ️</span>
                         <div>
-                            <strong>የመጀመሪያ የይለፍ ቃል (Default Password):</strong> 123<br>
+                            <strong>የመጀመሪያ የይለፍ ቃል:</strong> 123<br>
                             <small>መምህሩ ለመጀመሪያ ጊዜ ሲገባ ይለውጠዋል</small>
                         </div>
                     </div>
@@ -806,7 +1258,7 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
         <div class="section">
             <div class="section-header">
                 <h2><span>👨‍🏫</span> የመምህራን ዝርዝር እና ታሪክ</h2>
-                <span style="background: var(--gold-pale); padding: 5px 15px; border-radius: 20px;">
+                <span class="count-badge">
                     <?php echo mysqli_num_rows($teachers); ?> መምህራን
                 </span>
             </div>
@@ -858,6 +1310,7 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
                         
                         <form method="POST" style="display: inline;" 
                               onsubmit="return confirm('የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
+                            <?php echo csrfField(); ?>
                             <input type="hidden" name="teacher_id" value="<?php echo $teacher['id']; ?>">
                             <button type="submit" name="reset_password" class="btn btn-reset">
                                 🔄 ይለፍ ቃል መልስ
@@ -867,6 +1320,7 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
                         <?php if(!$has_history): ?>
                         <form method="POST" style="display: inline;" 
                               onsubmit="return confirm('መምህሩን መሰረዝ እርግጠኛ ነዎት?')">
+                            <?php echo csrfField(); ?>
                             <input type="hidden" name="teacher_id" value="<?php echo $teacher['id']; ?>">
                             <button type="submit" name="delete_teacher" class="btn btn-delete">
                                 🗑️ ሰርዝ
@@ -952,23 +1406,24 @@ while($assignment = mysqli_fetch_assoc($all_assignments)) {
     <div id="editModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
-            <h2 style="color: var(--brown-dark); margin-bottom: 20px;">የመምህር መረጃ አስተካክል</h2>
+            <h2 class="modal-title" style="margin-bottom: 20px;">የመምህር መረጃ አስተካክል</h2>
             
             <form method="POST" id="editForm">
+                <?php echo csrfField(); ?>
                 <input type="hidden" name="teacher_id" id="edit_id">
                 
                 <div class="form-group">
-                    <label>ሙሉ ስም (Full Name) <span style="color: var(--error-red);">*</span></label>
+                    <label>ሙሉ ስም <span style="color: var(--error-red);">*</span></label>
                     <input type="text" name="name" id="edit_name" class="form-control" required>
                 </div>
                 
                 <div class="form-group">
-                    <label>የተጠቃሚ ስም (Username) <span style="color: var(--error-red);">*</span></label>
+                    <label>የተጠቃሚ ስም <span style="color: var(--error-red);">*</span></label>
                     <input type="text" name="username" id="edit_username" class="form-control" required>
                 </div>
                 
                 <div class="form-group">
-                    <label>ስልክ ቁጥር (Phone)</label>
+                    <label>ስልክ ቁጥር</label>
                     <input type="text" name="phone" id="edit_phone" class="form-control">
                 </div>
                 

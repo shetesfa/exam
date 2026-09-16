@@ -1,7 +1,30 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
+
+if (!APP_DEBUG) {
+    http_response_code(404);
+    die('Not found.');
+}
+
+$msg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_pin'])) {
+    if (verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $student_id = intval($_POST['student_id'] ?? 0);
+        if ($student_id > 0) {
+            $hashed_pin = password_hash('123', PASSWORD_DEFAULT);
+            dbExecute(
+                $conn,
+                "INSERT INTO student_logins (student_id, pin, first_login, login_attempts, locked_until) 
+                 VALUES (?, ?, 1, 0, NULL)
+                 ON DUPLICATE KEY UPDATE pin = VALUES(pin), first_login = 1, login_attempts = 0, locked_until = NULL",
+                "is",
+                [$student_id, $hashed_pin]
+            );
+            $msg = "PIN reset to 123 for Student ID #$student_id!";
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,8 +87,10 @@ requireAdmin();
             echo "<td>$first_login</td>";
             echo "<td>{$row['login_attempts']}</td>";
             echo "<td>$locked</td>";
+            $csrfHtml = csrfField();
             echo "<td>
                 <form method='POST' style='display:inline;'>
+                    $csrfHtml
                     <input type='hidden' name='student_id' value='{$row['id']}'>
                     <button type='submit' name='reset_pin' class='btn' onclick='return confirm(\"Reset PIN to 123?\")'>🔄 Reset PIN</button>
                 </form>
@@ -74,22 +99,6 @@ requireAdmin();
         }
         ?>
     </table>
-    
-    <?php
-    // Handle PIN reset
-    if (isset($_POST['reset_pin'])) {
-        $student_id = intval($_POST['student_id']);
-        $hashed_pin = password_hash('123', PASSWORD_DEFAULT);
-        
-        mysqli_query($conn, "INSERT INTO student_logins (student_id, pin, first_login, login_attempts, locked_until) 
-                            VALUES ($student_id, '$hashed_pin', 1, 0, NULL)
-                            ON DUPLICATE KEY UPDATE pin = '$hashed_pin', first_login = 1, login_attempts = 0, locked_until = NULL");
-        
-        echo "<script>alert('PIN reset to 123!'); window.location.reload();</script>";
-    }
-    
-    mysqli_close($conn);
-    ?>
     
     <div style="margin-top: 20px; padding: 15px; background: #FFF8DC; border-radius: 8px;">
         <strong>📋 Instructions:</strong><br>

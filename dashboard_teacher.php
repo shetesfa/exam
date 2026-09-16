@@ -1,5 +1,4 @@
 <?php
-session_start();
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -8,12 +7,12 @@ header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 require_once 'db.php';
 requireLogin();
 
-if(!isTeacher()) {
+if (!isTeacher()) {
     header("Location: dashboard_admin.php");
     exit();
 }
 
-$teacher_id = $_SESSION['user_id'] ?? 0;
+$teacher_id = intval($_SESSION['user_id'] ?? 0);
 $user_name = $_SESSION['user_name'] ?? 'መምህር';
 
 // Get teacher full info
@@ -22,10 +21,9 @@ $teacher_full_name = $user_name;
 $teacher_username = '';
 $teacher_phone = '';
 
-$info_query = mysqli_query($conn, "SELECT * FROM users WHERE id = $teacher_id");
-if($info_query && mysqli_num_rows($info_query) > 0) {
-    $info = mysqli_fetch_assoc($info_query);
-    if(!empty($info['photo'])) {
+$info = dbFetchOne($conn, "SELECT * FROM users WHERE id = ?", "i", [$teacher_id]);
+if ($info) {
+    if (!empty($info['photo'])) {
         $teacher_photo = $info['photo'];
     }
     $teacher_full_name = $info['name'];
@@ -36,91 +34,90 @@ if($info_query && mysqli_num_rows($info_query) > 0) {
 // Handle password change
 $password_message = '';
 $password_error = '';
-if(isset($_POST['change_password'])) {
-    $current_pass = $_POST['current_password'];
-    $new_pass = $_POST['new_password'];
-    $confirm_pass = $_POST['confirm_password'];
-    
-    // Verify current password
-    $pass_query = mysqli_query($conn, "SELECT password FROM users WHERE id = $teacher_id");
-    $pass_data = mysqli_fetch_assoc($pass_query);
-    
-    if(!password_verify($current_pass, $pass_data['password'])) {
-        $password_error = "የአሁኑ የይለፍ ቃል ትክክል አይደለም! (Current password is incorrect!)";
-    } elseif(strlen($new_pass) < 3) {
-        $password_error = "የይለፍ ቃል ቢያንስ 3 ቁምፊዎች መሆን አለበት!";
-    } elseif($new_pass != $confirm_pass) {
-        $password_error = "አዲስ የይለፍ ቃላት አይዛመዱም! (Passwords do not match!)";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $password_error = "የደህንነት ማረጋገጫ አልተሳካም!";
     } else {
-        $hashed = hashPassword($new_pass);
-        mysqli_query($conn, "UPDATE users SET password = '$hashed', first_login = 0 WHERE id = $teacher_id");
-        $password_message = "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል! (Password changed successfully!)";
-    }
-}
-
-// Get admin contact info
-$admin1_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_1'");
-$admin1 = $admin1_query ? mysqli_fetch_assoc($admin1_query)['setting_value'] : 'ዲ/ን ኪብረአብ ዘለለም';
-$phone1_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_1'");
-$phone1 = $phone1_query ? mysqli_fetch_assoc($phone1_query)['setting_value'] : '0939883508';
-
-// Get current semester
-$current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
-
-// Get classes assigned to this teacher
-$teacher_classes = [];
-if($teacher_id && $semester_id) {
-    $teacher_classes_query = "SELECT tc.*, c.name as class_name, c.id as class_id, 
-                              COUNT(DISTINCT s.id) as student_count
-                              FROM teacher_class tc
-                              JOIN classes c ON tc.class_id = c.id
-                              LEFT JOIN students s ON c.id = s.class_id
-                              WHERE tc.teacher_id = $teacher_id 
-                              AND tc.semester_id = $semester_id
-                              GROUP BY c.id
-                              ORDER BY c.name";
-    $teacher_classes_result = mysqli_query($conn, $teacher_classes_query);
-    if($teacher_classes_result && mysqli_num_rows($teacher_classes_result) > 0) {
-        while($row = mysqli_fetch_assoc($teacher_classes_result)) {
-            $teacher_classes[] = $row;
+        $current_pass = $_POST['current_password'] ?? '';
+        $new_pass = $_POST['new_password'] ?? '';
+        $confirm_pass = $_POST['confirm_password'] ?? '';
+        
+        // Verify current password
+        $pass_data = dbFetchOne($conn, "SELECT password FROM users WHERE id = ?", "i", [$teacher_id]);
+        
+        if (!$pass_data || !password_verify($current_pass, $pass_data['password'])) {
+            $password_error = "የአሁኑ የይለፍ ቃል ትክክል አይደለም!";
+        } elseif (strlen($new_pass) < 3) {
+            $password_error = "የይለፍ ቃል ቢያንስ 3 ዲጂት መሆን አለበት!";
+        } elseif ($new_pass !== $confirm_pass) {
+            $password_error = "ያስገቧቸው የይለፍ ቃሎች አይመሳሰሉም!";
+        } else {
+            $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
+            dbExecute($conn, "UPDATE users SET password = ?, first_login = 0 WHERE id = ?", "si", [$hashed, $teacher_id]);
+            $password_message = "የይለፍ ቃሉ በተሳካ ሁኔታ ተቀይሯል!";
         }
     }
 }
 
+// Get admin contact info
+$admin1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_1'");
+$admin1 = $admin1_row ? $admin1_row['setting_value'] : 'ዲ/ን ኪብረአብ ዘለለም';
+$phone1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_1'");
+$phone1 = $phone1_row ? $phone1_row['setting_value'] : '0939883508';
+
+// Get current semester
+$current_semester = getCurrentSemester($conn);
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
+
+// Get classes assigned to this teacher
+$teacher_classes = [];
+if ($teacher_id && $semester_id) {
+    $teacher_classes_query = "SELECT tc.*, c.name as class_name, c.id as class_id, 
+                              COUNT(DISTINCT s.id) as student_count
+                              FROM teacher_class tc
+                              JOIN classes c ON tc.class_id = c.id
+                              LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
+                              WHERE tc.teacher_id = ? 
+                              AND tc.semester_id = ?
+                              GROUP BY c.id
+                              ORDER BY c.name";
+    $teacher_classes = dbFetchAll($conn, $teacher_classes_query, "ii", [$teacher_id, $semester_id]);
+}
+
 $error_message = '';
-if(empty($teacher_classes)) {
+if (empty($teacher_classes)) {
     $error_message = "ለዚህ ሴሚስተር ምንም ክፍል አልተመደበልዎትም!";
 }
 
 $success_message = '';
 $error_message_display = '';
-if(isset($_SESSION['success'])) { $success_message = $_SESSION['success']; unset($_SESSION['success']); }
-if(isset($_SESSION['error'])) { $error_message_display = $_SESSION['error']; unset($_SESSION['error']); }
+if (isset($_SESSION['success'])) { $success_message = $_SESSION['success']; unset($_SESSION['success']); }
+if (isset($_SESSION['error'])) { $error_message_display = $_SESSION['error']; unset($_SESSION['error']); }
 
-$selected_class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : (!empty($teacher_classes) ? $teacher_classes[0]['class_id'] : 0);
+$selected_class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : (!empty($teacher_classes) ? intval($teacher_classes[0]['class_id']) : 0);
 $selected_class = null;
 $students = null;
 $is_locked = false;
 $marking_scheme = null;
 
-if($selected_class_id > 0) {
-    foreach($teacher_classes as $class) {
-        if($class['class_id'] == $selected_class_id) {
+if ($selected_class_id > 0) {
+    foreach ($teacher_classes as $class) {
+        if (intval($class['class_id']) === $selected_class_id) {
             $selected_class = $class;
-            $is_locked = ($class['locked'] == 1);
+            $is_locked = (intval($class['locked']) === 1);
             break;
         }
     }
     
-    if($selected_class) {
-        $scheme_query = "SELECT * FROM marking_schemes 
-                        WHERE teacher_id = $teacher_id 
-                        AND class_id = {$selected_class['class_id']}
-                        AND semester_id = $semester_id";
-        $scheme_result = mysqli_query($conn, $scheme_query);
-        if(mysqli_num_rows($scheme_result) > 0) {
-            $marking_scheme = mysqli_fetch_assoc($scheme_result);
+    if ($selected_class) {
+        $scheme_row = dbFetchOne(
+            $conn,
+            "SELECT * FROM marking_schemes WHERE teacher_id = ? AND class_id = ? AND semester_id = ?",
+            "iii",
+            [$teacher_id, intval($selected_class['class_id']), $semester_id]
+        );
+        if ($scheme_row) {
+            $marking_scheme = $scheme_row;
         } else {
             $marking_scheme = [
                 'component1_name' => 'Assignment', 'component1_percentage' => 20,
@@ -135,132 +132,198 @@ if($selected_class_id > 0) {
                         m.assignment, m.participation, m.attendance, m.mid, m.final, m.total
                         FROM students s
                         LEFT JOIN marks m ON s.id = m.student_id 
-                            AND m.semester_id = $semester_id AND m.teacher_id = $teacher_id
-                        WHERE s.class_id = {$selected_class['class_id']}
+                            AND m.semester_id = ? AND m.teacher_id = ?
+                        WHERE s.class_id = ? AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                         ORDER BY s.name";
-        $students = mysqli_query($conn, $marks_query);
+        $students = dbQuery($conn, $marks_query, "iii", [$semester_id, $teacher_id, intval($selected_class['class_id'])]);
     }
 }
 
 // Handle AJAX save
-if(isset($_POST['ajax_save_marks'])) {
+if (isset($_POST['ajax_save_marks'])) {
     header('Content-Type: application/json');
     $response = ['success' => false, 'message' => ''];
     
-    if($is_locked) {
-        $response['message'] = 'locked'; echo json_encode($response); exit();
+    if ($is_locked) {
+        $response['message'] = 'locked';
+        echo json_encode($response);
+        exit();
     }
     
-    $student_id = intval($_POST['student_id']);
-    $field = mysqli_real_escape_string($conn, $_POST['field']);
-    $value = floatval($_POST['value']);
-    $class_id = intval($_POST['class_id']);
-    $semester_id = intval($_POST['semester_id']);
-    $teacher_id = $_SESSION['user_id'];
+    $student_id = intval($_POST['student_id'] ?? 0);
+    $field = trim($_POST['field'] ?? '');
+    $value = floatval($_POST['value'] ?? 0);
+    $class_id = intval($_POST['class_id'] ?? 0);
+    $sem_id = intval($_POST['semester_id'] ?? 0);
+    $t_id = intval($_SESSION['user_id'] ?? 0);
+
+    // IDOR Protection: verify teacher assignment & lock status
+    $tc_check = dbFetchOne(
+        $conn,
+        "SELECT locked FROM teacher_class WHERE teacher_id = ? AND class_id = ? AND semester_id = ?",
+        "iii",
+        [$t_id, $class_id, $sem_id]
+    );
+    if (!$tc_check && !isAdmin()) {
+        $response['message'] = 'unauthorized_class';
+        echo json_encode($response);
+        exit();
+    }
+    if ($tc_check && intval($tc_check['locked']) === 1 && !isAdmin()) {
+        $response['message'] = 'locked';
+        echo json_encode($response);
+        exit();
+    }
+    // Check if semester is closed
+    $sem_status = dbFetchOne($conn, "SELECT status FROM semesters WHERE id = ?", "i", [$sem_id]);
+    if (!$sem_status || ($sem_status['status'] === 'closed' && !isAdmin())) {
+        $response['message'] = 'semester_closed';
+        echo json_encode($response);
+        exit();
+    }
+
+    // IDOR Protection: verify student belongs to this class
+    $student_check = dbFetchOne(
+        $conn,
+        "SELECT id FROM students WHERE id = ? AND class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)",
+        "ii",
+        [$student_id, $class_id]
+    );
+    if (!$student_check) {
+        $response['message'] = 'invalid_student';
+        echo json_encode($response);
+        exit();
+    }
     
     $max_values = [
-        'assignment' => $marking_scheme['component1_percentage'],
-        'participation' => $marking_scheme['component2_percentage'],
-        'attendance' => $marking_scheme['component3_percentage'],
-        'mid' => $marking_scheme['component4_percentage'],
-        'final' => $marking_scheme['component5_percentage']
+        'assignment' => $marking_scheme['component1_percentage'] ?? 20,
+        'participation' => $marking_scheme['component2_percentage'] ?? 20,
+        'attendance' => $marking_scheme['component3_percentage'] ?? 10,
+        'mid' => $marking_scheme['component4_percentage'] ?? 25,
+        'final' => $marking_scheme['component5_percentage'] ?? 25
     ];
     
-    if(!isset($max_values[$field])) {
-        $response['message'] = 'invalid field'; echo json_encode($response); exit();
+    if (!isset($max_values[$field])) {
+        $response['message'] = 'invalid field';
+        echo json_encode($response);
+        exit();
     }
     
     $max = $max_values[$field];
     $value = min(max($value, 0), $max);
     
-    $check = mysqli_query($conn, "SELECT id, assignment, participation, attendance, mid, final FROM marks 
-                                  WHERE student_id = $student_id AND semester_id = $semester_id AND teacher_id = $teacher_id");
+    $existing = dbFetchOne(
+        $conn,
+        "SELECT id, assignment, participation, attendance, mid, final FROM marks 
+         WHERE student_id = ? AND semester_id = ? AND teacher_id = ?",
+        "iii",
+        [$student_id, $sem_id, $t_id]
+    );
     
-    if(mysqli_num_rows($check) > 0) {
-        $existing = mysqli_fetch_assoc($check);
-        $assignment = ($field == 'assignment') ? $value : floatval($existing['assignment']);
-        $participation = ($field == 'participation') ? $value : floatval($existing['participation']);
-        $attendance = ($field == 'attendance') ? $value : floatval($existing['attendance']);
-        $mid = ($field == 'mid') ? $value : floatval($existing['mid']);
-        $final = ($field == 'final') ? $value : floatval($existing['final']);
-        $total = $assignment + $participation + $attendance + $mid + $final;
-        
-        $query = "UPDATE marks SET assignment=$assignment, participation=$participation, attendance=$attendance,
-                 mid=$mid, final=$final, total=$total, class_id=$class_id, last_updated=NOW()
-                 WHERE student_id=$student_id AND semester_id=$semester_id AND teacher_id=$teacher_id";
-    } else {
-        $assignment = ($field == 'assignment') ? $value : 0;
-        $participation = ($field == 'participation') ? $value : 0;
-        $attendance = ($field == 'attendance') ? $value : 0;
-        $mid = ($field == 'mid') ? $value : 0;
-        $final = ($field == 'final') ? $value : 0;
-        $total = $assignment + $participation + $attendance + $mid + $final;
-        
-        $query = "INSERT INTO marks (student_id, class_id, teacher_id, semester_id, assignment, participation, attendance, mid, final, total) 
-                  VALUES ($student_id, $class_id, $teacher_id, $semester_id, $assignment, $participation, $attendance, $mid, $final, $total)";
-    }
+    $assignment = ($field === 'assignment') ? $value : ($existing ? floatval($existing['assignment']) : 0);
+    $participation = ($field === 'participation') ? $value : ($existing ? floatval($existing['participation']) : 0);
+    $attendance = ($field === 'attendance') ? $value : ($existing ? floatval($existing['attendance']) : 0);
+    $mid = ($field === 'mid') ? $value : ($existing ? floatval($existing['mid']) : 0);
+    $final = ($field === 'final') ? $value : ($existing ? floatval($existing['final']) : 0);
+    $total = $assignment + $participation + $attendance + $mid + $final;
     
-    if(mysqli_query($conn, $query)) {
-        $response['success'] = true;
-        $response['total'] = number_format($total, 1);
-        $response['value'] = $value;
-        $response['max'] = $max;
-    } else {
-        $response['message'] = 'error: ' . mysqli_error($conn);
-    }
+    $saved = dbExecute(
+        $conn,
+        "INSERT INTO marks (student_id, class_id, teacher_id, semester_id, assignment, participation, attendance, mid, final, total, last_updated)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE 
+            assignment = VALUES(assignment),
+            participation = VALUES(participation),
+            attendance = VALUES(attendance),
+            mid = VALUES(mid),
+            final = VALUES(final),
+            total = VALUES(total),
+            class_id = VALUES(class_id),
+            last_updated = NOW()",
+        "iiiidddddd",
+        [$student_id, $class_id, $t_id, $sem_id, $assignment, $participation, $attendance, $mid, $final, $total]
+    );
     
-    echo json_encode($response); exit();
+    echo json_encode(['success' => (bool)$saved, 'total' => $total]);
+    exit();
 }
-
 // Handle marking scheme save
-if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
-    $class_id = intval($_POST['class_id']);
-    $c1_perc = floatval($_POST['c1_perc']); $c2_perc = floatval($_POST['c2_perc']);
-    $c3_perc = floatval($_POST['c3_perc']); $c4_perc = floatval($_POST['c4_perc']);
-    $c5_perc = floatval($_POST['c5_perc']);
-    $total = $c1_perc + $c2_perc + $c3_perc + $c4_perc + $c5_perc;
-    
-    if(abs($total - 100) > 0.01) {
-        $_SESSION['error'] = "ጠቅላላ መቶኛ 100% መሆን አለበት! አሁን: " . $total . "%";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_scheme'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $_SESSION['error'] = "የደህንነት ማረጋገጫ አልተሳካም!";
     } else {
-        $c1_name = mysqli_real_escape_string($conn, $_POST['c1_name']);
-        $c2_name = mysqli_real_escape_string($conn, $_POST['c2_name']);
-        $c3_name = mysqli_real_escape_string($conn, $_POST['c3_name']);
-        $c4_name = mysqli_real_escape_string($conn, $_POST['c4_name']);
-        $c5_name = mysqli_real_escape_string($conn, $_POST['c5_name']);
+        $class_id = intval($_POST['class_id'] ?? 0);
+
+        // IDOR Protection: check teacher assignment
+        $tc_check = dbFetchOne(
+            $conn,
+            "SELECT id FROM teacher_class WHERE teacher_id = ? AND class_id = ? AND semester_id = ?",
+            "iii",
+            [$teacher_id, $class_id, $semester_id]
+        );
+        if (!$tc_check && !isAdmin()) {
+            $_SESSION['error'] = "ለዚህ ክፍል የውጤት አሰጣጥ ዘዴ የመቀየር ፈቃድ የለዎትም!";
+            header("Location: dashboard_teacher.php");
+            exit();
+        }
+
+        $c1_perc = floatval($_POST['c1_perc'] ?? 0);
+        $c2_perc = floatval($_POST['c2_perc'] ?? 0);
+        $c3_perc = floatval($_POST['c3_perc'] ?? 0);
+        $c4_perc = floatval($_POST['c4_perc'] ?? 0);
+        $c5_perc = floatval($_POST['c5_perc'] ?? 0);
+        $total = $c1_perc + $c2_perc + $c3_perc + $c4_perc + $c5_perc;
         
-        $query = "INSERT INTO marking_schemes (teacher_id, class_id, semester_id, 
-                  component1_name, component1_percentage, component2_name, component2_percentage,
-                  component3_name, component3_percentage, component4_name, component4_percentage,
-                  component5_name, component5_percentage)
-                  VALUES ($teacher_id, $class_id, $semester_id,
-                  '$c1_name', $c1_perc, '$c2_name', $c2_perc, '$c3_name', $c3_perc,
-                  '$c4_name', $c4_perc, '$c5_name', $c5_perc)
-                  ON DUPLICATE KEY UPDATE
-                  component1_name=VALUES(component1_name), component1_percentage=VALUES(component1_percentage),
-                  component2_name=VALUES(component2_name), component2_percentage=VALUES(component2_percentage),
-                  component3_name=VALUES(component3_name), component3_percentage=VALUES(component3_percentage),
-                  component4_name=VALUES(component4_name), component4_percentage=VALUES(component4_percentage),
-                  component5_name=VALUES(component5_name), component5_percentage=VALUES(component5_percentage)";
-        
-        if(mysqli_query($conn, $query)) {
-            $_SESSION['success'] = "የውጤት አሰጣጥ ዘዴ ተቀምጧል!";
-            $scheme_result = mysqli_query($conn, "SELECT * FROM marking_schemes WHERE teacher_id=$teacher_id AND class_id=$class_id AND semester_id=$semester_id");
-            if($scheme_result && mysqli_num_rows($scheme_result) > 0) $marking_scheme = mysqli_fetch_assoc($scheme_result);
+        if (abs($total - 100) > 0.01) {
+            $_SESSION['error'] = "ጠቅላላ መቶኛ 100% መሆን አለበት! አሁን: " . $total . "%";
         } else {
-            $_SESSION['error'] = "ስህተት: " . mysqli_error($conn);
+            $c1_name = trim($_POST['c1_name'] ?? 'Assignment');
+            $c2_name = trim($_POST['c2_name'] ?? 'Participation');
+            $c3_name = trim($_POST['c3_name'] ?? 'Attendance');
+            $c4_name = trim($_POST['c4_name'] ?? 'Mid Exam');
+            $c5_name = trim($_POST['c5_name'] ?? 'Final Exam');
+            
+            $saved = dbExecute(
+                $conn,
+                "INSERT INTO marking_schemes (teacher_id, class_id, semester_id, 
+                          component1_name, component1_percentage, component2_name, component2_percentage,
+                          component3_name, component3_percentage, component4_name, component4_percentage,
+                          component5_name, component5_percentage)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    component1_name = VALUES(component1_name), component1_percentage = VALUES(component1_percentage),
+                    component2_name = VALUES(component2_name), component2_percentage = VALUES(component2_percentage),
+                    component3_name = VALUES(component3_name), component3_percentage = VALUES(component3_percentage),
+                    component4_name = VALUES(component4_name), component4_percentage = VALUES(component4_percentage),
+                    component5_name = VALUES(component5_name), component5_percentage = VALUES(component5_percentage)",
+                "iiisdsdsdsdsd",
+                [
+                    $teacher_id, $class_id, $semester_id,
+                    $c1_name, $c1_perc, $c2_name, $c2_perc,
+                    $c3_name, $c3_perc, $c4_name, $c4_perc,
+                    $c5_name, $c5_perc
+                ]
+            );
+            
+            if ($saved) {
+                $_SESSION['success'] = "የውጤት አሰጣጥ ዘዴ ተቀምጧል!";
+            } else {
+                $_SESSION['error'] = "ስህተት ተከስቷል!";
+            }
         }
     }
-    header("Location: dashboard_teacher.php?class_id=$class_id"); exit();
+    header("Location: dashboard_teacher.php?class_id=$class_id");
+    exit();
 }
+$nav_active = 'dashboard_teacher';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <link rel="icon" type="image/png" href="images/icon.png">
+    <meta name="theme-color" content="#8B4513">
     <title>የመምህር ዳሽቦርድ | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513; --brown-medium: #A52A2A; --gold-primary: #FFD700;
@@ -476,37 +539,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
     </style>
 </head>
 <body>
-    <div class="app-header">
-        <div class="header-content">
-            <div class="header-left">
-                <!-- Teacher Photo Button - Click to open profile popup -->
-                <button class="teacher-photo-btn" onclick="openProfileModal()" title="መገለጫ እይ / View Profile">
-                    <img src="<?php echo $teacher_photo; ?>" alt="Teacher" onerror="this.src='images/icon.png'">
-                </button>
-                
-                <div class="logo-wrapper">
-                    
-                    <div class="title">
-                        <h1>አጸደ ትጉሃን</h1>
-                        <p>የመምህራን ገጽ</p>
-                    </div>
-                </div>
-                <div class="header-links">
-                    <a href="teacher_attendance_view.php" class="header-link attendance-link">📋 አቴንዳንስ</a>
-                    <a href="teacher_marking_scheme.php" class="header-link scheme-link">⚙️ ውጤት አሰጣጥ</a>
-                </div>
-            </div>
-            <div class="user-info">
-                <div class="user-name">
-                    <strong><?php echo htmlspecialchars(mb_substr($user_name, 0, 15)); ?></strong><br>
-                    <span>👨‍🏫 መምህር</span>
-                </div>
-                <a href="logout.php" class="logout-btn">ውጣ</a>
-            </div>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="container">
+    <div class="main-container">
         <?php if($password_message): ?><div class="alert-success">✅ <?php echo $password_message; ?></div><?php endif; ?>
         <?php if($success_message): ?><div class="alert-success">✅ <?php echo $success_message; ?></div><?php endif; ?>
         <?php if($error_message_display || $error_message): ?><div class="alert-error">⚠️ <?php echo $error_message_display ?: $error_message; ?></div><?php endif; ?>
@@ -652,6 +687,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
             </div>
             <div class="profile-modal-footer">
                 <button class="btn-modal btn-close-modal" onclick="closeProfileModal()">ዝጋ</button>
+                <a href="teacher_profile.php" class="btn-modal" style="text-decoration:none; background:#8B4513; color:#FFD700; display:inline-flex; align-items:center; justify-content:center;">👤 ሙሉ መረጃ</a>
                 <button class="btn-modal btn-change-pass" onclick="openPasswordModal()">🔒 የይለፍ ቃል ቀይር</button>
             </div>
         </div>
@@ -662,6 +698,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
         <div class="password-modal-content">
             <h3>🔒 የይለፍ ቃል ይቀይሩ</h3>
             <form method="POST" id="passwordForm">
+                <?php echo csrfField(); ?>
                 <input type="password" name="current_password" class="pass-input" placeholder="የአሁኑ የይለፍ ቃል" required>
                 <input type="password" name="new_password" class="pass-input" placeholder="አዲስ የይለፍ ቃል" required minlength="3">
                 <input type="password" name="confirm_password" class="pass-input" placeholder="አዲስ የይለፍ ቃል ያረጋግጡ" required minlength="3">
@@ -737,6 +774,29 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
         }
 
         function saveMark(studentId, field, value) {
+            const ind = document.getElementById('saveIndicator');
+            ind.classList.add('show');
+            ind.querySelector('span').textContent = 'በማስቀመጥ ላይ...';
+
+            function saveOfflineFallback() {
+                const localUuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'mark_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const markObj = {
+                    local_uuid: localUuid,
+                    student_id: parseInt(studentId),
+                    class_id: <?php echo $selected_class_id ?: 0; ?>,
+                    semester_id: <?php echo $semester_id ?: 0; ?>,
+                    [field]: parseFloat(value) || 0,
+                    updated_at: new Date().toISOString()
+                };
+                OfflineDB.saveMarksLocal(markObj).then(() => {
+                    ind.querySelector('span').textContent = 'ከመስመር ውጭ ተቀምጧል! 💾';
+                    setTimeout(() => ind.classList.remove('show'), 1500);
+                }).catch(err => {
+                    ind.querySelector('span').textContent = 'ስህተት! ❌';
+                    setTimeout(() => ind.classList.remove('show'), 2000);
+                });
+            }
+
             const fd = new FormData();
             fd.append('ajax_save_marks', '1'); fd.append('student_id', studentId);
             fd.append('field', field); fd.append('value', value);
@@ -744,11 +804,16 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
             fd.append('semester_id', <?php echo $semester_id ?: 0; ?>);
             fetch(window.location.href, { method: 'POST', body: fd })
             .then(r => r.json()).then(d => {
-                const ind = document.getElementById('saveIndicator');
-                if(d.success) { ind.querySelector('span').textContent = 'ውጤት ተቀምጧል! ✅'; setTimeout(() => ind.classList.remove('show'), 1500); }
+                if(d.success) { 
+                    ind.querySelector('span').textContent = 'ውጤት ተቀምጧል! ✅'; 
+                    setTimeout(() => ind.classList.remove('show'), 1500); 
+                    SyncManager.fullSync();
+                }
                 else if(d.message === 'locked') { showLockModal(); ind.classList.remove('show'); }
                 else { ind.querySelector('span').textContent = 'ስህተት! ❌'; setTimeout(() => ind.classList.remove('show'), 2000); }
-            }).catch(() => { document.getElementById('saveIndicator').querySelector('span').textContent = 'ስህተት! ❌'; setTimeout(() => document.getElementById('saveIndicator').classList.remove('show'), 2000); });
+            }).catch(() => { 
+                saveOfflineFallback();
+            });
         }
 
         // Profile Modal
@@ -780,6 +845,15 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
                 if(sid) updateStudentTotal(sid); 
             }); 
         });
+    </script>
+    <script src="exam-main/assets/js/offline-db.js"></script>
+    <script src="exam-main/assets/js/sync-manager.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/exam/sw.js').catch(() => {});
+            });
+        }
     </script>
 </body>
 </html>

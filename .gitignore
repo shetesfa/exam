@@ -1,4 +1,4 @@
-﻿vendor/
+vendor/
 node_modules/
 *.zip
 *.tar.gz
@@ -10,3 +10,9 @@ node_modules/
 Thumbs.db
 .vscode/
 .idea/
+backups/
+exam-main/
+uploads/**
+!uploads/**/
+!uploads/**/.htaccess
+!uploads/**/.gitkeep

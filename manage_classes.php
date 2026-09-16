@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,75 +6,100 @@ $message = '';
 $error = '';
 
 // Handle Add/Edit/Delete
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if(isset($_POST['add_class'])) {
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $description = mysqli_real_escape_string($conn, $_POST['description']);
-        
-        $query = "INSERT INTO classes (name, description) VALUES ('$name', '$description')";
-        if(mysqli_query($conn, $query)) {
-            $message = "ክፍል በተሳካ ሁኔታ ተፈጥሯል! (Class created successfully!)";
-        } else {
-            $error = "ስህተት ተከስቷል! (Error: " . mysqli_error($conn) . ")";
-        }
-    }
-    
-    if(isset($_POST['edit_class'])) {
-        $class_id = mysqli_real_escape_string($conn, $_POST['class_id']);
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $description = mysqli_real_escape_string($conn, $_POST['description']);
-        
-        $query = "UPDATE classes SET name='$name', description='$description' WHERE id=$class_id";
-        if(mysqli_query($conn, $query)) {
-            $message = "የክፍል መረጃ ተሻሽሏል! (Class updated successfully!)";
-        } else {
-            $error = "ስህተት ተከስቷል! (Error: " . mysqli_error($conn) . ")";
-        }
-    }
-    
-    if(isset($_POST['delete_class'])) {
-        $class_id = mysqli_real_escape_string($conn, $_POST['class_id']);
-        
-        // Check if class has students
-        $check_students = mysqli_query($conn, "SELECT id FROM students WHERE class_id=$class_id");
-        if(mysqli_num_rows($check_students) > 0) {
-            $error = "ይህ ክፍል ተማሪዎች አሉት! መጀመሪያ ተማሪዎቹን ያስተላልፉ (Class has students!)";
-        } else {
-            // Check if class has teacher assignments
-            $check_assignments = mysqli_query($conn, "SELECT id FROM teacher_class WHERE class_id=$class_id");
-            if(mysqli_num_rows($check_assignments) > 0) {
-                // Delete assignments first
-                mysqli_query($conn, "DELETE FROM teacher_class WHERE class_id=$class_id");
-            }
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (isset($_POST['add_class'])) {
+            $name = trim($_POST['name'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $grade_id = intval($_POST['grade_id'] ?? 0) ?: null;
             
-            $query = "DELETE FROM classes WHERE id=$class_id";
-            if(mysqli_query($conn, $query)) {
-                $message = "ክፍል ተሰርዟል! (Class deleted successfully!)";
+            if (!empty($name)) {
+                $saved = dbExecute($conn, "INSERT INTO classes (name, description, grade_id) VALUES (?, ?, ?)", "ssi", [$name, $description, $grade_id]);
+                if ($saved) {
+                    $message = "ክፍሉ በተሳካ ሁኔታ ተፈጥሯል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
             } else {
-                $error = "ስህተት ተከስቷል! (Error: " . mysqli_error($conn) . ")";
+                $error = "እባክዎ የክፍል ስም ያስገቡ!";
+            }
+        }
+        
+        if (isset($_POST['edit_class'])) {
+            $class_id = intval($_POST['class_id'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $description = trim($_POST['description'] ?? '');
+            $grade_id = intval($_POST['grade_id'] ?? 0) ?: null;
+            
+            if ($class_id > 0 && !empty($name)) {
+                $updated = dbExecute($conn, "UPDATE classes SET name = ?, description = ?, grade_id = ? WHERE id = ?", "ssii", [$name, $description, $grade_id, $class_id]);
+                if ($updated) {
+                    $message = "የክፍል መረጃው ተሻሽሏል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
+        }
+        
+        if (isset($_POST['delete_class'])) {
+            $class_id = intval($_POST['class_id'] ?? 0);
+            
+            if ($class_id > 0) {
+                // Check if class has students
+                $students_count = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students WHERE class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)", "i", [$class_id]);
+                if ($students_count && $students_count['cnt'] > 0) {
+                    $error = "ይህ ክፍል ተማሪዎች አሉት! መጀመሪያ ተማሪዎቹን ወደ ሌላ ክፍል ያስተላልፉ።";
+                } else {
+                    // Delete assignments first
+                    dbExecute($conn, "DELETE FROM teacher_class WHERE class_id = ?", "i", [$class_id]);
+                    $deleted = dbExecute($conn, "DELETE FROM classes WHERE id = ?", "i", [$class_id]);
+                    if ($deleted) {
+                        $message = "ክፍሉ ተሰርዟል!";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
             }
         }
     }
 }
 
-// Get all classes with statistics
+// Get all classes with statistics + their grade/division (if assigned)
 $classes_query = "SELECT c.*, 
+                  g.name_am AS grade_name, g.level_number,
+                  d.code AS division_code, d.name_am AS division_name,
                   COUNT(DISTINCT s.id) as student_count,
                   COUNT(DISTINCT tc.teacher_id) as teacher_count
                   FROM classes c
+                  LEFT JOIN grades g ON c.grade_id = g.id
+                  LEFT JOIN divisions d ON g.division_id = d.id
                   LEFT JOIN students s ON c.id = s.class_id
                   LEFT JOIN teacher_class tc ON c.id = tc.class_id
                   GROUP BY c.id
-                  ORDER BY c.name";
+                  ORDER BY d.sort_order, g.level_number, c.name";
 $classes = mysqli_query($conn, $classes_query);
+
+// Grade picker options, grouped by division (for the add/edit forms)
+$grades_by_division = [];
+$grades_res = mysqli_query($conn, "SELECT g.id, g.name_am, g.level_number, d.name_am AS division_name, d.sort_order
+                                    FROM grades g JOIN divisions d ON g.division_id = d.id
+                                    ORDER BY d.sort_order, g.level_number");
+if ($grades_res) {
+    while ($g = mysqli_fetch_assoc($grades_res)) {
+        $grades_by_division[$g['division_name']][] = $g;
+    }
+}
+
+$nav_active = 'manage_classes';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images\icon.png">
     <title>ክፍሎች አስተዳደር | አጸደ ትጉሃን </title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -319,7 +343,7 @@ $classes = mysqli_query($conn, $classes_query);
 
         .classes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 25px;
             margin-top: 20px;
         }
@@ -477,59 +501,42 @@ $classes = mysqli_query($conn, $classes_query);
         }
 
         @media (max-width: 768px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
+            .section-header h2 { font-size: 17px; }
+            .form-grid { grid-template-columns: 1fr; }
             .classes-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
             }
-            
+            .class-card { padding: 15px 12px; }
+            .class-actions { flex-direction: column; }
+            .class-actions .btn { width: 100%; justify-content: center; min-height: 38px; }
+            .stats-overview { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+            .stat-card { padding: 12px 8px; }
+            .stat-card .number { font-size: 24px; }
+            .stat-card .label { font-size: 12px; }
             .class-stats {
                 flex-direction: column;
                 gap: 10px;
             }
-            
             .nav-links {
                 justify-content: center;
             }
+            .modal-content { width: 95%; margin: 20px auto; padding: 20px 14px; border-radius: 12px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">⛪</div>
-                <div class="title">
-                    <h1>አጸደ ተጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>ክፍሎች አስተዳደር | Class Management</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="btn btn-primary">← ወደ ዳሽቦርድ</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
-        <div class="message success">✅ <?php echo $message; ?></div>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if($error): ?>
-        <div class="message error">⚠️ <?php echo $error; ?></div>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <!-- Statistics Overview -->
@@ -564,14 +571,28 @@ $classes = mysqli_query($conn, $classes_query);
                 <h2><span>➕</span> አዲስ ክፍል መፍጠሪያ</h2>
             </div>
             <form method="POST">
+                <?php echo csrfField(); ?>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>የክፍል ስም (Class Name) <span style="color: var(--error-red);">*</span></label>
+                        <label>የክፍል ስም <span style="color: var(--error-red);">*</span></label>
                         <input type="text" name="name" class="form-control" required 
-                               placeholder="ለምሳሌ: 7ኛ ክፍል (Grade 7)">
+                               placeholder="ለምሳሌ: 7ኛ ክፍል">
                     </div>
                     <div class="form-group">
-                        <label>መግለጫ (Description)</label>
+                        <label>የትምህርት ደረጃ / ክፍል</label>
+                        <select name="grade_id" class="form-control">
+                            <option value="">-- ያልተመደበ --</option>
+                            <?php foreach ($grades_by_division as $divName => $gradeList): ?>
+                                <optgroup label="<?php echo htmlspecialchars($divName); ?>">
+                                    <?php foreach ($gradeList as $g): ?>
+                                        <option value="<?php echo $g['id']; ?>"><?php echo htmlspecialchars($g['name_am']); ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>መግለጫ</label>
                         <textarea name="description" class="form-control" 
                                   placeholder="ስለ ክፍሉ አጭር መግለጫ..."></textarea>
                     </div>
@@ -597,6 +618,17 @@ $classes = mysqli_query($conn, $classes_query);
                 ?>
                 <div class="class-card">
                     <div class="class-name"><?php echo htmlspecialchars($class['name']); ?></div>
+                    <?php if($class['grade_name']): ?>
+                    <div style="display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:8px;
+                        background:<?php echo $class['division_code']==='CHILDREN' ? '#DBEAFE' : '#FEF3C7'; ?>;
+                        color:<?php echo $class['division_code']==='CHILDREN' ? '#1D4ED8' : '#92400E'; ?>;">
+                        <?php echo htmlspecialchars($class['division_name'] . ' · ' . $class['grade_name']); ?>
+                    </div>
+                    <?php else: ?>
+                    <div style="display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:8px;background:#F3F4F6;color:#6B7280;">
+                        ⚠️ ደረጃ ያልተመደበ
+                    </div>
+                    <?php endif; ?>
                     <?php if($class['description']): ?>
                     <div class="class-description"><?php echo htmlspecialchars($class['description']); ?></div>
                     <?php endif; ?>
@@ -616,12 +648,13 @@ $classes = mysqli_query($conn, $classes_query);
                         <a href="manage_students.php?class_id=<?php echo $class['id']; ?>" class="btn-view">
                             👥 ተማሪዎች
                         </a>
-                        <button onclick="editClass(<?php echo $class['id']; ?>, '<?php echo htmlspecialchars($class['name']); ?>', '<?php echo htmlspecialchars($class['description']); ?>')" 
+                        <button onclick="editClass(<?php echo $class['id']; ?>, '<?php echo htmlspecialchars($class['name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($class['description'], ENT_QUOTES); ?>', <?php echo $class['grade_id'] ? (int)$class['grade_id'] : 'null'; ?>)" 
                                 class="btn-edit">
                             ✏️ አስተካክል
                         </button>
                         <form method="POST" style="display: inline;" 
                               onsubmit="return confirm('ክፍሉን መሰረዝ እርግጠኛ ነዎት? ይህ ክዋኔ ሊቀለበስ አይችልም!')">
+                            <?php echo csrfField(); ?>
                             <input type="hidden" name="class_id" value="<?php echo $class['id']; ?>">
                             <button type="submit" name="delete_class" class="btn-delete">
                                 🗑️ ሰርዝ
@@ -647,10 +680,24 @@ $classes = mysqli_query($conn, $classes_query);
             <span class="close" onclick="closeModal()">&times;</span>
             <h2 style="color: var(--brown-dark); margin-bottom: 20px;">የክፍል መረጃ አስተካክል</h2>
             <form method="POST" id="editForm">
+                <?php echo csrfField(); ?>
                 <input type="hidden" name="class_id" id="edit_id">
                 <div class="form-group">
                     <label>የክፍል ስም <span style="color: var(--error-red);">*</span></label>
                     <input type="text" name="name" id="edit_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>የትምህርት ደረጃ / ክፍል</label>
+                    <select name="grade_id" id="edit_grade_id" class="form-control">
+                        <option value="">-- ያልተመደበ --</option>
+                        <?php foreach ($grades_by_division as $divName => $gradeList): ?>
+                            <optgroup label="<?php echo htmlspecialchars($divName); ?>">
+                                <?php foreach ($gradeList as $g): ?>
+                                    <option value="<?php echo $g['id']; ?>"><?php echo htmlspecialchars($g['name_am']); ?></option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>መግለጫ</label>
@@ -664,10 +711,11 @@ $classes = mysqli_query($conn, $classes_query);
     </div>
 
     <script>
-        function editClass(id, name, description) {
+        function editClass(id, name, description, gradeId) {
             document.getElementById('edit_id').value = id;
             document.getElementById('edit_name').value = name;
             document.getElementById('edit_description').value = description || '';
+            document.getElementById('edit_grade_id').value = gradeId || '';
             document.getElementById('editModal').style.display = 'block';
         }
 

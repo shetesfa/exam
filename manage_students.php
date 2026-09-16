@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,125 +6,199 @@ $message = '';
 $error = '';
 
 // Handle Add/Edit/Delete/Reset PIN
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if(isset($_POST['add_student'])) {
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $class_id = mysqli_real_escape_string($conn, $_POST['class_id']);
-        $parent_phone = mysqli_real_escape_string($conn, $_POST['parent_phone']);
-        
-        // Insert student
-        $query = "INSERT INTO students (name, class_id, parent_phone) VALUES ('$name', $class_id, '$parent_phone')";
-        if(mysqli_query($conn, $query)) {
-            $new_student_id = mysqli_insert_id($conn);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (isset($_POST['add_student'])) {
+            $name = trim($_POST['name'] ?? '');
+            $class_id = intval($_POST['class_id'] ?? 0);
+            $parent_phone = trim($_POST['parent_phone'] ?? '');
             
-            // Create student login with default PIN (123)
-            $default_pin = '123';
-            if (!empty($parent_phone) && strlen($parent_phone) >= 4) {
-                $default_pin = substr($parent_phone, -4);
+            if (!empty($name) && $class_id > 0) {
+                $stmt = mysqli_prepare($conn, "INSERT INTO students (name, class_id, parent_phone) VALUES (?, ?, ?)");
+                if ($stmt) {
+                    mysqli_stmt_bind_param($stmt, "sis", $name, $class_id, $parent_phone);
+                    if (mysqli_stmt_execute($stmt)) {
+                        $new_student_id = mysqli_insert_id($conn);
+                        mysqli_stmt_close($stmt);
+                        
+                        // Default PIN
+                        $default_pin = '123';
+                        if (!empty($parent_phone) && strlen($parent_phone) >= 4) {
+                            $default_pin = substr($parent_phone, -4);
+                        }
+                        $hashed_pin = password_hash($default_pin, PASSWORD_DEFAULT);
+                        
+                        dbExecute(
+                            $conn,
+                            "INSERT INTO student_logins (student_id, pin, first_login) 
+                             VALUES (?, ?, 1)
+                             ON DUPLICATE KEY UPDATE pin = VALUES(pin), first_login = 1",
+                            "is",
+                            [$new_student_id, $hashed_pin]
+                        );
+                        
+                        $message = "ተማሪው በተሳካ ሁኔታ ተመዝግቧል! የመግቢያ ፒን: $default_pin";
+                    } else {
+                        $error = "ስህተት ተከስቷል! " . mysqli_stmt_error($stmt);
+                        mysqli_stmt_close($stmt);
+                    }
+                }
+            } else {
+                $error = "እባክዎ የተማሪውን ስም እና ክፍል በትክክል ያስገቡ!";
             }
-            $hashed_pin = password_hash($default_pin, PASSWORD_DEFAULT);
-            
-            mysqli_query($conn, "INSERT INTO student_logins (student_id, pin, first_login) 
-                                VALUES ($new_student_id, '$hashed_pin', 1)
-                                ON DUPLICATE KEY UPDATE pin = '$hashed_pin', first_login = 1");
-            
-            $message = "ተማሪ በተሳካ ሁኔታ ተመዝግቧል! የመግቢያ ፒን: $default_pin (Student added successfully! Login PIN: $default_pin)";
-        } else {
-            $error = "ስህተት ተከስቷል! (Error: " . mysqli_error($conn) . ")";
         }
-    }
-    
-    if(isset($_POST['edit_student'])) {
-        $student_id = mysqli_real_escape_string($conn, $_POST['student_id']);
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $class_id = mysqli_real_escape_string($conn, $_POST['class_id']);
-        $parent_phone = mysqli_real_escape_string($conn, $_POST['parent_phone']);
         
-        $query = "UPDATE students SET name='$name', class_id=$class_id, parent_phone='$parent_phone' WHERE id=$student_id";
-        if(mysqli_query($conn, $query)) {
-            $message = "የተማሪ መረጃ ተሻሽሏል! (Student updated successfully!)";
-        } else {
-            $error = "ስህተት ተከስቷል! (Error: " . mysqli_error($conn) . ")";
+        if (isset($_POST['edit_student'])) {
+            $student_id = intval($_POST['student_id'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $class_id = intval($_POST['class_id'] ?? 0);
+            $parent_phone = trim($_POST['parent_phone'] ?? '');
+            
+            if ($student_id > 0 && !empty($name) && $class_id > 0) {
+                $updated = dbExecute(
+                    $conn,
+                    "UPDATE students SET name = ?, class_id = ?, parent_phone = ? WHERE id = ?",
+                    "sisi",
+                    [$name, $class_id, $parent_phone, $student_id]
+                );
+                if ($updated) {
+                    $message = "የተማሪው መረጃ ተሻሽሏል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
         }
-    }
-    
-    if(isset($_POST['delete_student'])) {
-        $student_id = mysqli_real_escape_string($conn, $_POST['student_id']);
         
-        // Delete related records
-        mysqli_query($conn, "DELETE FROM marks WHERE student_id=$student_id");
-        mysqli_query($conn, "DELETE FROM attendance_records WHERE student_id=$student_id");
-        mysqli_query($conn, "DELETE FROM student_logins WHERE student_id=$student_id");
-        mysqli_query($conn, "DELETE FROM students WHERE id=$student_id");
-        
-        $message = "ተማሪ ተሰርዟል! (Student deleted successfully!)";
-    }
+        if (isset($_POST['delete_student'])) {
+            $student_id = intval($_POST['student_id'] ?? 0);
+            
+            if ($student_id > 0) {
+                // Soft-delete marks and attendance to preserve historical records
+                dbExecute($conn, "UPDATE marks SET is_deleted = 1 WHERE student_id = ?", "i", [$student_id]);
+                dbExecute($conn, "UPDATE attendance_records SET is_deleted = 1 WHERE student_id = ?", "i", [$student_id]);
+                // Hard-delete login credentials (no is_deleted column)
+                dbExecute($conn, "DELETE FROM student_logins WHERE student_id = ?", "i", [$student_id]);
+                // Soft-delete the student
+                dbExecute($conn, "UPDATE students SET is_deleted = 1 WHERE id = ?", "i", [$student_id]);
+                auditLog($conn, 'student_deleted', 'students', $student_id, null);
+                
+                $message = "ተማሪው ተሰርዟል!";
+            }
+        }
 
-    // HANDLE PIN RESET
-    if(isset($_POST['reset_student_pin'])) {
-        $student_id = intval($_POST['student_id']);
-        $new_pin = '123';
-        $hashed_pin = password_hash($new_pin, PASSWORD_DEFAULT);
-        
-        $pin_query = "INSERT INTO student_logins (student_id, pin, first_login, login_attempts, locked_until) 
-                      VALUES ($student_id, '$hashed_pin', 1, 0, NULL)
-                      ON DUPLICATE KEY UPDATE pin = '$hashed_pin', first_login = 1, login_attempts = 0, locked_until = NULL";
-        
-        if (mysqli_query($conn, $pin_query)) {
-            $student_name_query = mysqli_query($conn, "SELECT name FROM students WHERE id = $student_id");
-            $student_name_row = mysqli_fetch_assoc($student_name_query);
-            $student_name = $student_name_row ? $student_name_row['name'] : 'ተማሪ';
-            
-            $message = "የ{$student_name} ፒን ወደ 123 ተመልሷል! (PIN has been reset to 123)";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+        // HANDLE PIN RESET
+        if (isset($_POST['reset_student_pin'])) {
+            $student_id = intval($_POST['student_id'] ?? 0);
+            if ($student_id > 0) {
+                $new_pin = '123';
+                $hashed_pin = password_hash($new_pin, PASSWORD_DEFAULT);
+                
+                $reset = dbExecute(
+                    $conn,
+                    "INSERT INTO student_logins (student_id, pin, first_login, login_attempts, locked_until) 
+                     VALUES (?, ?, 1, 0, NULL)
+                     ON DUPLICATE KEY UPDATE pin = VALUES(pin), first_login = 1, login_attempts = 0, locked_until = NULL",
+                    "is",
+                    [$student_id, $hashed_pin]
+                );
+                
+                if ($reset) {
+                    $student_name_row = dbFetchOne($conn, "SELECT name FROM students WHERE id = ?", "i", [$student_id]);
+                    $student_name = $student_name_row ? $student_name_row['name'] : 'ተማሪ';
+                    $message = "የ{$student_name} ፒን ወደ 123 ተመልሷል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
         }
-    }
-    
-    // HANDLE TOGGLE STUDENT PORTAL ACCESS
-    if(isset($_POST['toggle_portal'])) {
-        $student_id = intval($_POST['student_id']);
-        $current_status = intval($_POST['current_status']);
-        $new_status = $current_status ? 0 : 1;
         
-        $toggle_query = "UPDATE students SET student_portal_enabled = $new_status WHERE id = $student_id";
-        if (mysqli_query($conn, $toggle_query)) {
-            $status_text = $new_status ? 'ነቅቷል (Enabled)' : 'ተሰናክሏል (Disabled)';
-            $message = "የተማሪ ፖርታል መዳረሻ $status_text!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+        // HANDLE TOGGLE STUDENT PORTAL ACCESS
+        if (isset($_POST['toggle_portal'])) {
+            $student_id = intval($_POST['student_id'] ?? 0);
+            $current_status = intval($_POST['current_status'] ?? 0);
+            $new_status = $current_status ? 0 : 1;
+            
+            if ($student_id > 0) {
+                $toggled = dbExecute($conn, "UPDATE students SET student_portal_enabled = ? WHERE id = ?", "ii", [$new_status, $student_id]);
+                if ($toggled) {
+                    $status_text = $new_status ? 'በርቷል' : 'ጠፍቷል';
+                    $message = "የተማሪ ፖርታል መዳረሻ $status_text!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
         }
     }
 }
 
 // Get all classes
-$classes_query = "SELECT * FROM classes ORDER BY name";
-$classes = mysqli_query($conn, $classes_query);
+$classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY id ASC");
 
 // Get search filter
-$search_filter = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
+$search_filter = isset($_GET['search']) ? trim($_GET['search']) : '';
+
+// Pagination - 30 per page. Was unbounded before; fine at 84 rows today,
+// but will not scale once Children division adds more students.
+$per_page = 30;
+$page = max(1, intval($_GET['page'] ?? 1));
+$offset = ($page - 1) * $per_page;
 
 // Get all students with class names and portal status - WITH SEARCH
-$students_query = "SELECT s.*, c.name as class_name,
-                   COALESCE(sl.pin IS NOT NULL, 0) as has_pin,
-                   COALESCE(sl.first_login, 1) as pin_first_login,
-                   s.student_portal_enabled
-                   FROM students s
-                   JOIN classes c ON s.class_id = c.id
-                   LEFT JOIN student_logins sl ON s.id = sl.student_id";
-if(!empty($search_filter)) {
-    $students_query .= " WHERE s.name LIKE '%$search_filter%'";
+if (!empty($search_filter)) {
+    $searchParam = '%' . $search_filter . '%';
+    $count_row = dbFetchOne(
+        $conn,
+        "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id
+         WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL) AND (s.name LIKE ? OR c.name LIKE ?)",
+        "ss",
+        [$searchParam, $searchParam]
+    );
+    $total_students = $count_row ? (int)$count_row['cnt'] : 0;
+    $students = dbQuery(
+        $conn,
+        "SELECT s.*, c.name as class_name,
+                COALESCE(sl.pin IS NOT NULL, 0) as has_pin,
+                COALESCE(sl.first_login, 1) as pin_first_login,
+                s.student_portal_enabled
+         FROM students s
+         JOIN classes c ON s.class_id = c.id
+         LEFT JOIN student_logins sl ON s.id = sl.student_id
+         WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)
+           AND (s.name LIKE ? OR c.name LIKE ?)
+         ORDER BY c.id, s.name
+         LIMIT $per_page OFFSET $offset",
+        "ss",
+        [$searchParam, $searchParam]
+    );
+} else {
+    $count_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)");
+    $total_students = $count_row ? (int)$count_row['cnt'] : 0;
+    $students = dbQuery(
+        $conn,
+        "SELECT s.*, c.name as class_name,
+                COALESCE(sl.pin IS NOT NULL, 0) as has_pin,
+                COALESCE(sl.first_login, 1) as pin_first_login,
+                s.student_portal_enabled
+         FROM students s
+         JOIN classes c ON s.class_id = c.id
+         LEFT JOIN student_logins sl ON s.id = sl.student_id
+         WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)
+         ORDER BY c.id, s.name
+         LIMIT $per_page OFFSET $offset"
+    );
 }
-$students_query .= " ORDER BY c.name, s.name";
-$students = mysqli_query($conn, $students_query);
+$total_pages = max(1, ceil($total_students / $per_page));
+
+$nav_active = 'manage_students';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>ተማሪዎች አስተዳደር | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -255,8 +328,9 @@ $students = mysqli_query($conn, $students_query);
         }
         .form-control:focus { outline: none; border-color: var(--gold-primary); }
 
-        .table-responsive { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; }
+        .table-responsive table { min-width: 800px; }
         th { background: var(--brown-dark); color: white; padding: 15px 10px; text-align: left; font-size: 13px; border: 1px solid var(--gold-dark); }
         td { padding: 12px 10px; border-bottom: 1px solid #E2E8F0; }
         tr:hover { background: #FEF9E7; }
@@ -296,49 +370,30 @@ $students = mysqli_query($conn, $students_query);
         }
 
         @media (max-width: 768px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
+            .section-header h2 { font-size: 17px; }
             .form-grid { grid-template-columns: 1fr; }
-            .action-buttons { flex-direction: column; }
-            .search-box { max-width: 100%; }
+            .action-buttons { flex-direction: column; gap: 4px; }
+            .action-buttons .btn { width: 100%; justify-content: center; min-height: 38px; }
+            .search-box { max-width: 100%; flex-direction: column; }
+            .search-input { width: 100%; min-width: 0; }
+            .btn-search, .btn-clear { width: 100%; text-align: center; justify-content: center; min-height: 44px; }
+            .modal-content { width: 95%; margin: 20px auto; padding: 20px 14px; border-radius: 12px; }
+            .info-box { flex-direction: column; align-items: flex-start; padding: 14px; gap: 10px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<div class=logo-img style=background:gold;display:flex;align-items:center;justify-content:center;font-size:24px;color:#8B4513;>⛪</div>');">
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>ተማሪዎች አስተዳደር | Student Management</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="btn btn-primary">← ወደ ዳሽቦርድ</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link active">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
-        <div class="message success">✅ <?php echo $message; ?></div>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if($error): ?>
-        <div class="message error">⚠️ <?php echo $error; ?></div>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <!-- Student Portal Info Box -->
@@ -357,13 +412,14 @@ $students = mysqli_query($conn, $students_query);
                 <h2>➕ አዲስ ተማሪ መመዝገቢያ</h2>
             </div>
             <form method="POST">
+                <?php echo csrfField(); ?>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>የተማሪ ስም (Student Name) <span style="color: red;">*</span></label>
+                        <label>የተማሪው ሙሉ ስም <span style="color: red;">*</span></label>
                         <input type="text" name="name" class="form-control" required placeholder="ሙሉ ስም">
                     </div>
                     <div class="form-group">
-                        <label>ክፍል (Class) <span style="color: red;">*</span></label>
+                        <label>ክፍል <span style="color: red;">*</span></label>
                         <select name="class_id" class="form-control" required>
                             <option value="">ክፍል ምረጥ</option>
                             <?php 
@@ -375,7 +431,7 @@ $students = mysqli_query($conn, $students_query);
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>የወላጅ ስልክ (Parent Phone)</label>
+                        <label>የወላጅ ስልክ ቁጥር</label>
                         <input type="text" name="parent_phone" class="form-control" placeholder="ከሆነ ያስገቡ...">
                         <small style="color: #666;">ፒን ከስልክ ቁጥር የመጨረሻ 4 አሃዝ ይወሰዳል (ወይም 123)</small>
                     </div>
@@ -390,7 +446,7 @@ $students = mysqli_query($conn, $students_query);
         <div class="section">
             <div class="section-header">
                 <h2>👥 የተማሪዎች ዝርዝር</h2>
-                <span><?php echo $students ? mysqli_num_rows($students) : 0; ?> ተማሪዎች</span>
+                <span><?php echo $total_students; ?> ተማሪዎች</span>
             </div>
 
             <!-- SEARCH BOX -->
@@ -407,7 +463,7 @@ $students = mysqli_query($conn, $students_query);
             <?php if(!empty($search_filter)): ?>
             <div class="search-results-info">
                 <span>🔍 የፍለጋ ውጤት: "<strong><?php echo htmlspecialchars($search_filter); ?></strong>"</span>
-                <span><?php echo $students ? mysqli_num_rows($students) : 0; ?> ተማሪዎች ተገኝተዋል</span>
+                <span><?php echo $total_students; ?> ተማሪዎች ተገኝተዋል</span>
             </div>
             <?php endif; ?>
 
@@ -438,6 +494,7 @@ $students = mysqli_query($conn, $students_query);
                             <td><?php echo htmlspecialchars($student['parent_phone'] ?: '---'); ?></td>
                             <td>
                                 <form method="POST" style="display: inline;">
+                                    <?php echo csrfField(); ?>
                                     <input type="hidden" name="student_id" value="<?php echo $student['id']; ?>">
                                     <input type="hidden" name="current_status" value="<?php echo $student['student_portal_enabled']; ?>">
                                     <button type="submit" name="toggle_portal" 
@@ -461,6 +518,7 @@ $students = mysqli_query($conn, $students_query);
                                     
                                     <form method="POST" style="display: inline;" 
                                           onsubmit="return confirm('የዚህን ተማሪ ፒን ወደ 123 ማስጀመር እርግጠኛ ነዎት?')">
+                                        <?php echo csrfField(); ?>
                                         <input type="hidden" name="student_id" value="<?php echo $student['id']; ?>">
                                         <button type="submit" name="reset_student_pin" class="btn btn-reset">
                                             🔄 Reset PIN
@@ -469,6 +527,7 @@ $students = mysqli_query($conn, $students_query);
                                     
                                     <form method="POST" style="display: inline;" 
                                           onsubmit="return confirm('እርግጠኛ ነዎት ተማሪውን መሰረዝ ይፈልጋሉ?')">
+                                        <?php echo csrfField(); ?>
                                         <input type="hidden" name="student_id" value="<?php echo $student['id']; ?>">
                                         <button type="submit" name="delete_student" class="btn btn-delete">🗑️ ሰርዝ</button>
                                     </form>
@@ -493,6 +552,20 @@ $students = mysqli_query($conn, $students_query);
                     </tbody>
                 </table>
             </div>
+
+            <?php if ($total_pages > 1): ?>
+            <div style="display:flex; justify-content:center; align-items:center; gap:8px; padding:15px; flex-wrap:wrap;">
+                <?php
+                $qs = !empty($search_filter) ? '&search=' . urlencode($search_filter) : '';
+                for ($p = 1; $p <= $total_pages; $p++):
+                    if ($p === $page): ?>
+                        <span style="padding:8px 14px; border-radius:8px; background:var(--gold-primary); color:var(--brown-dark); font-weight:700;"><?php echo $p; ?></span>
+                    <?php else: ?>
+                        <a href="?page=<?php echo $p; ?><?php echo $qs; ?>" style="padding:8px 14px; border-radius:8px; background:#F3F4F6; color:#555; text-decoration:none;"><?php echo $p; ?></a>
+                    <?php endif;
+                endfor; ?>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -502,6 +575,7 @@ $students = mysqli_query($conn, $students_query);
             <span class="close" onclick="closeModal()">&times;</span>
             <h2 style="color: var(--brown-dark); margin-bottom: 20px;">የተማሪ መረጃ አስተካክል</h2>
             <form method="POST" id="editForm">
+                <?php echo csrfField(); ?>
                 <input type="hidden" name="student_id" id="edit_id">
                 <div class="form-group">
                     <label>የተማሪ ስም <span style="color: red;">*</span></label>

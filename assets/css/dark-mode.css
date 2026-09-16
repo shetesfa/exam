@@ -1,0 +1,2606 @@
+/* ============================================================
+   assets/css/dark-mode.css
+   Global High-Specificity Dark Mode Stylesheet
+   አጸደ ትጉሃን ሰንበት ትምህርት ቤት Management System
+   ============================================================ */
+
+/* ── CSS VARIABLES OVERRIDE ON ROOT ── */
+html.dark-mode,
+html[data-theme="dark"] {
+  color-scheme: dark !important;
+  --bg-cream: #0B1120 !important;
+  --bg-page: #0B1120 !important;
+  --bg: #0B1120 !important;
+  --white: #1E293B !important;
+  --brown-dark: #FCD34D !important;
+  --brown-medium: #FBBF24 !important;
+  --brown-light: #F59E0B !important;
+  --primary: #FCD34D !important;
+  --text-primary: #F1F5F9 !important;
+  --gray-100: #1E293B !important;
+  --gray-200: #334155 !important;
+  --gray-300: #475569 !important;
+  --gold-pale: #0F172A !important;
+  --gold-primary: #F59E0B !important;
+  --gold-dark: #D97706 !important;
+  --gold-light: #FCD34D !important;
+  --pale: #0F172A !important;
+  --gold: #F59E0B !important;
+}
+
+/* ── HTML & BODY CANVAS ── */
+html.dark-mode,
+html.dark-mode body,
+body.dark-mode,
+html[data-theme="dark"] body {
+  background-color: #0B1120 !important;
+  background: #0B1120 !important;
+  color: #F1F5F9 !important;
+}
+
+/* ── MAIN CONTAINERS, SECTIONS & CARDS ── */
+html.dark-mode .section,
+body.dark-mode .section,
+html.dark-mode .card,
+body.dark-mode .card,
+html.dark-mode .card-box,
+html.dark-mode .info-card,
+html.dark-mode .profile-card,
+html.dark-mode .filter-card,
+html.dark-mode .month-card,
+html.dark-mode .method-card,
+html.dark-mode .section-card,
+html.dark-mode .table-card,
+html.dark-mode .table-wrapper,
+html.dark-mode .auth-box,
+html.dark-mode .login-box,
+html.dark-mode .login-card,
+html.dark-mode .welcome-card,
+html.dark-mode .settings-card,
+html.dark-mode .change-card,
+html.dark-mode .filter-panel,
+html.dark-mode .filter-section,
+html.dark-mode .photo-preview-card,
+html.dark-mode .box,
+html.dark-mode .empty-state,
+html.dark-mode .empty-box,
+html.dark-mode .white-box,
+html.dark-mode .form-section,
+html.dark-mode .stats-bar,
+html.dark-mode .controls,
+html.dark-mode .summary-section,
+html.dark-mode .compact-table,
+html.dark-mode .semester-card,
+html.dark-mode .history-section,
+html.dark-mode .semester-header,
+html.dark-mode .day-card,
+html.dark-mode .teacher-table-container,
+html.dark-mode .guidance-card,
+html.dark-mode .class-direct-card,
+html.dark-mode .exam-notice-banner,
+html.dark-mode .permissions-panel,
+html.dark-mode .request-review-card,
+html.dark-mode .modal-card,
+html.dark-mode .no-data {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* ── STUDENT LOGIN PORTAL (student_login.php) ── */
+html.dark-mode .login-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #F59E0B !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark-mode .login-card h1 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .login-card .subtitle {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .search-box input,
+html.dark-mode .pin-group input {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border: 1.5px solid #475569 !important;
+}
+
+html.dark-mode .search-box input:focus,
+html.dark-mode .pin-group input:focus {
+  border-color: #F59E0B !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+}
+
+html.dark-mode .search-results {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1.5px solid #F59E0B !important;
+  border-top: none !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark-mode .result-item {
+  border-bottom: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .result-item:hover {
+  background-color: #334155 !important;
+}
+
+html.dark-mode .result-item.selected {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark-mode .result-name {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .result-class {
+  background-color: #0F172A !important;
+  color: #94A3B8 !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .selected-student {
+  background-color: #064E3B !important;
+  border-color: #059669 !important;
+  color: #ECFDF5 !important;
+}
+
+html.dark-mode .selected-student .name {
+  color: #A7F3D0 !important;
+}
+
+html.dark-mode .selected-student .class {
+  color: #6EE7B7 !important;
+}
+
+html.dark-mode .selected-student .change-btn {
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .hint-box {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-color: #F59E0B !important;
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .hint-box strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .hint-box .pin-highlight {
+  background-color: #2D2305 !important;
+  color: #FCD34D !important;
+  border: 1px solid #78350F !important;
+}
+
+html.dark-mode .back-link {
+  color: #FCD34D !important;
+}
+
+/* ── MAIN LOGIN PAGE (index.php) ── */
+html.dark-mode .welcome-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #F59E0B !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark-mode .welcome-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .welcome-subtitle {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .amharic {
+  background-color: #2D2305 !important;
+  border-color: #78350F !important;
+  color: #FDE68A !important;
+}
+
+html.dark-mode .input-group input.form-control,
+html.dark-mode .input-group input[type="text"],
+html.dark-mode .input-group input[type="password"] {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+  border: 1.5px solid #475569 !important;
+}
+
+html.dark-mode .input-group input.form-control:focus,
+html.dark-mode .input-group input[type="text"]:focus,
+html.dark-mode .input-group input[type="password"]:focus {
+  background-color: #0F172A !important;
+  border-color: #F59E0B !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+}
+
+html.dark-mode .input-icon {
+  color: #F59E0B !important;
+}
+
+html.dark-mode .toggle-password-btn {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .toggle-password-btn:hover {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .student-portal-link {
+  border-top-color: #334155 !important;
+}
+
+/* ── STUDENT CHANGE PIN (student_change_pin.php) ── */
+html.dark-mode .welcome-text {
+  background-color: #0F172A !important;
+  color: #CBD5E1 !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .welcome-text strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .btn-back {
+  color: #FCD34D !important;
+}
+
+/* ── STUDENT DASHBOARD (dashboard_student.php) ── */
+html.dark-mode .semester-tabs {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .sem-tab {
+  background-color: #0F172A !important;
+  color: #CBD5E1 !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .sem-tab:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .sem-tab.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .day-cell.future {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .att-absent {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .grade-poor {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+}
+
+/* ── TEACHER DASHBOARD (dashboard_teacher.php) ── */
+html.dark-mode .classes-bar {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-mode .classes-bar h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .btn-class {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #CBD5E1 !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .btn-class:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .btn-class.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  border-color: #F59E0B !important;
+  box-shadow: 0 2px 10px rgba(217, 119, 6, 0.4) !important;
+}
+
+html.dark-mode .btn-class.locked {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+  border-color: #DC2626 !important;
+}
+
+html.dark-mode .student-badge {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #F59E0B !important;
+}
+
+html.dark-mode .class-info-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-mode .class-details h2 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-details p {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .scheme-editor {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .scheme-header h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .total-percentage {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #F59E0B !important;
+}
+
+html.dark-mode .scheme-item {
+  background-color: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .scheme-item label {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .scheme-item input {
+  background-color: #1E293B !important;
+  color: #F8FAFC !important;
+  border: 1.5px solid #475569 !important;
+}
+
+html.dark-mode .student-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-mode .student-card-header {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .student-name {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .student-number {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1.5px solid #F59E0B !important;
+}
+
+html.dark-mode .student-phone {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .total-score {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+html.dark-mode .mark-item {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+}
+
+html.dark-mode .mark-label {
+  color: #CBD5E1 !important;
+  font-weight: 600 !important;
+}
+
+html.dark-mode .mark-label small {
+  color: #FCD34D !important;
+  font-weight: 700 !important;
+}
+
+html.dark-mode .mark-input {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  color: #F8FAFC !important;
+  border: 1.5px solid #475569 !important;
+}
+
+html.dark-mode .mark-input:focus {
+  border-color: #F59E0B !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+}
+
+html.dark-mode .mark-input:read-only {
+  background-color: #0F172A !important;
+  color: #64748B !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .lock-warning {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+  border-color: #DC2626 !important;
+}
+
+html.dark-mode .admin-contact {
+  background-color: #1E293B !important;
+  color: #FCD34D !important;
+  border: 1px solid #475569 !important;
+}
+
+html.dark-mode .profile-modal-content,
+html.dark-mode .password-modal-content {
+  background-color: #1E293B !important;
+  border-color: #475569 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .profile-info-row {
+  border-bottom-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .pass-input {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .teacher-photo-btn {
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .profile-photo-large {
+  border-color: #F59E0B !important;
+}
+
+/* ── TEACHER MARKING SCHEME (teacher_marking_scheme.php) ── */
+html.dark-mode .class-tabs {
+  border-color: #334155 !important;
+}
+
+html.dark-mode .class-tab {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #CBD5E1 !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .class-tab:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .class-tab.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  border-color: #F59E0B !important;
+  box-shadow: 0 2px 10px rgba(217, 119, 6, 0.4) !important;
+}
+
+html.dark-mode .scheme-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+html.dark-mode .scheme-title {
+  color: #FCD34D !important;
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .component-label {
+  color: #CBD5E1 !important;
+  font-weight: 600 !important;
+}
+
+html.dark-mode .percentage-input {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+html.dark-mode .total-row {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #F1F5F9 !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .total-value.valid {
+  color: #34D399 !important;
+}
+
+html.dark-mode .total-value.invalid {
+  color: #F87171 !important;
+}
+
+/* ── TEACHER MARKS VIEWER (teacher_marks_viewer.php) ── */
+html.dark-mode .filter-section {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .filter-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .filter-group label {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .filter-group select {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .teacher-btn {
+  background-color: #0F172A !important;
+  color: #CBD5E1 !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .teacher-btn:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .teacher-btn.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .results-card {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .results-header {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .results-header h2 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-direct-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+/* ── ATTENDANCE VIEWS & CONTROLLER ── */
+html.dark-mode .class-bar {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .class-chip {
+  background-color: #0F172A !important;
+  color: #CBD5E1 !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .class-chip:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-chip.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .class-chip .count {
+  background-color: #1E293B !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .info-bar {
+  background-color: #1E293B !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .table-scroll th:first-child,
+html.dark-mode .table-scroll td:first-child,
+html.dark-mode .table-scroll th:nth-child(2),
+html.dark-mode .table-scroll td:nth-child(2) {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .table-scroll tbody tr:hover td:first-child,
+html.dark-mode .table-scroll tbody tr:hover td:nth-child(2) {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .day-col.weekend,
+html.dark-mode .ld-weekend {
+  background-color: #13271D !important;
+}
+
+html.dark-mode .day-col.today,
+html.dark-mode .ld-today {
+  background-color: #2D2305 !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .day-col.closed {
+  background-color: #261B1B !important;
+}
+
+html.dark-mode .day-col.past {
+  background-color: #172033 !important;
+}
+
+html.dark-mode .status-empty,
+html.dark-mode .att-dot.empty {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+}
+
+/* ── ATTENDANCE DAYS CONTROL (attendance_days_control.php) ── */
+html.dark-mode .day-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .day-card.open {
+  background-color: #17261E !important;
+  border-color: #059669 !important;
+}
+
+html.dark-mode .status-open {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+}
+
+html.dark-mode .status-closed {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .badge-today {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+}
+
+/* ── TEACHER PROFILE & MANAGEMENT (teacher_profile.php, manage_teachers.php) ── */
+html.dark-mode .btn-outline {
+  background-color: #1E293B !important;
+  color: #CBD5E1 !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .btn-outline:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .stat-data .label {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .stat-data .value {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .detail-row {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .detail-label {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .detail-val {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .chip,
+html.dark-mode .class-tag {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .request-banner {
+  background-color: #2D2305 !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .request-banner-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .doc-item {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .doc-item:hover {
+  background-color: #1E293B !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .request-review-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #F59E0B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .request-review-header {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .request-detail-box {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #F1F5F9 !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .request-reason-box {
+  background-color: #2D2305 !important;
+  color: #FDE68A !important;
+  border: 1px solid #78350F !important;
+}
+
+/* ── LESSON PLAN (lesson_plan_editor.php, lesson_plan_admin_review.php) ── */
+html.dark-mode .ocr-banner {
+  background: linear-gradient(135deg, #2D2305, #1E1B0A) !important;
+  border-color: #D97706 !important;
+  color: #FEF3C7 !important;
+}
+
+html.dark-mode .btn-ocr-secondary {
+  background-color: #1E293B !important;
+  color: #FCD34D !important;
+  border-color: #D97706 !important;
+}
+
+html.dark-mode .paper-table {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .paper-table th {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .paper-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .paper-table tbody tr:hover {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .btn-action-edit {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .feedback-box {
+  background-color: #2D2305 !important;
+  color: #FDE68A !important;
+  border-color: #78350F !important;
+}
+
+html.dark-mode .kpi-title {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .kpi-num {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .filter-control {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode table.plans-table {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode table.plans-table th {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode table.plans-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode table.plans-table tbody tr:hover {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .guidance-card {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .plan-grid-spec {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .feedback-textarea {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .thumb-img {
+  border-color: #334155 !important;
+}
+
+/* ── PRINT RESULTS PAGE (print_results.php) ── */
+html.dark-mode .controls,
+html.dark-mode .stats-bar,
+html.dark-mode .summary-section,
+html.dark-mode .compact-table {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .control-group select,
+html.dark-mode .control-group input {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode .control-group label {
+  color: #CBD5E1 !important;
+}
+
+/* ── SEMESTER & HISTORY (semester.php, semester_history.php) ── */
+html.dark-mode .semester-card,
+html.dark-mode .history-section,
+html.dark-mode .semester-header {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .warning-box {
+  background-color: #2D2305 !important;
+  border-color: #F59E0B !important;
+  color: #FDE68A !important;
+}
+
+/* ── MANAGE ASSIGNMENTS (manage_assignments.php) ── */
+html.dark-mode .teacher-table-container {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .teacher-icon {
+  background-color: #0F172A !important;
+  border-color: #F59E0B !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-badge {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+/* ── ADMIN SETTINGS (admin_settings.php) ── */
+html.dark-mode .permissions-panel {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .permission-label {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .permission-hint,
+html.dark-mode .settings-help-text {
+  color: #94A3B8 !important;
+}
+
+/* ── NOTIFICATIONS (notifications.php) ── */
+html.dark-mode .notif {
+  border-bottom-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .notif.unread {
+  background-color: #17261E !important;
+  border-left: 4px solid #059669 !important;
+}
+
+/* ── DASHBOARD EXAM BANNER & QUICK NOTICES ── */
+html.dark-mode .exam-notice-banner {
+  background-color: #2D2305 !important;
+  border-color: #F59E0B !important;
+  color: #FDE68A !important;
+}
+
+/* ── SPECIFIC ENTITY CARDS ── */
+html.dark-mode .teacher-card,
+html.dark-mode .student-card,
+html.dark-mode .class-card,
+html.dark-mode .stat-item,
+html.dark-mode .stat-mini,
+html.dark-mode .kpi-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-mode .teacher-card:hover,
+html.dark-mode .student-card:hover,
+html.dark-mode .class-card:hover {
+  border-color: #F59E0B !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Stat Cards */
+html.dark-mode .stat-card,
+body.dark-mode .stat-card {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+  border-color: #334155 !important;
+  border-left: 5px solid #F59E0B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .stat-value,
+html.dark-mode .stat-val {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .stat-label,
+html.dark-mode .stat-lbl {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .stat-icon {
+  background-color: #0F172A !important;
+  color: #F59E0B !important;
+}
+
+/* Section & Card Headers */
+html.dark-mode .section-header,
+html.dark-mode .card-header {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .section-header h2,
+html.dark-mode .card-title,
+html.dark-mode .header-title {
+  color: #FCD34D !important;
+}
+
+/* ── LOGOS & AVATARS: REMOVE JARSH WHITE BORDERS ── */
+html.dark-mode .logo-img,
+html.dark-mode .logo-icon,
+html.dark-mode .logo-circle,
+html.dark-mode .logo-placeholder,
+html.dark-mode .teacher-avatar,
+html.dark-mode .avatar-box,
+html.dark-mode .avatar-img,
+html.dark-mode .logo img {
+  border-color: #F59E0B !important;
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+}
+
+/* ── TYPOGRAPHY ── */
+html.dark-mode h1,
+html.dark-mode h2,
+html.dark-mode h3,
+html.dark-mode h4,
+html.dark-mode h5,
+html.dark-mode h6 {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode p,
+html.dark-mode span:not(.badge):not(.status-badge):not(.tag):not(.btn-text),
+html.dark-mode label,
+html.dark-mode div {
+  color: inherit;
+}
+
+html.dark-mode label,
+html.dark-mode .form-label,
+html.dark-mode .form-group label {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .text-muted,
+html.dark-mode .help-text,
+html.dark-mode small {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode strong,
+html.dark-mode b {
+  color: #F8FAFC !important;
+}
+
+/* ── SITE HEADER & NAVIGATION ── */
+html.dark-mode .site-header,
+html.dark-mode .header {
+  background: linear-gradient(135deg, #18110B 0%, #2A1A0F 100%) !important;
+  border-bottom: 1px solid #78350F !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark-mode .site-title h1,
+html.dark-mode .header .title h1 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .site-title p,
+html.dark-mode .header .title p {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .user-name {
+  background: rgba(0, 0, 0, 0.4) !important;
+  color: #E2E8F0 !important;
+}
+
+html.dark-mode .user-name strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .site-nav,
+html.dark-mode .nav {
+  background-color: #1E293B !important;
+  border-bottom: 1px solid #334155 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark-mode .nav-link {
+  color: #CBD5E1 !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+html.dark-mode .nav-link:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .nav-link.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  border-color: #F59E0B !important;
+  font-weight: 700 !important;
+}
+
+html.dark-mode .nav-drawer {
+  background-color: #1E293B !important;
+  border-top-color: #334155 !important;
+}
+
+html.dark-mode .nav-drawer .nav-link {
+  border-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .hamburger-btn {
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .ham-line {
+  background-color: #F59E0B !important;
+}
+
+html.dark-mode .btn-header-notif {
+  background-color: #1E293B !important;
+  border-color: #F59E0B !important;
+  color: #FCD34D !important;
+}
+
+/* ── TABLES & BORDERS ── */
+html.dark-mode table,
+html.dark-mode .table,
+html.dark-mode .preview-table,
+html.dark-mode .history-table,
+html.dark-mode .paper-table,
+html.dark-mode .compact-table,
+html.dark-mode .marks-table,
+html.dark-mode .teacher-table {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode thead th,
+html.dark-mode th,
+html.dark-mode .table-header-bar {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+  border-bottom: 2px solid #475569 !important;
+}
+
+html.dark-mode tbody td,
+html.dark-mode td,
+html.dark-mode .preview-table td,
+html.dark-mode .history-table td,
+html.dark-mode .paper-table td,
+html.dark-mode .compact-table td,
+html.dark-mode .marks-table td,
+html.dark-mode .teacher-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-color: #334155 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+html.dark-mode tr:hover td,
+html.dark-mode tbody tr:hover td,
+html.dark-mode .table-scroll tbody tr:hover td,
+html.dark-mode .preview-table tr:hover td,
+html.dark-mode .history-table tr:hover td,
+html.dark-mode .teacher-table tbody tr:hover td {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .table-responsive,
+html.dark-mode .table-scroll {
+  border-color: #334155 !important;
+}
+
+html.dark-mode .teacher-class {
+  color: #FBBF24 !important;
+}
+
+html.dark-mode .marks-table .total {
+  color: #FCD34D !important;
+}
+
+/* ── COMPREHENSIVE FORMS, INPUTS, SELECTS & TEXTAREAS ── */
+html.dark-mode input,
+html.dark-mode select,
+html.dark-mode textarea,
+html.dark-mode .form-control,
+html.dark-mode .filter-control,
+html.dark-mode .search-input,
+html.dark-mode .pass-input,
+html.dark-mode .percentage-input,
+html.dark-mode .mark-input,
+html.dark-mode .feedback-textarea,
+html.dark-mode .input-group input,
+html.dark-mode .form-group input,
+html.dark-mode .form-group select,
+html.dark-mode .filter-group select,
+html.dark-mode .control-group select,
+html.dark-mode .control-group input,
+html.dark-mode .add-teacher-form select,
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea,
+body.dark-mode .form-control,
+body.dark-mode .filter-control,
+body.dark-mode .search-input,
+body.dark-mode .pass-input,
+body.dark-mode .percentage-input,
+body.dark-mode .mark-input,
+body.dark-mode .feedback-textarea,
+body.dark-mode .input-group input,
+body.dark-mode .form-group input,
+body.dark-mode .form-group select,
+body.dark-mode .filter-group select,
+body.dark-mode .control-group select,
+body.dark-mode .control-group input,
+body.dark-mode .add-teacher-form select,
+.dark-mode input,
+.dark-mode select,
+.dark-mode textarea,
+.dark-mode .form-control,
+.dark-mode .filter-control,
+.dark-mode .search-input,
+.dark-mode .pass-input,
+.dark-mode .percentage-input,
+.dark-mode .mark-input,
+.dark-mode .feedback-textarea,
+.dark-mode .input-group input,
+.dark-mode .form-group input,
+.dark-mode .form-group select,
+.dark-mode .filter-group select,
+.dark-mode .control-group select,
+.dark-mode .control-group input,
+.dark-mode .add-teacher-form select,
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .filter-control,
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .pass-input,
+[data-theme="dark"] .percentage-input,
+[data-theme="dark"] .mark-input,
+[data-theme="dark"] .feedback-textarea,
+[data-theme="dark"] .input-group input,
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select,
+[data-theme="dark"] .filter-group select,
+[data-theme="dark"] .control-group select,
+[data-theme="dark"] .control-group input,
+[data-theme="dark"] .add-teacher-form select {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+  border: 1.5px solid #334155 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode input:focus,
+html.dark-mode select:focus,
+html.dark-mode textarea:focus,
+html.dark-mode .form-control:focus,
+html.dark-mode .filter-control:focus,
+html.dark-mode .search-input:focus,
+html.dark-mode .input-group input:focus,
+html.dark-mode .form-group input:focus,
+body.dark-mode input:focus,
+body.dark-mode select:focus,
+body.dark-mode textarea:focus,
+body.dark-mode .form-control:focus,
+body.dark-mode .filter-control:focus,
+body.dark-mode .search-input:focus,
+body.dark-mode .input-group input:focus,
+body.dark-mode .form-group input:focus,
+.dark-mode input:focus,
+.dark-mode select:focus,
+.dark-mode textarea:focus,
+.dark-mode .form-control:focus,
+.dark-mode .filter-control:focus,
+.dark-mode .search-input:focus,
+.dark-mode .input-group input:focus,
+.dark-mode .form-group input:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .filter-control:focus,
+[data-theme="dark"] .search-input:focus,
+[data-theme="dark"] .input-group input:focus,
+[data-theme="dark"] .form-group input:focus {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-color: #F59E0B !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+  outline: none !important;
+}
+
+/* Autofill handling so Chrome/Edge/Safari won't paint white box */
+html.dark-mode input:-webkit-autofill,
+html.dark-mode input:-webkit-autofill:hover,
+html.dark-mode input:-webkit-autofill:focus,
+html.dark-mode textarea:-webkit-autofill,
+html.dark-mode select:-webkit-autofill,
+body.dark-mode input:-webkit-autofill,
+body.dark-mode input:-webkit-autofill:hover,
+body.dark-mode input:-webkit-autofill:focus,
+body.dark-mode textarea:-webkit-autofill,
+body.dark-mode select:-webkit-autofill,
+.dark-mode input:-webkit-autofill,
+.dark-mode textarea:-webkit-autofill,
+.dark-mode select:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] textarea:-webkit-autofill,
+[data-theme="dark"] select:-webkit-autofill {
+  -webkit-text-fill-color: #F8FAFC !important;
+  -webkit-box-shadow: 0 0 0px 1000px #0F172A inset !important;
+  box-shadow: 0 0 0px 1000px #0F172A inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+html.dark-mode input::placeholder,
+html.dark-mode textarea::placeholder,
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder,
+.dark-mode input::placeholder,
+.dark-mode textarea::placeholder,
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
+html.dark-mode select option,
+body.dark-mode select option,
+.dark-mode select option,
+[data-theme="dark"] select option {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .add-teacher-form,
+html.dark-mode .add-form,
+html.dark-mode .form-card,
+body.dark-mode .add-teacher-form,
+body.dark-mode .add-form,
+body.dark-mode .form-card,
+.dark-mode .add-teacher-form,
+.dark-mode .add-form,
+.dark-mode .form-card,
+[data-theme="dark"] .add-teacher-form,
+[data-theme="dark"] .add-form,
+[data-theme="dark"] .form-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 2px dashed #475569 !important;
+}
+
+/* ── MODALS & OVERLAYS ── */
+html.dark-mode .modal,
+html.dark-mode .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+html.dark-mode .modal-box,
+html.dark-mode .modal-content,
+html.dark-mode .modal-card {
+  background-color: #1E293B !important;
+  border: 1.5px solid #475569 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+}
+
+html.dark-mode .modal-header {
+  border-bottom: 1px solid #334155 !important;
+}
+
+html.dark-mode .modal-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .modal-footer {
+  border-top: 1px solid #334155 !important;
+}
+
+/* ── ALERTS, MESSAGES & NOTICES ── */
+html.dark-mode .alert-success,
+html.dark-mode .success,
+html.dark-mode .message.success {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border-color: #059669 !important;
+}
+
+html.dark-mode .alert-danger,
+html.dark-mode .alert-error,
+html.dark-mode .error,
+html.dark-mode .message.error,
+html.dark-mode .error-message {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+  border-color: #DC2626 !important;
+}
+
+html.dark-mode .alert-warning,
+html.dark-mode .warning,
+html.dark-mode .warning-message {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+  border-color: #D97706 !important;
+}
+
+html.dark-mode .alert-info,
+html.dark-mode .info,
+html.dark-mode .info-box,
+html.dark-mode .info-note {
+  background-color: #1E3A8A !important;
+  color: #BFDBFE !important;
+  border-color: #2563EB !important;
+}
+
+/* ── BADGES & STATUS PILLS ── */
+html.dark-mode .badge-gray,
+html.dark-mode .badge-nomarks {
+  background-color: #334155 !important;
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .badge-success,
+html.dark-mode .badge-promoted,
+html.dark-mode .badge-active,
+html.dark-mode .status-enabled,
+html.dark-mode .status-active,
+html.dark-mode .pin-active,
+html.dark-mode .badge-unlocked {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border: 1px solid #059669 !important;
+}
+
+html.dark-mode .badge-danger,
+html.dark-mode .badge-repeated,
+html.dark-mode .badge-closed,
+html.dark-mode .status-disabled,
+html.dark-mode .badge-locked {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+  border: 1px solid #DC2626 !important;
+}
+
+html.dark-mode .badge-warning,
+html.dark-mode .status-new,
+html.dark-mode .pin-new {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+  border: 1px solid #D97706 !important;
+}
+
+html.dark-mode .badge-info,
+html.dark-mode .badge-last,
+html.dark-mode .semester-1 {
+  background-color: #1E3A8A !important;
+  color: #BFDBFE !important;
+  border: 1px solid #2563EB !important;
+}
+
+html.dark-mode .semester-badge,
+html.dark-mode .current-year-badge,
+html.dark-mode .semester-2 {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+}
+
+html.dark-mode .grade-badge {
+  border: 1px solid #334155 !important;
+}
+
+/* ── CALENDAR & ATTENDANCE ── */
+html.dark-mode .legend {
+  background-color: #0F172A !important;
+  color: #CBD5E1 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .month-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .month-nav a,
+html.dark-mode .month-nav .btn-today {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .month-nav a:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark-mode .day-col {
+  border-color: #334155 !important;
+}
+
+html.dark-mode .day-name {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .day-num {
+  color: #F8FAFC !important;
+}
+
+/* ── DARK TOGGLE BUTTONS ── */
+html.dark-mode .btn-dark-toggle,
+html.dark-mode #darkModeToggle {
+  background-color: #1E293B !important;
+  border-color: #F59E0B !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .btn-dark-toggle:hover,
+html.dark-mode #darkModeToggle:hover {
+  background-color: #334155 !important;
+}
+
+html.dark-mode .floating-dark-toggle {
+  background-color: #1E293B !important;
+  border-color: #F59E0B !important;
+  color: #FCD34D !important;
+}
+
+/* ── UNIVERSAL FAILSAFE FOR HARDCODED INLINE LIGHT STYLES ── */
+html.dark-mode [style*="background: white"],
+html.dark-mode [style*="background:white"],
+html.dark-mode [style*="background: #fff"],
+html.dark-mode [style*="background:#fff"],
+html.dark-mode [style*="background: #FFF"],
+html.dark-mode [style*="background:#FFF"],
+html.dark-mode [style*="background: #FAF9F6"],
+html.dark-mode [style*="background:#FAF9F6"],
+html.dark-mode [style*="background: #F9FAFB"],
+html.dark-mode [style*="background:#F9FAFB"],
+html.dark-mode [style*="background: #FFF8DC"],
+html.dark-mode [style*="background:#FFF8DC"],
+html.dark-mode [style*="background: #FEF9E7"],
+html.dark-mode [style*="background:#FEF9E7"],
+html.dark-mode [style*="background: #FFFBEB"],
+html.dark-mode [style*="background:#FFFBEB"],
+html.dark-mode [style*="background: #EFF6FF"],
+html.dark-mode [style*="background:#EFF6FF"] {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+/* Inline light borders converted to readable dark border */
+html.dark-mode [style*="border: 2px solid #E2E8F0"],
+html.dark-mode [style*="border:2px solid #E2E8F0"],
+html.dark-mode [style*="border: 1px solid #E5E7EB"],
+html.dark-mode [style*="border:1px solid #E5E7EB"],
+html.dark-mode [style*="border: 1px solid #ddd"],
+html.dark-mode [style*="border:1px solid #ddd"],
+html.dark-mode [style*="border: 3px solid white"],
+html.dark-mode [style*="border: 2px solid white"] {
+  border-color: #334155 !important;
+}
+
+/* Inline dark text converted to readable light text in dark mode */
+html.dark-mode [style*="color: #666"],
+html.dark-mode [style*="color:#666"],
+html.dark-mode [style*="color: #777"],
+html.dark-mode [style*="color:#777"],
+html.dark-mode [style*="color: #555"],
+html.dark-mode [style*="color:#555"],
+html.dark-mode [style*="color: #6B7280"],
+html.dark-mode [style*="color:#6B7280"],
+html.dark-mode [style*="color: #9CA3AF"],
+html.dark-mode [style*="color:#9CA3AF"] {
+  color: #94A3B8 !important;
+}
+
+/* Inline brown headings converted to readable gold in dark mode */
+html.dark-mode [style*="color: #8B4513"],
+html.dark-mode [style*="color:#8B4513"],
+html.dark-mode [style*="color: #5C2607"],
+html.dark-mode [style*="color:#5C2607"],
+html.dark-mode [style*="color: #78350F"],
+html.dark-mode [style*="color:#78350F"],
+html.dark-mode [style*="color: #4A1A05"],
+html.dark-mode [style*="color:#4A1A05"] {
+  color: #FCD34D !important;
+}
+
+/* ── SCROLLBARS ── */
+html.dark-mode ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark-mode ::-webkit-scrollbar-track {
+  background: #0B1120;
+}
+html.dark-mode ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+
+/* ── COMPREHENSIVE COMPONENT & BADGE ADDITIONS ── */
+
+/* Lesson Plan Review & Admin (lesson_plan_admin_review.php) */
+html.dark-mode .btn-excel {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border: 1.5px solid #059669 !important;
+}
+html.dark-mode .btn-excel:hover {
+  background-color: #047857 !important;
+  color: #FFFFFF !important;
+}
+html.dark-mode .btn-review {
+  background-color: #1E3A8A !important;
+  color: #BFDBFE !important;
+  border: 1.5px solid #2563EB !important;
+}
+html.dark-mode .btn-review:hover {
+  background-color: #1D4ED8 !important;
+  color: #FFFFFF !important;
+}
+html.dark-mode .badge-submitted {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+  border: 1px solid #D97706 !important;
+}
+html.dark-mode .badge-approved {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border: 1px solid #059669 !important;
+}
+html.dark-mode .badge-needs_correction {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+  border: 1px solid #DC2626 !important;
+}
+html.dark-mode .badge-draft {
+  background-color: #334155 !important;
+  color: #94A3B8 !important;
+  border: 1px solid #475569 !important;
+}
+html.dark-mode .modal-close {
+  background-color: #334155 !important;
+  color: #CBD5E1 !important;
+}
+html.dark-mode .modal-close:hover {
+  background-color: #475569 !important;
+  color: #FFFFFF !important;
+}
+
+/* Print Results (print_results.php) */
+html.dark-mode .class-header,
+html.dark-mode .class-header td {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+html.dark-mode .total-cell {
+  background-color: #1E293B !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+html.dark-mode .grade-excellent {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+}
+html.dark-mode .grade-satisfactory {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+}
+html.dark-mode .summary-table th {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+html.dark-mode .summary-table tr:nth-child(even),
+html.dark-mode .summary-table tr:nth-child(even) td {
+  background-color: #172033 !important;
+}
+
+/* Student & Teacher Attendance Badges */
+html.dark-mode .att-present {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+}
+html.dark-mode .att-permission {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+}
+html.dark-mode .att-dot.present {
+  background-color: #10B981 !important;
+}
+html.dark-mode .att-dot.permission {
+  background-color: #F59E0B !important;
+}
+html.dark-mode .att-dot.absent {
+  background-color: #EF4444 !important;
+}
+
+/* Teacher Dashboard Extra Links & Modals */
+html.dark-mode .header-link.attendance-link:hover,
+html.dark-mode .header-link.scheme-link:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+html.dark-mode .status-success {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+}
+html.dark-mode .status-warning {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+}
+html.dark-mode .btn-change-pass {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #475569 !important;
+}
+html.dark-mode .profile-modal-footer {
+  border-top: 1px solid #334155 !important;
+}
+
+/* Audit Log Admin (audit_log_admin.php) */
+html.dark-mode .filters select,
+html.dark-mode .filters input {
+  background-color: #0F172A !important;
+  color: #F8FAFC !important;
+  border: 1px solid #475569 !important;
+}
+html.dark-mode .pager a {
+  background-color: #0F172A !important;
+  color: #CBD5E1 !important;
+  border: 1px solid #334155 !important;
+}
+html.dark-mode .pager a:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+}
+html.dark-mode .pager a.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+}
+
+/* Calendar Admin & View (calendar_admin.php, calendar_view.php) */
+html.dark-mode .event-row {
+  border-bottom: 1px solid #334155 !important;
+}
+html.dark-mode .event-row:hover {
+  background-color: #26354A !important;
+}
+html.dark-mode .event-type-badge {
+  border-color: #334155 !important;
+}
+
+/* Class Locks (class_locks.php) */
+html.dark-mode .toggle-btn.unlocked {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border: 1px solid #059669 !important;
+}
+html.dark-mode .toggle-btn.locked {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+  border: 1px solid #DC2626 !important;
+}
+
+/* Manage Assignments (manage_assignments.php) */
+html.dark-mode .status-locked {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+}
+html.dark-mode .status-unlocked {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+}
+html.dark-mode .remove-btn:hover {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+}
+
+/* Promotion (promotion.php) */
+html.dark-mode .preset-btn {
+  background-color: #0F172A !important;
+  color: #CBD5E1 !important;
+  border: 1.5px solid #475569 !important;
+}
+html.dark-mode .preset-btn:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+/* Backup Admin (backup_admin.php) */
+html.dark-mode .backup-row {
+  border-bottom: 1px solid #334155 !important;
+}
+html.dark-mode .backup-row:hover {
+  background-color: #26354A !important;
+}
+
+/* Attendance Submitter Assign */
+html.dark-mode .class-item {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+/* Universal Table Row Hover & Borders */
+html.dark-mode tr:hover,
+html.dark-mode tbody tr:hover {
+  background-color: #26354A !important;
+}
+
+/* Catch all gradients with light colors */
+html.dark-mode [style*="#FFFDF7"],
+html.dark-mode [style*="#fffdf7"] {
+  background: linear-gradient(135deg, #1E293B, #0F172A) !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .notice-banner-card {
+  background: linear-gradient(135deg, #1E293B, #0F172A) !important;
+  border-color: #D97706 !important;
+  color: #F1F5F9 !important;
+}
+html.dark-mode .notice-banner-card h3 {
+  color: #FCD34D !important;
+}
+html.dark-mode .notice-banner-card p {
+  color: #CBD5E1 !important;
+}
+html.dark-mode .notice-banner-card strong {
+  color: #FCD34D !important;
+}
+
+/* ── OFFLINE INTERFACE (offline.html) ── */
+html.dark-mode .offline-header {
+  background: linear-gradient(135deg, #18110B 0%, #2A1A0F 100%) !important;
+  border-bottom: 1px solid #78350F !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark-mode .offline-header .brand-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .dot-btn {
+  background-color: #1E293B !important;
+  border-color: #475569 !important;
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .dot-btn:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark-mode .dot-btn.active-p {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border-color: #059669 !important;
+}
+
+html.dark-mode .dot-btn.active-a {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+  border-color: #DC2626 !important;
+}
+
+html.dark-mode .dot-btn.active-per {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+  border-color: #D97706 !important;
+}
+
+html.dark-mode .dot-btn.active-l {
+  background-color: #3730A3 !important;
+  color: #C7D2FE !important;
+  border-color: #4F46E5 !important;
+}
+
+html.dark-mode .dot-btn.active-e {
+  background-color: #334155 !important;
+  color: #E2E8F0 !important;
+  border-color: #64748B !important;
+}
+
+html.dark-mode .att-row {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .att-name {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .tab-btn {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .tab-btn.active {
+  background: linear-gradient(135deg, #D97706, #92400E) !important;
+  color: #FFFFFF !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .toast {
+  background-color: #0F172A !important;
+  border: 1px solid #475569 !important;
+  color: #F8FAFC !important;
+}
+
+/* ── ASSIGNMENTS & SEMESTER PAGES (manage_assignments.php, semester.php, etc.) ── */
+html.dark-mode .section {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .section:hover {
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark-mode .section-header {
+  border-bottom: 2px solid #334155 !important;
+}
+
+html.dark-mode .section-header h2 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .semester-info-card {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+  border: 1.5px solid #F59E0B !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .semester-details h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .semester-details p {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .total-badge {
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #F59E0B !important;
+}
+
+html.dark-mode .class-header {
+  border-bottom: 1.5px solid #334155 !important;
+}
+
+html.dark-mode .class-name {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .teacher-count,
+html.dark-mode .teacher-count.count-pale,
+html.dark-mode .teacher-count[style*="background: var(--gold-pale)"] {
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #F59E0B !important;
+}
+
+html.dark-mode .teachers-list::-webkit-scrollbar-track {
+  background: #0B1120 !important;
+}
+
+html.dark-mode .teachers-list::-webkit-scrollbar-thumb {
+  background: #475569 !important;
+}
+
+html.dark-mode .teacher-item {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1px solid #334155 !important;
+  border-left: 4px solid #F59E0B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .teacher-item:hover {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+}
+
+html.dark-mode .teacher-icon {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #475569 !important;
+  box-shadow: none !important;
+}
+
+html.dark-mode .teacher-name {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .subject-tag,
+html.dark-mode [style*="background: #FEF3C7"] {
+  background: #78350F !important;
+  border-color: #D97706 !important;
+  color: #FDE68A !important;
+}
+
+html.dark-mode .teacher-status.status-locked {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+  border: 1px solid #DC2626 !important;
+}
+
+html.dark-mode .teacher-status.status-unlocked {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border: 1px solid #059669 !important;
+}
+
+html.dark-mode .remove-btn {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .remove-btn:hover {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+}
+
+html.dark-mode .add-teacher-form {
+  border-top: 2px dashed #334155 !important;
+}
+
+html.dark-mode .teacher-table-container {
+  border: 1px solid #334155 !important;
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark-mode .teacher-avatar {
+  border: 2px solid #F59E0B !important;
+}
+
+html.dark-mode .teacher-phone {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .class-badge {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #F59E0B !important;
+}
+
+html.dark-mode .class-badge:hover {
+  background-color: #334155 !important;
+  background: #334155 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark-mode .class-badge.locked {
+  background-color: #3B1212 !important;
+  background: #3B1212 !important;
+  border-color: #DC2626 !important;
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .badge-icon {
+  background: #D97706 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark-mode .total-classes {
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #F59E0B !important;
+}
+
+html.dark-mode .no-classes {
+  color: #64748B !important;
+}
+
+html.dark-mode .empty-state {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .empty-state h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .empty-state p {
+  color: #94A3B8 !important;
+}
+
+/* ── SEMESTER.PHP SPECIFICS ── */
+html.dark-mode .current-year-card {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+  border: 2px solid #F59E0B !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .year-info h2 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .year-info p {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .semester-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1.5px solid #334155 !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3) !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .semester-card:hover {
+  border-color: #F59E0B !important;
+  box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2) !important;
+}
+
+html.dark-mode .semester-card::before {
+  opacity: 0.05 !important;
+}
+
+html.dark-mode .semester-number {
+  color: #FCD34D !important;
+  border-bottom: 2px solid #334155 !important;
+}
+
+html.dark-mode .semester-card p {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .semester-card p strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .semester-card p small {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .semester-status.badge-active {
+  background-color: #064E3B !important;
+  color: #A7F3D0 !important;
+  border: 1px solid #059669 !important;
+}
+
+html.dark-mode .semester-status.badge-closed {
+  background-color: #7F1D1D !important;
+  color: #FECACA !important;
+  border: 1px solid #DC2626 !important;
+}
+
+html.dark-mode .semester-status.badge-warning {
+  background-color: #78350F !important;
+  color: #FDE68A !important;
+  border: 1px solid #D97706 !important;
+}
+
+html.dark-mode .warning-box {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  border-left: 4px solid #F59E0B !important;
+  color: #FDE68A !important;
+}
+
+html.dark-mode .warning-box strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .info-box {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  border-left: 4px solid #3B82F6 !important;
+  color: #BFDBFE !important;
+}
+
+html.dark-mode .info-box strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .history-section {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .history-header {
+  border-bottom: 2px solid #334155 !important;
+}
+
+html.dark-mode .history-header h2 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .year-group {
+  border-left: 4px solid #F59E0B !important;
+}
+
+html.dark-mode .year-title {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .year-badge {
+  background: #D97706 !important;
+  color: #FFFFFF !important;
+}
+
+html.dark-mode .history-row {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #E2E8F0 !important;
+}
+
+html.dark-mode .history-label {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .history-value {
+  color: #CBD5E1 !important;
+}
+
+/* ── TEACHER MANAGEMENT (manage_teachers.php) ── */
+html.dark-mode .requests-section {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .requests-section.has-pending {
+  background: linear-gradient(135deg, #1E293B 0%, #261E0A 100%) !important;
+  border-color: #D97706 !important;
+}
+
+html.dark-mode .count-badge {
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1px solid #F59E0B !important;
+}
+
+html.dark-mode .teacher-username {
+  background-color: #2E1065 !important;
+  color: #DDD6FE !important;
+  border: 1px solid #6D28D9 !important;
+}
+
+html.dark-mode .year-header {
+  background-color: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .year-header:hover {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .semester-row {
+  background-color: #0F172A !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .class-tag {
+  background-color: #1E293B !important;
+  border: 1px solid #F59E0B !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-tag.locked {
+  background-color: #3B1212 !important;
+  border-color: #DC2626 !important;
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .reject-box {
+  background-color: #3B1212 !important;
+  border: 1px solid #7F1D1D !important;
+  color: #FECACA !important;
+}
+
+html.dark-mode .reject-box label {
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .reject-box input {
+  background-color: #0F172A !important;
+  border-color: #475569 !important;
+  color: #F8FAFC !important;
+}
+
+/* ── LESSON PLAN EDITOR (lesson_plan_editor.php) ── */
+html.dark-mode .plan-date-panel,
+body.dark-mode .plan-date-panel {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .ocr-banner,
+body.dark-mode .ocr-banner {
+  background: linear-gradient(135deg, #1E293B, #0F172A) !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .ocr-banner h3,
+body.dark-mode .ocr-banner h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .ocr-banner p,
+body.dark-mode .ocr-banner p {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .btn-ocr-secondary,
+body.dark-mode .btn-ocr-secondary {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border: 1.5px solid #F59E0B !important;
+}
+
+html.dark-mode .subject-input-field,
+body.dark-mode .subject-input-field {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .subject-lock-badge,
+body.dark-mode .subject-lock-badge {
+  background-color: #1E293B !important;
+  color: #CBD5E1 !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .subject-unlock-btn,
+body.dark-mode .subject-unlock-btn {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .paper-table,
+body.dark-mode .paper-table {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .paper-table th,
+body.dark-mode .paper-table th {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .paper-table td,
+body.dark-mode .paper-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .paper-table tbody tr:hover td,
+body.dark-mode .paper-table tbody tr:hover td {
+  background-color: #233045 !important;
+}
+
+html.dark-mode .plan-card-mobile,
+body.dark-mode .plan-card-mobile {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .plan-card-mobile.active-edit,
+body.dark-mode .plan-card-mobile.active-edit {
+  background-color: #233045 !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .btn-photo-view,
+body.dark-mode .btn-photo-view {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+/* ── LOGOS, CIRCLES & AVATARS (Removes stark white borders across all pages) ── */
+html.dark-mode .logo-icon,
+html.dark-mode .logo-circle,
+html.dark-mode .teacher-avatar,
+html.dark-mode .logo img,
+html.dark-mode .logo-placeholder,
+html.dark-mode .avatar-box,
+body.dark-mode .logo-icon,
+body.dark-mode .logo-circle,
+body.dark-mode .teacher-avatar,
+body.dark-mode .logo img,
+body.dark-mode .logo-placeholder,
+body.dark-mode .avatar-box,
+.dark-mode .logo-icon,
+.dark-mode .logo-circle,
+.dark-mode .teacher-avatar,
+.dark-mode .logo img,
+.dark-mode .logo-placeholder,
+.dark-mode .avatar-box,
+[data-theme="dark"] .logo-icon,
+[data-theme="dark"] .logo-circle,
+[data-theme="dark"] .teacher-avatar,
+[data-theme="dark"] .logo img,
+[data-theme="dark"] .logo-placeholder,
+[data-theme="dark"] .avatar-box {
+  border-color: #F59E0B !important;
+}
+
+/* ── CALLOUTS, WELCOME BANNERS & NOTICE BOXES (Removes pale white/cream boxes) ── */
+html.dark-mode .welcome-message,
+html.dark-mode .welcome-text,
+html.dark-mode .info-box,
+html.dark-mode .info-note,
+html.dark-mode .rules-box,
+html.dark-mode .request-reason-box,
+html.dark-mode .request-banner,
+html.dark-mode .notif.unread,
+html.dark-mode .class-badge,
+html.dark-mode .subject-tag,
+html.dark-mode .stat-value,
+html.dark-mode .total-cell,
+html.dark-mode .class-header,
+html.dark-mode .class-header td,
+html.dark-mode .summary-table th,
+html.dark-mode .summary-table tr:nth-child(even),
+html.dark-mode .preview-table tr:hover,
+html.dark-mode .compact-table tr:hover,
+html.dark-mode .teacher-marks-viewer tr:hover,
+html.dark-mode .student-name,
+body.dark-mode .welcome-message,
+body.dark-mode .welcome-text,
+body.dark-mode .info-box,
+body.dark-mode .info-note,
+body.dark-mode .rules-box,
+body.dark-mode .request-reason-box,
+body.dark-mode .request-banner,
+body.dark-mode .notif.unread,
+body.dark-mode .class-badge,
+body.dark-mode .subject-tag,
+body.dark-mode .stat-value,
+body.dark-mode .total-cell,
+body.dark-mode .class-header,
+body.dark-mode .class-header td,
+body.dark-mode .summary-table th,
+body.dark-mode .summary-table tr:nth-child(even),
+body.dark-mode .preview-table tr:hover,
+body.dark-mode .compact-table tr:hover,
+body.dark-mode .teacher-marks-viewer tr:hover,
+body.dark-mode .student-name,
+.dark-mode .welcome-message,
+.dark-mode .welcome-text,
+.dark-mode .info-box,
+.dark-mode .info-note,
+.dark-mode .rules-box,
+.dark-mode .request-reason-box,
+.dark-mode .request-banner,
+.dark-mode .notif.unread,
+.dark-mode .class-badge,
+.dark-mode .subject-tag,
+.dark-mode .stat-value,
+.dark-mode .total-cell,
+.dark-mode .class-header,
+.dark-mode .class-header td,
+.dark-mode .summary-table th,
+.dark-mode .summary-table tr:nth-child(even),
+.dark-mode .preview-table tr:hover,
+.dark-mode .compact-table tr:hover,
+.dark-mode .teacher-marks-viewer tr:hover,
+.dark-mode .student-name,
+[data-theme="dark"] .welcome-message,
+[data-theme="dark"] .welcome-text,
+[data-theme="dark"] .info-box,
+[data-theme="dark"] .info-note,
+[data-theme="dark"] .rules-box,
+[data-theme="dark"] .request-reason-box,
+[data-theme="dark"] .request-banner,
+[data-theme="dark"] .notif.unread,
+[data-theme="dark"] .class-badge,
+[data-theme="dark"] .subject-tag,
+[data-theme="dark"] .stat-value,
+[data-theme="dark"] .total-cell,
+[data-theme="dark"] .class-header,
+[data-theme="dark"] .class-header td,
+[data-theme="dark"] .summary-table th,
+[data-theme="dark"] .summary-table tr:nth-child(even),
+[data-theme="dark"] .preview-table tr:hover,
+[data-theme="dark"] .compact-table tr:hover,
+[data-theme="dark"] .teacher-marks-viewer tr:hover,
+[data-theme="dark"] .student-name {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+/* ── UNIVERSAL TABLE CELL & ROW BORDERS (Removes bright #E2E8F0 white lines) ── */
+html.dark-mode table,
+html.dark-mode th,
+html.dark-mode td,
+html.dark-mode tr,
+body.dark-mode table,
+body.dark-mode th,
+body.dark-mode td,
+body.dark-mode tr,
+.dark-mode table,
+.dark-mode th,
+.dark-mode td,
+.dark-mode tr,
+[data-theme="dark"] table,
+[data-theme="dark"] th,
+[data-theme="dark"] td,
+[data-theme="dark"] tr {
+  border-color: #334155 !important;
+}
+
+

@@ -1,57 +1,62 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
-$semester_id = isset($_SESSION['view_semester_id']) ? $_SESSION['view_semester_id'] : (isset($_GET['id']) ? $_GET['id'] : 0);
+$semester_id = isset($_SESSION['view_semester_id']) ? intval($_SESSION['view_semester_id']) : (isset($_GET['id']) ? intval($_GET['id']) : 0);
 
-if(!$semester_id) {
+if (!$semester_id) {
     header("Location: semester.php");
     exit();
 }
 
 // Get semester info
-$semester_query = "SELECT * FROM semesters WHERE id = $semester_id";
-$semester_result = mysqli_query($conn, $semester_query);
-$semester = mysqli_fetch_assoc($semester_result);
+$semester = dbFetchOne($conn, "SELECT * FROM semesters WHERE id = ?", "i", [$semester_id]);
 
-if(!$semester) {
+if (!$semester) {
     header("Location: semester.php");
     exit();
 }
 
 // Get teacher assignments for this semester
-$assignments_query = "SELECT tc.*, u.name as teacher_name, c.name as class_name
-                      FROM teacher_class tc
-                      JOIN users u ON tc.teacher_id = u.id
-                      JOIN classes c ON tc.class_id = c.id
-                      WHERE tc.semester_id = $semester_id
-                      ORDER BY c.name";
-$assignments = mysqli_query($conn, $assignments_query);
+$assignments = dbQuery(
+    $conn,
+    "SELECT tc.*, u.name as teacher_name, c.name as class_name
+     FROM teacher_class tc
+     JOIN users u ON tc.teacher_id = u.id
+     JOIN classes c ON tc.class_id = c.id
+     WHERE tc.semester_id = ?
+     ORDER BY c.name",
+    "i",
+    [$semester_id]
+);
 
 // Get marks for this semester
-$marks_query = "SELECT s.name as student_name, c.name as class_name,
-                m.assignment, m.mid, m.final, m.total
-                FROM marks m
-                JOIN students s ON m.student_id = s.id
-                JOIN classes c ON m.class_id = c.id
-                WHERE m.semester_id = $semester_id
-                ORDER BY c.name, s.name";
-$marks = mysqli_query($conn, $marks_query);
+$marks_list = dbFetchAll(
+    $conn,
+    "SELECT s.name as student_name, c.name as class_name,
+            m.assignment, m.mid, m.final, m.total
+     FROM marks m
+     JOIN students s ON m.student_id = s.id
+     JOIN classes c ON m.class_id = c.id
+     WHERE m.semester_id = ?
+     ORDER BY c.name, s.name",
+    "i",
+    [$semester_id]
+);
 
 // Group marks by class
 $class_marks = [];
-while($mark = mysqli_fetch_assoc($marks)) {
+foreach ($marks_list as $mark) {
     $class_marks[$mark['class_name']][] = $mark;
 }
+$nav_active = 'semester';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images\icon.png">
     <title>ሴሚስተር ታሪክ | አጸደ ትጉሃን </title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -209,9 +214,18 @@ while($mark = mysqli_fetch_assoc($marks)) {
             color: #8B4513;
         }
 
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
+        }
+
+        .table-responsive table {
+            min-width: 500px;
         }
 
         th {
@@ -245,42 +259,25 @@ while($mark = mysqli_fetch_assoc($marks)) {
         }
 
         @media (max-width: 768px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .semester-header {
                 flex-direction: column;
                 text-align: center;
+                padding: 18px 14px;
+                border-radius: 12px;
+                gap: 12px;
             }
+            .semester-header h1 { font-size: 22px; }
+            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
+            .section-header h2 { font-size: 17px; }
+            th, td { padding: 10px 8px; font-size: 13px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">⛪</div>
-                <div class="title">
-                    <h1>ሴሚስተር ታሪክ</h1>
-                    <p>Semester History</p>
-                </div>
-            </div>
-            <a href="semester.php" class="btn btn-primary">← ወደ ሴሚስተር አስተዳደር</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav">
-        <div class="nav-links">
-            <a href="dashboard_admin.php" class="nav-link">🏠 ዳሽቦርድ</a>
-            <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-            <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-            <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-            <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-            <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-            <a href="class_locks.php" class="nav-link active">🔒 ክፍል መቆለፊያ</a>
-            <a href="semester_history.php" class="nav-link active">📜 ታሪክ</a>
-            <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        </div>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <div class="semester-header">
             <div>
                 <h1><?php echo htmlspecialchars($semester['name']); ?></h1>

@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,31 +6,41 @@ $message = '';
 $error = '';
 
 // Handle save settings
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
-    $settings = [
-        'admin_name_1' => $_POST['admin_name_1'],
-        'admin_phone_1' => $_POST['admin_phone_1'],
-        'admin_name_2' => $_POST['admin_name_2'],
-        'admin_phone_2' => $_POST['admin_phone_2'],
-        'admin_title' => $_POST['admin_title']
-    ];
-    
-    $success = true;
-    foreach ($settings as $key => $value) {
-        $value_escaped = mysqli_real_escape_string($conn, $value);
-        $query = "INSERT INTO settings (setting_key, setting_value) 
-                  VALUES ('$key', '$value_escaped')
-                  ON DUPLICATE KEY UPDATE setting_value = '$value_escaped'";
-        if (!mysqli_query($conn, $query)) {
-            $success = false;
-            break;
-        }
-    }
-    
-    if ($success) {
-        $message = "መረጃ በተሳካ ሁኔታ ተቀምጧል! (Settings saved successfully!)";
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
     } else {
-        $error = "ስህተት ተከስቷል! (Error occurred!)";
+        $settings = [
+            'admin_name_1' => trim($_POST['admin_name_1'] ?? ''),
+            'admin_phone_1' => trim($_POST['admin_phone_1'] ?? ''),
+            'admin_name_2' => trim($_POST['admin_name_2'] ?? ''),
+            'admin_phone_2' => trim($_POST['admin_phone_2'] ?? ''),
+            'admin_title' => trim($_POST['admin_title'] ?? ''),
+            'youth_can_create_plans' => isset($_POST['youth_can_create_plans']) ? '1' : '0',
+            'youth_can_write_attendance' => isset($_POST['youth_can_write_attendance']) ? '1' : '0'
+        ];
+        
+        $success = true;
+        foreach ($settings as $key => $value) {
+            $saved = dbExecute(
+                $conn,
+                "INSERT INTO settings (setting_key, setting_value) 
+                 VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)",
+                "ss",
+                [$key, $value]
+            );
+            if (!$saved) {
+                $success = false;
+                break;
+            }
+        }
+        
+        if ($success) {
+            $message = "መረጃው በተሳካ ሁኔታ ተቀምጧል!";
+        } else {
+            $error = "ስህተት ተከስቷል! እባክዎ እንደገና ይሞክሩ።";
+        }
     }
 }
 
@@ -48,14 +57,17 @@ $phone1 = $current_settings['admin_phone_1'] ?? '';
 $admin2 = $current_settings['admin_name_2'] ?? '';
 $phone2 = $current_settings['admin_phone_2'] ?? '';
 $title = $current_settings['admin_title'] ?? '';
+$youth_can_create_plans = ($current_settings['youth_can_create_plans'] ?? '0') === '1';
+$youth_can_write_attendance = ($current_settings['youth_can_write_attendance'] ?? '0') === '1';
+$nav_active = 'admin_settings';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>ቅንብሮች አስተዳደር | Settings</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -79,82 +91,20 @@ $title = $current_settings['admin_title'] ?? '';
             background: var(--bg-cream);
         }
 
-        .header {
-            background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
-            color: white;
-            padding: 20px 30px;
-        }
-
-        .header-content {
-            max-width: 900px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--gold-primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: var(--brown-dark);
-        }
-
-        .title h1 {
-            font-size: 20px;
-            color: var(--gold-primary);
-        }
-
-        .title p {
-            font-size: 14px;
-            color: rgba(255,255,255,0.9);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-
-        .btn-back {
-            background: var(--gold-primary);
-            color: var(--brown-dark);
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 30px auto;
-            padding: 0 20px;
+        .main-container {
+            max-width: 850px;
+            margin: 20px auto;
+            padding: 0 16px 60px;
         }
 
         .message {
-            padding: 15px 20px;
+            padding: 14px 18px;
             border-radius: 10px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+            font-size: 14px;
         }
 
         .success {
@@ -171,42 +121,45 @@ $title = $current_settings['admin_title'] ?? '';
 
         .settings-card {
             background: white;
-            border-radius: 20px;
-            padding: 30px;
+            border-radius: 18px;
+            padding: 28px 24px;
             border: 2px solid var(--gold-primary);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
 
         .settings-title {
             color: var(--brown-dark);
-            font-size: 22px;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
+            font-size: 20px;
+            margin-bottom: 22px;
+            padding-bottom: 12px;
             border-bottom: 2px solid var(--gold-pale);
             display: flex;
             align-items: center;
             gap: 10px;
+            font-weight: 700;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 7px;
             color: var(--brown-dark);
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13.5px;
         }
 
         .form-control {
             width: 100%;
-            padding: 12px 15px;
+            padding: 12px 14px;
             border: 2px solid #E2E8F0;
             border-radius: 10px;
             font-size: 14px;
-            transition: all 0.3s;
+            transition: all 0.25s;
+            background: white;
+            color: #1F2937;
         }
 
         .form-control:focus {
@@ -218,21 +171,26 @@ $title = $current_settings['admin_title'] ?? '';
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 16px;
         }
 
         .btn-save {
             width: 100%;
-            padding: 15px;
+            min-height: 48px;
+            padding: 12px 20px;
             background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
             color: #8B4513;
             border: none;
             border-radius: 10px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 20px;
+            transition: all 0.25s;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
         .btn-save:hover {
@@ -240,34 +198,66 @@ $title = $current_settings['admin_title'] ?? '';
             box-shadow: 0 5px 15px rgba(218,165,32,0.3);
         }
 
+        .permissions-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #FAF9F6;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1.5px solid #E2E8F0;
+        }
+        .permission-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            color: #1F2937;
+        }
+        .permission-hint {
+            font-size: 12px;
+            color: #6B7280;
+            margin-left: 30px;
+        }
+        .settings-help-text {
+            color: #6B7280;
+        }
+
         @media (max-width: 600px) {
+            .main-container {
+                padding: 0 10px 40px;
+                margin: 12px auto;
+            }
+            .settings-card {
+                padding: 18px 14px;
+                border-radius: 14px;
+            }
+            .settings-title {
+                font-size: 17px;
+                margin-bottom: 16px;
+            }
             .form-row {
                 grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .btn-save {
+                font-size: 14px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">⛪</div>
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>ቅንብሮች አስተዳደር | Settings Management</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="btn btn-back">← ወደ ዳሽቦርድ</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="container">
+    <div class="main-container">
         <?php if ($message): ?>
-        <div class="message success">✅ <?php echo $message; ?></div>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-        <div class="message error">⚠️ <?php echo $error; ?></div>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <div class="settings-card">
@@ -277,8 +267,9 @@ $title = $current_settings['admin_title'] ?? '';
             </div>
 
             <form method="POST">
+                <?php echo csrfField(); ?>
                 <div class="form-group">
-                    <label>የኃላፊነት ማዕረግ (Admin Title)</label>
+                    <label>የኃላፊነት ማዕረግ</label>
                     <input type="text" name="admin_title" class="form-control" 
                            value="<?php echo htmlspecialchars($title); ?>" 
                            placeholder="ለምሳሌ: የአጸደ ትጉሃን ትምህርት ክፍል ኃላፊ">
@@ -286,13 +277,13 @@ $title = $current_settings['admin_title'] ?? '';
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 1 ስም (Admin 1 Name)</label>
+                        <label>የአስተዳዳሪ 1 ሙሉ ስም</label>
                         <input type="text" name="admin_name_1" class="form-control" 
                                value="<?php echo htmlspecialchars($admin1); ?>"
                                placeholder="ዲ/ን ኪብረአብ ዘለለም">
                     </div>
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 1 ስልክ (Admin 1 Phone)</label>
+                        <label>የአስተዳዳሪ 1 ስልክ ቁጥር</label>
                         <input type="text" name="admin_phone_1" class="form-control" 
                                value="<?php echo htmlspecialchars($phone1); ?>"
                                placeholder="0939883508">
@@ -301,21 +292,49 @@ $title = $current_settings['admin_title'] ?? '';
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 2 ስም (Admin 2 Name)</label>
+                        <label>የአስተዳዳሪ 2 ሙሉ ስም</label>
                         <input type="text" name="admin_name_2" class="form-control" 
                                value="<?php echo htmlspecialchars($admin2); ?>"
                                placeholder="ተስፋሁን ባዬ">
                     </div>
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 2 ስልክ (Admin 2 Phone)</label>
+                        <label>የአስተዳዳሪ 2 ስልክ ቁጥር</label>
                         <input type="text" name="admin_phone_2" class="form-control" 
                                value="<?php echo htmlspecialchars($phone2); ?>"
                                placeholder="0943854325">
                     </div>
                 </div>
 
+                <div style="margin-top:24px; padding-top:18px; border-top:2px solid var(--gold-pale);">
+                    <div style="font-weight:700; color:var(--brown-dark); font-size:16px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                        <span>🛡️</span> የወጣቶች እና የህፃናት መምህራን ፈቃዶች
+                    </div>
+                    <p class="settings-help-text" style="font-size:13px; margin-bottom:14px; line-height:1.5;">
+                        በስርዓቱ መሠረት የህፃናት መምህራን (ከ1ኛ-6ኛ ክፍል) ሁልጊዜም አቴንዳንስ መመዝገብ እና የትምህርት ዕቅድ ማዘጋጀት ይችላሉ።<br>
+                        ለወጣቶች መምህራን (ከ7ኛ-12ኛ ክፍል) የሚከተሉትን ፍቃዶች መፍቀድ ወይም መከልከል ይችላሉ፦
+                    </p>
+
+                    <div class="permissions-panel">
+                        <label class="permission-label">
+                            <input type="checkbox" name="youth_can_create_plans" value="1" <?php echo $youth_can_create_plans ? 'checked' : ''; ?> style="width:20px; height:20px; accent-color:var(--brown-dark);">
+                            <span>📝 የወጣቶች መምህራን የትምህርት ዕቅድ ማዘጋጀት ይችላሉ</span>
+                        </label>
+                        <div class="permission-hint">
+                            ሲጠፋ፦ የወጣቶች መምህራን በሜኑ ላይ የትምህርት ዕቅድ ማዘጋጃ አይታይላቸውም፤ አዲስ ዕቅድ መፍጠርም አይችሉም።
+                        </div>
+
+                        <label class="permission-label" style="margin-top:8px;">
+                            <input type="checkbox" name="youth_can_write_attendance" value="1" <?php echo $youth_can_write_attendance ? 'checked' : ''; ?> style="width:20px; height:20px; accent-color:var(--brown-dark);">
+                            <span>📋 የወጣቶች መምህራን አቴንዳንስ መመዝገብ ይችላሉ</span>
+                        </label>
+                        <div class="permission-hint">
+                            ሲጠፋ፦ የወጣቶች መምህራን የተማሪዎች አቴንዳንስ ማየት ብቻ ይችላሉ፤ መጻፍ ወይም ማረም አይችሉም።
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" name="save_settings" class="btn-save">
-                    💾 አስቀምጥ / Save Settings
+                    💾 ቅንብሮቹን አስቀምጥ
                 </button>
             </form>
         </div>

@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -15,140 +14,144 @@ $ethiopian_months = [
 
 // Get current Ethiopian date
 $today_eth = getCurrentEthiopianDate();
-$selected_eth_month = isset($_GET['m']) ? intval($_GET['m']) : $today_eth['month'];
-$selected_eth_year = isset($_GET['y']) ? intval($_GET['y']) : $today_eth['year'];
+$selected_eth_month = isset($_GET['m']) ? intval($_GET['m']) : intval($today_eth['month']);
+$selected_eth_year = isset($_GET['y']) ? intval($_GET['y']) : intval($today_eth['year']);
 $selected_class = isset($_GET['c']) ? intval($_GET['c']) : 0;
 
 // Validate
-if($selected_eth_month < 1 || $selected_eth_month > 13) {
-    $selected_eth_month = $today_eth['month'];
+if ($selected_eth_month < 1 || $selected_eth_month > 13) {
+    $selected_eth_month = intval($today_eth['month']);
 }
-if($selected_eth_year < 2000 || $selected_eth_year > 2100) {
-    $selected_eth_year = $today_eth['year'];
+if ($selected_eth_year < 2000 || $selected_eth_year > 2100) {
+    $selected_eth_year = intval($today_eth['year']);
 }
 
 // Get classes
-$classes_query = "SELECT * FROM classes ORDER BY name";
-$classes = mysqli_query($conn, $classes_query);
+$classes = dbQuery($conn, "SELECT * FROM classes ORDER BY name");
 
-// Handle toggle day - ALLOW PAST AND FUTURE DAYS
-if(isset($_POST['toggle_day'])) {
-    $date_gregorian = mysqli_real_escape_string($conn, $_POST['date_gregorian']);
-    $class_id = intval($_POST['class_id']);
-    $current_status = intval($_POST['current_status']);
-    $new_status = $current_status ? 0 : 1;
-    
-    // Get Ethiopian date info
-    $eth_date = getEthiopianDateFromGregorian($date_gregorian);
-    
-    if($class_id > 0) {
-        // Per-class toggle
-        mysqli_query($conn, "DELETE FROM attendance_days WHERE date_gregorian = '$date_gregorian' AND class_id = $class_id");
-        
-        // Check global entry
-        $check_global = mysqli_query($conn, "SELECT is_school_day FROM attendance_days WHERE date_gregorian = '$date_gregorian' AND class_id IS NULL");
-        $global_open = true;
-        if(mysqli_num_rows($check_global) > 0) {
-            $global_row = mysqli_fetch_assoc($check_global);
-            $global_open = ($global_row['is_school_day'] == 1);
-        }
-        
-        // Only insert per-class entry if it differs from global
-        if($new_status != ($global_open ? 1 : 0)) {
-            mysqli_query($conn, "INSERT INTO attendance_days (date_gregorian, ethiopian_year, ethiopian_month, ethiopian_day, day_of_week, class_id, is_school_day, created_by) 
-                                VALUES ('$date_gregorian', {$eth_date['year']}, {$eth_date['month']}, {$eth_date['day']}, '{$eth_date['day_of_week']}', $class_id, $new_status, {$_SESSION['user_id']})");
-        }
+// Handle toggle day
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_day'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም!";
     } else {
-        // All classes toggle - remove per-class overrides first
-        mysqli_query($conn, "DELETE FROM attendance_days WHERE date_gregorian = '$date_gregorian' AND class_id IS NOT NULL");
+        $date_gregorian = trim($_POST['date_gregorian'] ?? '');
+        $class_id = intval($_POST['class_id'] ?? 0);
+        $current_status = intval($_POST['current_status'] ?? 1);
+        $new_status = ($current_status === 1) ? 0 : 1;
         
-        // Delete existing global entry
-        mysqli_query($conn, "DELETE FROM attendance_days WHERE date_gregorian = '$date_gregorian' AND class_id IS NULL");
+        // Get Ethiopian date info
+        $eth_date = getEthiopianDateFromGregorian($date_gregorian);
+        $userId = intval($_SESSION['user_id'] ?? 1);
         
-        // Insert new global entry
-        mysqli_query($conn, "INSERT INTO attendance_days (date_gregorian, ethiopian_year, ethiopian_month, ethiopian_day, day_of_week, class_id, is_school_day, created_by) 
-                            VALUES ('$date_gregorian', {$eth_date['year']}, {$eth_date['month']}, {$eth_date['day']}, '{$eth_date['day_of_week']}', NULL, $new_status, {$_SESSION['user_id']})");
+        if ($class_id > 0) {
+            // Per-class toggle: delete existing class entry
+            dbExecute($conn, "DELETE FROM attendance_days WHERE date_gregorian = ? AND class_id = ?", "si", [$date_gregorian, $class_id]);
+            
+            // Check global entry
+            $check_global = dbFetchOne($conn, "SELECT is_school_day FROM attendance_days WHERE date_gregorian = ? AND class_id IS NULL", "s", [$date_gregorian]);
+            $global_open = true;
+            if ($check_global) {
+                $global_open = (intval($check_global['is_school_day']) === 1);
+            }
+            
+            // Only insert per-class entry if it differs from global
+            if ($new_status !== ($global_open ? 1 : 0)) {
+                dbExecute(
+                    $conn,
+                    "INSERT INTO attendance_days (date_gregorian, ethiopian_year, ethiopian_month, ethiopian_day, day_of_week, class_id, is_school_day, created_by) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "siiisiii",
+                    [
+                        $date_gregorian,
+                        intval($eth_date['year']),
+                        intval($eth_date['month']),
+                        intval($eth_date['day']),
+                        $eth_date['day_of_week'] ?? date('l', strtotime($date_gregorian)),
+                        $class_id,
+                        $new_status,
+                        $userId
+                    ]
+                );
+            }
+        } else {
+            // All classes toggle: remove per-class overrides and global entry
+            dbExecute($conn, "DELETE FROM attendance_days WHERE date_gregorian = ?", "s", [$date_gregorian]);
+            
+            // Insert new global entry
+            dbExecute(
+                $conn,
+                "INSERT INTO attendance_days (date_gregorian, ethiopian_year, ethiopian_month, ethiopian_day, day_of_week, class_id, is_school_day, created_by) 
+                 VALUES (?, ?, ?, ?, ?, NULL, ?, ?)",
+                "siiisii",
+                [
+                    $date_gregorian,
+                    intval($eth_date['year']),
+                    intval($eth_date['month']),
+                    intval($eth_date['day']),
+                    $eth_date['day_of_week'] ?? date('l', strtotime($date_gregorian)),
+                    $new_status,
+                    $userId
+                ]
+            );
+        }
+        
+        header("Location: attendance_days_control.php?m=$selected_eth_month&y=$selected_eth_year&c=$selected_class&msg=1");
+        exit();
     }
-    
-    $status_text = $new_status ? 'ክፍት (Open)' : 'ዝግ (Closed)';
-    $message = "ቀን ተዘምኗል! $date_gregorian → $status_text";
-    
-    // Redirect to prevent form resubmission
-    header("Location: attendance_days_control.php?m=$selected_eth_month&y=$selected_eth_year&c=$selected_class&msg=1");
-    exit();
 }
 
-if(isset($_GET['msg'])) {
-    $message = "✅ ቀን በተሳካ ሁኔታ ተዘምኗል! (Day updated successfully!)";
+if (isset($_GET['msg'])) {
+    $message = "ቀኑ በተሳካ ሁኔታ ተዘምኗል!";
 }
 
-// Build Ethiopian month calendar - ALL Saturday & Sunday (past, present, future)
+// Build Ethiopian month calendar - ALL Saturday & Sunday
 $days_in_month = getEthiopianDaysInMonth($selected_eth_year, $selected_eth_month);
 $all_days = [];
 
-$base_year = $selected_eth_year + 7;
-$eth_new_year = new DateTime("$base_year-09-11");
-if($base_year % 4 == 3) $eth_new_year = new DateTime("$base_year-09-12");
-
-$month_offset = ($selected_eth_month - 1) * 30;
-
-for($d = 1; $d <= $days_in_month; $d++) {
-    $greg_date = clone $eth_new_year;
-    $greg_date->modify('+' . ($month_offset + $d - 1) . ' days');
-    $ds = $greg_date->format('Y-m-d');
-    $dow = $greg_date->format('l');
+for ($d = 1; $d <= $days_in_month; $d++) {
+    $greg_str = ethiopianToGregorian($selected_eth_year, $selected_eth_month, $d);
+    if (!$greg_str) continue;
     
-    // Only Saturday and Sunday
-    if($dow == 'Saturday' || $dow == 'Sunday') {
+    $dow = date('l', strtotime($greg_str));
+    if ($dow === 'Saturday' || $dow === 'Sunday') {
         $all_days[] = [
             'eth_day' => $d,
-            'greg_date' => $ds,
+            'greg_date' => $greg_str,
             'day_name' => $dow,
-            'is_future' => $ds > date('Y-m-d'),
-            'is_today' => $ds == date('Y-m-d'),
-            'is_past' => $ds < date('Y-m-d')
+            'is_future' => ($greg_str > date('Y-m-d')),
+            'is_today' => ($greg_str === date('Y-m-d')),
+            'is_past' => ($greg_str < date('Y-m-d'))
         ];
     }
 }
 
 // Get existing attendance days status
 $closed_days = [];
-if(!empty($all_days)) {
+if (!empty($all_days)) {
     $first = $all_days[0]['greg_date'];
     $last = $all_days[count($all_days)-1]['greg_date'];
     
-    if($selected_class > 0) {
-        // Global settings first
-        $days_query = "SELECT date_gregorian, is_school_day FROM attendance_days 
-                       WHERE date_gregorian BETWEEN '$first' AND '$last' 
-                       AND class_id IS NULL";
-        $days_result = mysqli_query($conn, $days_query);
-        if($days_result) {
-            while($row = mysqli_fetch_assoc($days_result)) {
-                $closed_days[$row['date_gregorian']] = $row['is_school_day'];
-            }
-        }
-        
-        // Class override
-        $days_query2 = "SELECT date_gregorian, is_school_day FROM attendance_days 
-                        WHERE date_gregorian BETWEEN '$first' AND '$last' 
-                        AND class_id = $selected_class";
-        $days_result2 = mysqli_query($conn, $days_query2);
-        if($days_result2) {
-            while($row = mysqli_fetch_assoc($days_result2)) {
-                $closed_days[$row['date_gregorian']] = $row['is_school_day'];
-            }
-        }
-    } else {
-        // All classes - only global
-        $days_query = "SELECT date_gregorian, is_school_day FROM attendance_days 
-                       WHERE date_gregorian BETWEEN '$first' AND '$last' 
-                       AND class_id IS NULL";
-        $days_result = mysqli_query($conn, $days_query);
-        if($days_result) {
-            while($row = mysqli_fetch_assoc($days_result)) {
-                $closed_days[$row['date_gregorian']] = $row['is_school_day'];
-            }
+    // Global settings first
+    $global_rows = dbFetchAll(
+        $conn,
+        "SELECT date_gregorian, is_school_day FROM attendance_days WHERE date_gregorian BETWEEN ? AND ? AND class_id IS NULL",
+        "ss",
+        [$first, $last]
+    );
+    foreach ($global_rows as $row) {
+        $closed_days[$row['date_gregorian']] = intval($row['is_school_day']);
+    }
+    
+    // Class override
+    if ($selected_class > 0) {
+        $class_rows = dbFetchAll(
+            $conn,
+            "SELECT date_gregorian, is_school_day FROM attendance_days WHERE date_gregorian BETWEEN ? AND ? AND class_id = ?",
+            "ssi",
+            [$first, $last, $selected_class]
+        );
+        foreach ($class_rows as $row) {
+            $closed_days[$row['date_gregorian']] = intval($row['is_school_day']);
         }
     }
 }
@@ -167,14 +170,14 @@ $today_year = $today_eth['year'];
 function buildDayUrl($m, $y, $c) {
     return "attendance_days_control.php?m={$m}&y={$y}&c={$c}";
 }
+$nav_active = 'attendance_days_control';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>የትምህርት ቀናት መቆጣጠሪያ | Attendance Days Control</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513; --gold-primary: #FFD700; --gold-dark: #DAA520;
@@ -282,50 +285,37 @@ function buildDayUrl($m, $y, $c) {
         .stat-mini .lbl { font-size: 10px; color: #666; }
         
         @media (max-width: 600px) {
-            .days-grid { grid-template-columns: repeat(2, 1fr); }
+            .main-container { padding: 0 10px 30px; margin: 15px auto; }
+            .card { padding: 16px 12px; border-radius: 12px; margin-bottom: 15px; }
+            .month-nav { flex-wrap: wrap; gap: 8px; justify-content: center; }
+            .month-nav a { padding: 8px 12px; font-size: 12px; }
+            .month-title { font-size: 15px; width: 100%; order: -1; margin-bottom: 5px; }
+            .filter-row { flex-direction: column; gap: 8px; }
+            .filter-group { width: 100%; min-width: 0; }
+            .days-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .day-card { padding: 12px 8px; }
             .day-num { font-size: 22px; }
+            .stats-row { gap: 8px; }
+            .stat-mini { padding: 8px 6px; }
+            .info-box { padding: 12px; font-size: 12px; }
+            .legend { gap: 8px; padding: 10px; font-size: 11px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">
-            <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','📅');">
-            <div>
-                <h2>የትምህርት ቀናት መቆጣጠሪያ</h2>
-                <span>Attendance Days Control</span>
-            </div>
-        </div>
-        <a href="dashboard_admin.php" class="btn-back">← ዳሽቦርድ</a>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
-        <div class="message success">✅ <?php echo $message; ?></div>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <div class="info-box">
             <span>💡</span>
             <div>
                 <strong>መመሪያ:</strong> ትምህርት የማይሰጥበትን ቀን ለመዝጋት ቀኑን ይጫኑ።<br>
-                🟢 አረንጓዴ = ትምህርት አለ (Open) | 🔴 ቀይ = ትምህርት የለም (Closed)<br>
-                <strong>⭐ ያለፉ ቀናትም መዝጋት ይቻላል! Past days CAN be closed!</strong>
+                🟢 አረንጓዴ = ትምህርት አለ | 🔴 ቀይ = ትምህርት የለም<br>
+                <strong>⭐ ያለፉ ቀናትም ቢሆኑ መዝጋት ወይም መክፈት ይቻላል!</strong>
             </div>
         </div>
 
@@ -335,9 +325,9 @@ function buildDayUrl($m, $y, $c) {
                 <input type="hidden" name="m" value="<?php echo $selected_eth_month; ?>">
                 <input type="hidden" name="y" value="<?php echo $selected_eth_year; ?>">
                 <div class="filter-group">
-                    <label>📚 ክፍል (Class)</label>
+                    <label>📚 ክፍል</label>
                     <select name="c" onchange="this.form.submit()">
-                        <option value="0">ሁሉም ክፍሎች (All Classes)</option>
+                        <option value="0">ሁሉም ክፍሎች</option>
                         <?php 
                         mysqli_data_seek($classes, 0);
                         while($cl = mysqli_fetch_assoc($classes)): 
@@ -396,6 +386,7 @@ function buildDayUrl($m, $y, $c) {
                     else $badge = '<span class="day-badge badge-future">የወደፊት</span>';
                 ?>
                 <form method="POST" style="display:inline;">
+                    <?php echo csrfField(); ?>
                     <input type="hidden" name="date_gregorian" value="<?php echo $day['greg_date']; ?>">
                     <input type="hidden" name="class_id" value="<?php echo $selected_class; ?>">
                     <input type="hidden" name="current_status" value="<?php echo $is_open; ?>">
@@ -414,7 +405,7 @@ function buildDayUrl($m, $y, $c) {
                 
                 <?php if(empty($all_days)): ?>
                 <div style="grid-column: 1/-1; text-align:center; padding: 30px; color: #999;">
-                    ምንም ቀናት አልተገኙም (No Saturday/Sunday in this month)
+                    በዚህ ወር ውስጥ ምንም የቅዳሜና እሁድ ቀናት አልተገኙም
                 </div>
                 <?php endif; ?>
             </div>
@@ -422,27 +413,27 @@ function buildDayUrl($m, $y, $c) {
 
         <!-- Legend -->
         <div class="card">
-            <h3 style="color:var(--brown-dark); margin-bottom:10px;">📖 መፍቻ / Legend</h3>
+            <h3 style="color:var(--brown-dark); margin-bottom:10px;">📖 የቀለማት መፍቻ</h3>
             <div class="legend">
                 <div class="legend-item">
                     <span class="legend-dot" style="background:#D1FAE5; border:2px solid var(--success);"></span> 
-                    ✅ ትምህርት አለ (Open)
+                    ✅ ትምህርት አለ
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot" style="background:#FEE2E2; border:2px solid var(--error);"></span> 
-                    🔒 ትምህርት የለም (Closed)
+                    🔒 ትምህርት የለም
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot" style="background:#FEF3C7; border:2px solid #F59E0B;"></span> 
-                    ⭐ ዛሬ (Today)
+                    ⭐ ዛሬ
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot" style="background:#DBEAFE; border:2px solid #3B82F6;"></span> 
-                    📅 ያለፈ ቀን (Past - Clickable)
+                    📅 ያለፈ ቀን
                 </div>
                 <div class="legend-item">
                     <span class="legend-dot" style="background:#F3F0FF; border:2px solid #7C3AED;"></span> 
-                    ⏰ የወደፊት (Future - Clickable)
+                    ⏰ የወደፊት ቀን
                 </div>
             </div>
         </div>
@@ -450,16 +441,16 @@ function buildDayUrl($m, $y, $c) {
 
     <script>
         function confirmToggle(date, currentStatus) {
-            const action = currentStatus ? 'መዝጋት (CLOSE)' : 'መክፈት (OPEN)';
+            const action = currentStatus ? 'መዝጋት' : 'መክፈት';
             const dateType = new Date(date) < new Date(new Date().toDateString()) ? 'ያለፈ ቀን' : 
                             new Date(date) > new Date(new Date().toDateString()) ? 'የወደፊት ቀን' : 'ዛሬ';
             
             return confirm(
-                '⚠️ ማረጋገጫ / Confirmation\n\n' +
+                '⚠️ ማረጋገጫ\n\n' +
                 'ቀን: ' + date + '\n' +
-                'አይነት: ' + dateType + '\n' +
-                'ድርጊት: ' + action + '\n\n' +
-                'እርግጠኛ ነዎት? (Are you sure?)'
+                'ሁኔታ: ' + dateType + '\n' +
+                'የሚወሰድ እርምጃ: ' + action + '\n\n' +
+                'እርግጠኛ ነዎት?'
             );
         }
     </script>

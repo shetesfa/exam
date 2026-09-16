@@ -1,73 +1,123 @@
 <?php
-session_start();
 require_once 'db.php';
-requireAdmin();
+requireLogin();
+if (!isAdmin() && !isTeacher()) {
+    header("Location: index.php");
+    exit();
+}
+
+$user_id = intval($_SESSION['user_id'] ?? 0);
+$user_name = $_SESSION['user_name'] ?? '';
+$is_admin = isAdmin();
+
+if (empty($user_name) && $user_id) {
+    $u_row = dbFetchOne($conn, "SELECT name FROM users WHERE id = ?", "i", [$user_id]);
+    $user_name = $u_row ? $u_row['name'] : 'Teacher';
+}
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
-// Get all classes
-$classes_query = "SELECT * FROM classes ORDER BY name";
-$classes = mysqli_query($conn, $classes_query);
+// Get classes based on role
+if ($is_admin) {
+    $classes_query = "SELECT * FROM classes ORDER BY name";
+    $classes = mysqli_query($conn, $classes_query);
+    $teachers_query = "SELECT * FROM users WHERE role = 'teacher' ORDER BY name";
+    $teachers = mysqli_query($conn, $teachers_query);
+    $teacher_classes = [];
+    $selected_class_id = 0;
+} else {
+    $teacher_classes = getTeacherClasses($conn, $user_id, $semester_id);
+    $classes = null;
+    $teachers = null;
+    $selected_class_id = 0;
+    if (!empty($teacher_classes)) {
+        $requested_class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
+        foreach ($teacher_classes as $tc) {
+            if (intval($tc['class_id']) === $requested_class_id) {
+                $selected_class_id = $requested_class_id;
+                break;
+            }
+        }
+        if (!$selected_class_id) {
+            $selected_class_id = intval($teacher_classes[0]['class_id']);
+        }
+    }
+}
 
-// Get all teachers
-$teachers_query = "SELECT * FROM users WHERE role = 'teacher' ORDER BY name";
-$teachers = mysqli_query($conn, $teachers_query);
-
-// Handle AJAX request for marks
-if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_teachers') {
+// Handle AJAX request for teachers
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_teachers') {
     header('Content-Type: application/json');
     
-    $class_id = intval($_GET['class_id']);
+    $class_id = intval($_GET['class_id'] ?? 0);
     
-    if(!$class_id) {
+    if (!$class_id) {
         echo json_encode(['success' => false, 'message' => 'Missing class_id']);
         exit();
     }
     
+    if (!$is_admin) {
+        // IDOR Protection: teacher can only see themselves and only for assigned classes
+        $assigned = dbFetchOne($conn, "SELECT id FROM teacher_class WHERE teacher_id = ? AND class_id = ? AND semester_id = ?", "iii", [$user_id, $class_id, $semester_id]);
+        if (!$assigned) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized class']);
+            exit();
+        }
+        $teacher_info = dbFetchOne($conn, "SELECT id, name FROM users WHERE id = ?", "i", [$user_id]);
+        echo json_encode(['success' => true, 'teachers' => [$teacher_info]]);
+        exit();
+    }
+
     // Get teachers assigned to this class
     $query = "SELECT DISTINCT u.id, u.name 
               FROM teacher_class tc
               JOIN users u ON tc.teacher_id = u.id
-              WHERE tc.class_id = $class_id 
-              AND tc.semester_id = $semester_id
+              WHERE tc.class_id = ? 
+              AND tc.semester_id = ?
               AND u.role = 'teacher'
               ORDER BY u.name";
     
-    $result = mysqli_query($conn, $query);
-    $teachers_list = [];
-    
-    if($result) {
-        while($row = mysqli_fetch_assoc($result)) {
-            $teachers_list[] = $row;
-        }
-    }
+    $teachers_list = dbFetchAll($conn, $query, "ii", [$class_id, $semester_id]);
     
     echo json_encode(['success' => true, 'teachers' => $teachers_list]);
     exit();
 }
 
 // Handle AJAX request for marks
-if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_marks') {
     header('Content-Type: application/json');
     
-    $teacher_id = intval($_GET['teacher_id']);
-    $class_id = intval($_GET['class_id']);
+    $teacher_id = intval($_GET['teacher_id'] ?? 0);
+    $class_id = intval($_GET['class_id'] ?? 0);
     
-    if(!$teacher_id || !$class_id) {
+    if (!$teacher_id || !$class_id) {
         echo json_encode(['success' => false, 'message' => 'Missing parameters']);
         exit();
     }
+
+    // IDOR Protection
+    if (!$is_admin) {
+        if ($teacher_id !== $user_id) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized teacher']);
+            exit();
+        }
+        $assigned = dbFetchOne($conn, "SELECT id FROM teacher_class WHERE teacher_id = ? AND class_id = ? AND semester_id = ?", "iii", [$user_id, $class_id, $semester_id]);
+        if (!$assigned) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized class']);
+            exit();
+        }
+    }
     
     // Get marking scheme for this teacher and class
-    $scheme_query = "SELECT * FROM marking_schemes 
-                    WHERE teacher_id = $teacher_id 
-                    AND class_id = $class_id 
-                    AND semester_id = $semester_id";
-    $scheme_result = mysqli_query($conn, $scheme_query);
+    $scheme_row = dbFetchOne(
+        $conn,
+        "SELECT * FROM marking_schemes WHERE teacher_id = ? AND class_id = ? AND semester_id = ?",
+        "iii",
+        [$teacher_id, $class_id, $semester_id]
+    );
     
-    if($scheme_result && mysqli_num_rows($scheme_result) > 0) {
-        $scheme = mysqli_fetch_assoc($scheme_result);
+    if ($scheme_row) {
+        $scheme = $scheme_row;
     } else {
         // Default scheme
         $scheme = [
@@ -94,26 +144,18 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
                     COALESCE(m.total, 0) as total
                     FROM students s
                     LEFT JOIN marks m ON s.id = m.student_id 
-                        AND m.teacher_id = $teacher_id 
-                        AND m.semester_id = $semester_id
-                    WHERE s.class_id = $class_id
+                        AND m.teacher_id = ? 
+                        AND m.semester_id = ?
+                    WHERE s.class_id = ? AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                     ORDER BY s.name";
     
-    $marks_result = mysqli_query($conn, $marks_query);
-    $students = [];
-    if($marks_result) {
-        while($row = mysqli_fetch_assoc($marks_result)) {
-            $students[] = $row;
-        }
-    }
+    $students = dbFetchAll($conn, $marks_query, "iii", [$teacher_id, $semester_id, $class_id]);
     
     // Get teacher name
-    $teacher_info_result = mysqli_query($conn, "SELECT name FROM users WHERE id = $teacher_id");
-    $teacher_info = $teacher_info_result ? mysqli_fetch_assoc($teacher_info_result) : ['name' => 'Unknown'];
+    $teacher_info = dbFetchOne($conn, "SELECT name FROM users WHERE id = ?", "i", [$teacher_id]) ?: ['name' => 'Unknown'];
     
     // Get class name
-    $class_info_result = mysqli_query($conn, "SELECT name FROM classes WHERE id = $class_id");
-    $class_info = $class_info_result ? mysqli_fetch_assoc($class_info_result) : ['name' => 'Unknown'];
+    $class_info = dbFetchOne($conn, "SELECT name FROM classes WHERE id = ?", "i", [$class_id]) ?: ['name' => 'Unknown'];
     
     echo json_encode([
         'success' => true,
@@ -125,14 +167,14 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
     ]);
     exit();
 }
+$nav_active = 'teacher_marks_viewer';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>የመምህራን ውጤት ማያ ገጽ | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -263,6 +305,12 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
             box-shadow: 0 5px 20px rgba(0,0,0,0.08);
         }
 
+        .class-direct-card {
+            background: white;
+            border: 2px solid var(--gold-primary);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
         .filter-title {
             color: var(--brown-dark);
             font-size: 20px;
@@ -305,6 +353,41 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
             outline: none;
             border-color: var(--gold-primary);
             box-shadow: 0 0 0 3px rgba(255,215,0,0.2);
+        }
+
+        /* Class Tabs for Teachers */
+        .class-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .class-tab {
+            padding: 10px 22px;
+            border: 2px solid var(--gold-dark);
+            border-radius: 30px;
+            background: white;
+            color: var(--brown-dark);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .class-tab:hover {
+            background: var(--gold-pale);
+            transform: translateY(-2px);
+        }
+
+        .class-tab.active {
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            border-color: var(--brown-dark);
+            color: var(--brown-dark);
+            box-shadow: 0 4px 12px rgba(218,165,32,0.3);
         }
 
         /* Teachers Grid */
@@ -559,38 +642,10 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-            <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.innerHTML='⛪'">
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>የመምህራን ውጤት ማያ ገጽ | Teacher Marks Viewer</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="nav-link" style="background: var(--gold-primary); color: var(--brown-dark);">
-                ← ወደ ዳሽቦርድ
-            </a>
-        </div>
-    </div>
-
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-    <div class="container">
-        <!-- Filter Section -->
+    <?php include 'mobile_nav.php'; ?>
+    <div class="main-container">
+        <?php if ($is_admin): ?>
+        <!-- Filter Section for Admin -->
         <div class="filter-section">
             <div class="filter-title">
                 <span>🔍</span> የማጣሪያ መምረጫ / Filter Selection
@@ -601,20 +656,69 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
                     <select id="classSelect" onchange="onClassChange()">
                         <option value="">-- ክፍል ምረጥ --</option>
                         <?php 
-                        mysqli_data_seek($classes, 0);
-                        while($class = mysqli_fetch_assoc($classes)): 
+                        if ($classes) {
+                            mysqli_data_seek($classes, 0);
+                            while($class = mysqli_fetch_assoc($classes)): 
                         ?>
                         <option value="<?php echo $class['id']; ?>"><?php echo htmlspecialchars($class['name']); ?></option>
-                        <?php endwhile; ?>
+                        <?php 
+                            endwhile;
+                        } 
+                        ?>
                     </select>
                 </div>
             </div>
         </div>
 
-        <!-- Teachers Grid (dynamic) -->
+        <!-- Teachers Grid (dynamic for Admin) -->
         <div id="teachersGrid" class="teachers-grid" style="display: none;">
             <!-- Teachers buttons will be loaded here -->
         </div>
+        <?php else: ?>
+        <!-- Teacher Direct View: No selecting self needed! -->
+        <?php if (empty($teacher_classes)): ?>
+            <div class="no-data class-direct-card" style="border-radius: 20px; padding: 40px; text-align: center; margin-bottom: 25px;">
+                <span style="font-size: 48px; display: block; margin-bottom: 12px;">📚</span>
+                <h3 style="color: var(--brown-dark); margin-bottom: 8px;">ለዚህ ሴሚስተር የተመደቡበት ክፍል የለም</h3>
+                <p style="color: #666; font-size: 14px;">እባክዎ ከአስተዳዳሪው ጋር ይገናኙ። (No assigned classes found for this semester.)</p>
+            </div>
+        <?php elseif (count($teacher_classes) === 1): ?>
+            <div class="class-direct-card" style="border-radius: 16px; padding: 18px 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 32px;">📚</span>
+                    <div>
+                        <h3 style="color: var(--brown-dark); margin: 0; font-size: 20px; font-weight: 700;">
+                            <?php echo htmlspecialchars($teacher_classes[0]['class_name']); ?>
+                        </h3>
+                        <p style="color: #666; margin: 4px 0 0 0; font-size: 13px;">
+                            👨‍🏫 መምህር፡ <strong><?php echo htmlspecialchars($user_name); ?></strong> &nbsp;|&nbsp; 
+                            👥 ተማሪዎች፡ <strong><?php echo $teacher_classes[0]['student_count']; ?></strong>
+                        </p>
+                    </div>
+                </div>
+                <span class="semester-badge"><?php echo htmlspecialchars($current_semester['name'] ?? ''); ?></span>
+            </div>
+        <?php else: ?>
+            <div class="class-direct-card" style="border-radius: 16px; padding: 18px 25px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                    <div style="font-size: 14px; color: var(--brown-dark); font-weight: 700;">
+                        👨‍🏫 መምህር፡ <?php echo htmlspecialchars($user_name); ?> | 📚 ክፍል ይምረጡ፦
+                    </div>
+                    <span class="semester-badge"><?php echo htmlspecialchars($current_semester['name'] ?? ''); ?></span>
+                </div>
+                <div class="class-tabs" style="margin-bottom: 0;">
+                    <?php foreach ($teacher_classes as $tc): ?>
+                    <button type="button" 
+                            class="class-tab <?php echo $selected_class_id == $tc['class_id'] ? 'active' : ''; ?>" 
+                            onclick="selectTeacherClass(this, <?php echo $tc['class_id']; ?>)">
+                        📚 <?php echo htmlspecialchars($tc['class_name']); ?> 
+                        <small style="opacity: 0.85;">(<?php echo $tc['student_count']; ?> ተማሪዎች)</small>
+                    </button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+        <?php endif; ?>
 
         <!-- Results Card -->
         <div id="resultsCard" class="results-card">
@@ -647,15 +751,28 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
         let currentScheme = null;
         let currentTeacherName = '';
         let currentClassName = '';
+        let currentClassId = null;
+        let currentTeacherId = null;
+
+        const isAdmin = <?php echo $is_admin ? 'true' : 'false'; ?>;
+        const loggedInTeacherId = <?php echo $user_id; ?>;
+        const loggedInTeacherName = <?php echo json_encode($user_name, JSON_UNESCAPED_UNICODE); ?>;
+
+        function selectTeacherClass(btn, classId) {
+            document.querySelectorAll('.class-tab').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            loadMarks(loggedInTeacherId, loggedInTeacherName, classId);
+        }
 
         function onClassChange() {
-            const classId = document.getElementById('classSelect').value;
+            const classSelect = document.getElementById('classSelect');
+            const classId = classSelect ? classSelect.value : null;
             const teachersGrid = document.getElementById('teachersGrid');
             const resultsCard = document.getElementById('resultsCard');
             
             if (!classId) {
-                teachersGrid.style.display = 'none';
-                resultsCard.classList.remove('show');
+                if (teachersGrid) teachersGrid.style.display = 'none';
+                if (resultsCard) resultsCard.classList.remove('show');
                 document.getElementById('marksTableContainer').innerHTML = `
                     <div class="loading">
                         <div class="loading-spinner"></div>
@@ -666,54 +783,68 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
             }
             
             // Show loading
-            teachersGrid.style.display = 'flex';
-            teachersGrid.innerHTML = '<div style="width:100%; text-align:center; padding:20px;"><div class="loading-spinner"></div><p>መምህራንን በማግኘት ላይ...</p></div>';
-            resultsCard.classList.remove('show');
+            if (teachersGrid) {
+                teachersGrid.style.display = 'flex';
+                teachersGrid.innerHTML = '<div style="width:100%; text-align:center; padding:20px;"><div class="loading-spinner"></div><p>መምህራንን በማግኘት ላይ...</p></div>';
+            }
+            if (resultsCard) resultsCard.classList.remove('show');
             
             // Fetch teachers for this class
             fetch(`teacher_marks_viewer.php?ajax=get_teachers&class_id=${classId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.teachers.length > 0) {
-                        renderTeacherButtons(data.teachers);
+                        renderTeacherButtons(data.teachers, classId);
                     } else {
-                        teachersGrid.innerHTML = '<div class="no-data" style="width:100%;"><span>👨‍🏫</span><p>ለዚህ ክፍል ምንም መምህራን አልተመደቡም</p></div>';
+                        if (teachersGrid) teachersGrid.innerHTML = '<div class="no-data" style="width:100%;"><span>👨‍🏫</span><p>ለዚህ ክፍል ምንም መምህራን አልተመደቡም</p></div>';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    teachersGrid.innerHTML = '<div class="error-message" style="width:100%;">❌ ስህተት ተከስቷል! እባክዎ እንደገና ይሞክሩ።</div>';
+                    if (teachersGrid) teachersGrid.innerHTML = '<div class="error-message" style="width:100%;">❌ ስህተት ተከስቷል! እባክዎ እንደገና ይሞክሩ።</div>';
                 });
         }
 
-        function renderTeacherButtons(teachers) {
+        function renderTeacherButtons(teachers, classId) {
             const teachersGrid = document.getElementById('teachersGrid');
+            if (!teachersGrid) return;
             teachersGrid.innerHTML = '';
             
-            teachers.forEach(teacher => {
+            teachers.forEach((teacher, idx) => {
                 const btn = document.createElement('button');
                 btn.className = 'teacher-btn';
                 btn.innerHTML = `👨‍🏫 ${escapeHtml(teacher.name)}`;
                 btn.onclick = function() {
-                    // Remove active from all
                     document.querySelectorAll('.teacher-btn').forEach(b => b.classList.remove('active'));
-                    // Add active to this
                     btn.classList.add('active');
-                    // Load marks
-                    loadMarks(teacher.id, teacher.name);
+                    loadMarks(teacher.id, teacher.name, classId);
                 };
                 teachersGrid.appendChild(btn);
+
+                // If only 1 teacher in this class, auto-select!
+                if (teachers.length === 1 && idx === 0) {
+                    btn.classList.add('active');
+                    loadMarks(teacher.id, teacher.name, classId);
+                }
             });
         }
 
-        function loadMarks(teacherId, teacherName) {
-            const classId = document.getElementById('classSelect').value;
+        function loadMarks(teacherId, teacherName, classId) {
+            if (!classId) {
+                const sel = document.getElementById('classSelect');
+                classId = sel ? sel.value : null;
+            }
+            if (!classId) return;
+
             const resultsCard = document.getElementById('resultsCard');
-            
             currentTeacherName = teacherName;
+            currentTeacherId = teacherId;
+            currentClassId = classId;
             
-            resultsCard.classList.add('show');
-            document.getElementById('teacherNameSpan').innerHTML = ` - ${escapeHtml(teacherName)}`;
+            if (resultsCard) resultsCard.classList.add('show');
+            const teacherNameSpan = document.getElementById('teacherNameSpan');
+            if (teacherNameSpan) teacherNameSpan.innerHTML = ` - ${escapeHtml(teacherName)}`;
+            
             document.getElementById('marksTableContainer').innerHTML = `
                 <div class="loading">
                     <div class="loading-spinner"></div>
@@ -728,13 +859,17 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
                         currentMarksData = data.students;
                         currentScheme = data.scheme;
                         currentClassName = data.class_name;
+                        currentTeacherName = data.teacher_name;
+                        const resultsTitle = document.getElementById('resultsTitle');
+                        if (resultsTitle) resultsTitle.innerHTML = `ውጤት ሰንጠረዥ - ${escapeHtml(data.class_name)}`;
+                        if (teacherNameSpan) teacherNameSpan.innerHTML = ` (${escapeHtml(data.teacher_name)})`;
                         renderMarksTable(data);
                     } else {
                         document.getElementById('marksTableContainer').innerHTML = `
                             <div class="error-message">
                                 <span style="font-size:40px;">❌</span>
                                 <p>ውጤቶችን ማምጣት አልተቻለም</p>
-                                <small>${data.message || 'Unknown error'}</small>
+                                <small>${escapeHtml(data.message || 'Unknown error')}</small>
                             </div>
                         `;
                     }
@@ -750,6 +885,13 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
                     `;
                 });
         }
+
+        // Auto-load marks on page load for teachers
+        document.addEventListener('DOMContentLoaded', function() {
+            <?php if (!$is_admin && !empty($teacher_classes) && $selected_class_id): ?>
+                loadMarks(<?php echo $user_id; ?>, <?php echo json_encode($user_name, JSON_UNESCAPED_UNICODE); ?>, <?php echo $selected_class_id; ?>);
+            <?php endif; ?>
+        });
 
         function renderMarksTable(data) {
             const scheme = data.scheme;
@@ -778,7 +920,7 @@ if(isset($_GET['ajax']) && $_GET['ajax'] == 'get_marks') {
                                 <th>${escapeHtml(scheme.component3_name)}<br><small>(${scheme.component3_percentage}%)</small></th>
                                 <th>${escapeHtml(scheme.component4_name)}<br><small>(${scheme.component4_percentage}%)</small></th>
                                 <th>${escapeHtml(scheme.component5_name)}<br><small>(${scheme.component5_percentage}%)</small></th>
-                                <th>ድምር<br><small>(Total)</small></th>
+                                <th>ጠቅላላ ድምር</th>
                             </tr>
                         </thead>
                         <tbody>

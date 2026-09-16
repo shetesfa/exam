@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,39 +6,66 @@ $message = '';
 $error = '';
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 // Handle Add Assignment
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if(isset($_POST['add_assignment'])) {
-        $teacher_id = mysqli_real_escape_string($conn, $_POST['teacher_id']);
-        $class_id = mysqli_real_escape_string($conn, $_POST['class_id']);
-        
-        $query = "INSERT INTO teacher_class (teacher_id, class_id, semester_id, locked) 
-                  VALUES ($teacher_id, $class_id, $semester_id, FALSE)";
-        
-        if(mysqli_query($conn, $query)) {
-            $message = "መምህር በተሳካ ሁኔታ ለክፍል ተመድቧል!";
-        } else {
-            if(mysqli_errno($conn) == 1062) {
-                $error = "ይህ መምህር በዚህ ክፍል ቀድሞውኑ ተመድቧል!";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (isset($_POST['add_assignment'])) {
+            $teacher_id = intval($_POST['teacher_id'] ?? 0);
+            $class_id = intval($_POST['class_id'] ?? 0);
+            $subject_id = intval($_POST['subject_id'] ?? 0);
+            
+            if ($teacher_id > 0 && $class_id > 0 && $subject_id > 0 && $semester_id > 0) {
+                // Get subject name
+                $sub_row = dbFetchOne($conn, "SELECT name FROM subjects WHERE id = ?", "i", [$subject_id]);
+                $subject_name = $sub_row ? $sub_row['name'] : '';
+                
+                if (empty($subject_name)) {
+                    $error = "እባክዎ ትክክለኛ የትምህርት ዓይነት ይምረጡ!";
+                } else {
+                    // Check if already assigned for this class and subject
+                    $exists = dbFetchOne($conn, "SELECT id FROM teacher_class WHERE teacher_id = ? AND class_id = ? AND semester_id = ? AND subject_id = ?", "iiii", [$teacher_id, $class_id, $semester_id, $subject_id]);
+                    
+                    if ($exists) {
+                        $error = "ይህ መምህር በዚህ ክፍልና የትምህርት ዓይነት ቀድሞውኑ ተመድቧል!";
+                    } else {
+                        $saved = dbExecute(
+                            $conn,
+                            "INSERT INTO teacher_class (teacher_id, class_id, subject_id, subject_name, semester_id, locked) VALUES (?, ?, ?, ?, ?, 0)",
+                            "iiisi",
+                            [$teacher_id, $class_id, $subject_id, $subject_name, $semester_id]
+                        );
+                        if ($saved) {
+                            $message = "መምህር በተሳካ ሁኔታ ለክፍል ({$subject_name}) ተመድቧል!";
+                        } else {
+                            $error = "ስህተት ተከስቷል!";
+                        }
+                    }
+                }
             } else {
-                $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+                $error = "እባክዎ መምህር፣ ክፍል እና የትምህርት ዓይነት በትክክል ይምረጡ! የትምህርት ዓይነት መምረጥ ግዴታ ነው።";
+            }
+        }
+        
+        if (isset($_POST['remove_assignment'])) {
+            $assignment_id = intval($_POST['assignment_id'] ?? 0);
+            if ($assignment_id > 0) {
+                $deleted = dbExecute($conn, "DELETE FROM teacher_class WHERE id = ?", "i", [$assignment_id]);
+                if ($deleted) {
+                    $message = "ምደባ ተሰርዟል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
             }
         }
     }
-    
-    if(isset($_POST['remove_assignment'])) {
-        $assignment_id = mysqli_real_escape_string($conn, $_POST['assignment_id']);
-        
-        $query = "DELETE FROM teacher_class WHERE id=$assignment_id";
-        if(mysqli_query($conn, $query)) {
-            $message = "ምደባ ተሰርዟል!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
-        }
-    }
 }
+
+// Get all subjects
+$all_subjects = getSubjects($conn);
 
 // Get all teachers
 $teachers_query = "SELECT * FROM users WHERE role='teacher' ORDER BY name";
@@ -49,68 +75,69 @@ $teachers = mysqli_query($conn, $teachers_query);
 $classes_query = "SELECT * FROM classes ORDER BY name";
 $classes = mysqli_query($conn, $classes_query);
 
-// Get all assignments for current semester
-$assignments_query = "SELECT tc.*, u.name as teacher_name, c.name as class_name, c.id as class_id
-                      FROM teacher_class tc
-                      JOIN users u ON tc.teacher_id = u.id
-                      JOIN classes c ON tc.class_id = c.id
-                      WHERE tc.semester_id = $semester_id
-                      ORDER BY c.name, u.name";
-$assignments_result = mysqli_query($conn, $assignments_query);
+// Get all assignments for current semester with subject
+$assignments_list = dbFetchAll(
+    $conn,
+    "SELECT tc.*, u.name as teacher_name, c.name as class_name, c.id as class_id,
+            COALESCE(s.name, tc.subject_name, '') as subject_name
+     FROM teacher_class tc
+     JOIN users u ON tc.teacher_id = u.id
+     JOIN classes c ON tc.class_id = c.id
+     LEFT JOIN subjects s ON tc.subject_id = s.id
+     WHERE tc.semester_id = ?
+     ORDER BY c.name, u.name",
+    "i",
+    [$semester_id]
+);
 
 // Group assignments by class
 $class_assignments = [];
-while($assignment = mysqli_fetch_assoc($assignments_result)) {
+foreach ($assignments_list as $assignment) {
     $class_assignments[$assignment['class_name']][] = $assignment;
 }
 
-// Prepare teacher assignments data for the table
+$classes_arr = [];
+mysqli_data_seek($classes, 0);
+while ($c = mysqli_fetch_assoc($classes)) {
+    $classes_arr[] = $c;
+}
+
 $teacher_assignments_data = [];
 mysqli_data_seek($teachers, 0);
 while($teacher = mysqli_fetch_assoc($teachers)) {
-    $teacher_id = $teacher['id'];
-    $teacher_name = $teacher['name'];
-    $teacher_phone = $teacher['phone'] ?: '---';
+    $tid = intval($teacher['id']);
     $assigned_classes = [];
     $total_classes = 0;
-    
-    // Find all classes this teacher teaches
-    mysqli_data_seek($classes, 0);
-    while($class = mysqli_fetch_assoc($classes)) {
-        // Check if this teacher is assigned to this class
-        $check_query = "SELECT tc.* FROM teacher_class tc 
-                        WHERE tc.teacher_id = $teacher_id 
-                        AND tc.class_id = {$class['id']}
-                        AND tc.semester_id = $semester_id";
-        $check_result = mysqli_query($conn, $check_query);
-        
-        if(mysqli_num_rows($check_result) > 0) {
-            $assignment = mysqli_fetch_assoc($check_result);
+
+    foreach ($assignments_list as $a) {
+        if (intval($a['teacher_id']) === $tid) {
             $assigned_classes[] = [
-                'name' => $class['name'],
-                'locked' => $assignment['locked'],
-                'assignment_id' => $assignment['id']
+                'name'          => $a['class_name'],
+                'subject'       => $a['subject_name'] ?? '',
+                'locked'        => $a['locked'],
+                'assignment_id' => $a['id']
             ];
             $total_classes++;
         }
     }
-    
+
     $teacher_assignments_data[] = [
-        'id' => $teacher_id,
-        'name' => $teacher_name,
-        'phone' => $teacher_phone,
+        'id'      => $tid,
+        'name'    => $teacher['name'],
+        'phone'   => $teacher['phone'] ?: '---',
         'classes' => $assigned_classes,
-        'total' => $total_classes
+        'total'   => $total_classes
     ];
 }
+
+$nav_active = 'manage_assignments';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images\icon.png">
     <title>ክፍል ምደባ | አጸደ ትጉሃን </title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -341,8 +368,8 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
 
         .classes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
             margin-top: 20px;
         }
 
@@ -547,7 +574,9 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
         /* Teacher Table Styles */
         .teacher-table-container {
             border-radius: 16px;
-            overflow: hidden;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            max-width: 100%;
             border: 2px solid var(--gold-pale);
             background: white;
             margin-top: 20px;
@@ -716,80 +745,213 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
         }
 
         @media (max-width: 768px) {
+            .section {
+                padding: 16px 12px;
+                border-radius: 14px;
+            }
+            .semester-info-card {
+                padding: 14px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
             .classes-grid {
                 grid-template-columns: 1fr;
             }
-            
+            .class-card {
+                padding: 15px 12px;
+            }
             .add-teacher-form {
                 flex-direction: column;
             }
-            
             .add-teacher-form button {
                 width: 100%;
+                justify-content: center;
             }
-            
             .teacher-table th:nth-child(2),
             .teacher-table td:nth-child(2) {
                 display: none;
             }
-            
+            .teacher-table th,
+            .teacher-table td {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
             .class-badge {
                 padding: 4px 10px;
                 font-size: 12px;
             }
-            
             .teacher-info-cell {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 10px;
+                gap: 8px;
             }
+        }
+
+        .teacher-count.count-pale {
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+        }
+
+        .subject-tag {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            color: #92400E;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 6px;
+            display: inline-block;
+        }
+
+        /* Direct dark-mode overrides for page components */
+        html.dark-mode body {
+            background-color: #0B1120 !important;
+        }
+        html.dark-mode .section {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+        }
+        html.dark-mode .section-header {
+            border-bottom-color: #334155 !important;
+        }
+        html.dark-mode .section-header h2 {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .semester-info-card {
+            background: linear-gradient(135deg, #1E293B, #0F172A) !important;
+            border-color: #F59E0B !important;
+        }
+        html.dark-mode .semester-details h3 {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .semester-details p {
+            color: #CBD5E1 !important;
+        }
+        html.dark-mode .total-badge {
+            background: #0F172A !important;
+            color: #FCD34D !important;
+            border: 1px solid #F59E0B !important;
+        }
+        html.dark-mode .class-card {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .class-card:hover {
+            border-color: #F59E0B !important;
+        }
+        html.dark-mode .class-header {
+            border-bottom-color: #334155 !important;
+        }
+        html.dark-mode .class-name {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .teacher-count,
+        html.dark-mode .teacher-count.count-pale {
+            background: #0F172A !important;
+            color: #FCD34D !important;
+            border: 1px solid #F59E0B !important;
+        }
+        html.dark-mode .teacher-item {
+            background-color: #0F172A !important;
+            border: 1px solid #334155 !important;
+            border-left: 4px solid #F59E0B !important;
+        }
+        html.dark-mode .teacher-item:hover {
+            background-color: #26354A !important;
+        }
+        html.dark-mode .teacher-icon {
+            background-color: #1E293B !important;
+            border: 1px solid #475569 !important;
+            box-shadow: none !important;
+        }
+        html.dark-mode .teacher-name {
+            color: #F8FAFC !important;
+        }
+        html.dark-mode .subject-tag {
+            background: #78350F !important;
+            border-color: #D97706 !important;
+            color: #FDE68A !important;
+        }
+        html.dark-mode .teacher-status.status-locked {
+            background-color: #7F1D1D !important;
+            color: #FECACA !important;
+        }
+        html.dark-mode .teacher-status.status-unlocked {
+            background-color: #064E3B !important;
+            color: #A7F3D0 !important;
+        }
+        html.dark-mode .add-teacher-form {
+            border-top: 2px dashed #475569 !important;
+        }
+        html.dark-mode .add-teacher-form select {
+            background-color: #0F172A !important;
+            color: #F8FAFC !important;
+            border: 1.5px solid #475569 !important;
+        }
+        html.dark-mode .teacher-table-container {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+        }
+        html.dark-mode .teacher-table th {
+            background: #0F172A !important;
+            color: #FCD34D !important;
+            border-bottom: 2px solid #F59E0B !important;
+        }
+        html.dark-mode .teacher-table td {
+            background-color: #1E293B !important;
+            color: #E2E8F0 !important;
+            border-bottom: 1px solid #334155 !important;
+        }
+        html.dark-mode .teacher-table tbody tr:hover {
+            background-color: #26354A !important;
+        }
+        html.dark-mode .class-badge {
+            background-color: #0F172A !important;
+            color: #FCD34D !important;
+            border-color: #F59E0B !important;
+        }
+        html.dark-mode .class-badge:hover {
+            background-color: #334155 !important;
+            color: #FFFFFF !important;
+        }
+        html.dark-mode .class-badge.locked {
+            background-color: #3B1212 !important;
+            border-color: #DC2626 !important;
+            color: #FCA5A5 !important;
+        }
+        html.dark-mode .total-classes {
+            background: #0F172A !important;
+            color: #FCD34D !important;
+            border: 1px solid #F59E0B !important;
+        }
+        html.dark-mode .empty-state {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .empty-state h3 {
+            color: #FCD34D !important;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">⛪</div>
-                <div class="title">
-                    <h1>አጸደ ተጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>Atsede Teguhan Sunday School</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="nav-link" style="background: var(--gold-primary); color: var(--brown-dark);">
-                ← ወደ ዳሽቦርድ
-            </a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
         <div class="message success">
             <span>✅</span>
-            <?php echo $message; ?>
+            <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
 
         <?php if($error): ?>
         <div class="message error">
             <span>⚠️</span>
-            <?php echo $error; ?>
+            <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
 
@@ -823,7 +985,7 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
                     <span>📚</span> 
                     ክፍሎች እና የተመደቡላቸው መምህራን
                 </h2>
-                <span class="teacher-count" style="background: var(--gold-pale);">
+                <span class="teacher-count count-pale">
                     <?php echo mysqli_num_rows($classes); ?> ክፍሎች
                 </span>
             </div>
@@ -853,6 +1015,11 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
                                 <div class="teacher-info">
                                     <span class="teacher-icon">👨‍🏫</span>
                                     <span class="teacher-name"><?php echo htmlspecialchars($teacher['teacher_name']); ?></span>
+                                    <?php if(!empty($teacher['subject_name'])): ?>
+                                    <span class="subject-tag">
+                                        📖 <?php echo htmlspecialchars($teacher['subject_name']); ?>
+                                    </span>
+                                    <?php endif; ?>
                                     <?php if($teacher['locked']): ?>
                                     <span class="teacher-status status-locked">🔒 ተቆልፏል</span>
                                     <?php else: ?>
@@ -861,6 +1028,7 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
                                 </div>
                                 <form method="POST" style="display: inline;" 
                                       onsubmit="return confirm('መምህሩን ከዚህ ክፍል ማስወገድ እርግጠኛ ነዎት?')">
+                                    <?php echo csrfField(); ?>
                                     <input type="hidden" name="assignment_id" value="<?php echo $teacher['id']; ?>">
                                     <button type="submit" name="remove_assignment" class="remove-btn" title="አስወግድ">✕</button>
                                 </form>
@@ -874,31 +1042,29 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
                         <?php endif; ?>
                     </div>
 
-                    <form method="POST" class="add-teacher-form">
+                    <form method="POST" class="add-teacher-form" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <?php echo csrfField(); ?>
                         <input type="hidden" name="class_id" value="<?php echo $class['id']; ?>">
-                        <select name="teacher_id" required>
+                        <select name="teacher_id" style="flex: 2; min-width: 140px;" required>
                             <option value="">+ መምህር ምረጥ...</option>
                             <?php 
                             mysqli_data_seek($teachers, 0);
                             while($teacher = mysqli_fetch_assoc($teachers)): 
-                                $already_assigned = false;
-                                foreach($class_teachers as $ct) {
-                                    if($ct['teacher_id'] == $teacher['id']) {
-                                        $already_assigned = true;
-                                        break;
-                                    }
-                                }
-                                if(!$already_assigned):
                             ?>
                             <option value="<?php echo $teacher['id']; ?>">
                                 <?php echo htmlspecialchars($teacher['name']); ?>
                             </option>
-                            <?php 
-                                endif;
-                            endwhile; 
-                            ?>
+                            <?php endwhile; ?>
                         </select>
-                        <button type="submit" name="add_assignment">
+                        <select name="subject_id" style="flex: 2; min-width: 140px;" required>
+                            <option value="">* የትምህርት ዓይነት ምረጥ (ግዴታ)...</option>
+                            <?php foreach($all_subjects as $sub): ?>
+                                <option value="<?php echo $sub['id']; ?>">
+                                    <?php echo htmlspecialchars($sub['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <button type="submit" name="add_assignment" style="padding: 10px 18px;">
                             <span>➕</span> መድብ
                         </button>
                     </form>
@@ -914,12 +1080,12 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
                     <span>👨‍🏫</span> 
                     የመምህራን ምደባ ማጠቃለያ
                 </h2>
-                <span class="teacher-count" style="background: var(--gold-pale);">
+                <span class="teacher-count count-pale">
                     <?php echo count($teacher_assignments_data); ?> መምህራን
                 </span>
             </div>
 
-            <div class="teacher-table-container">
+            <div class="teacher-table-container table-responsive">
                 <table class="teacher-table">
                     <thead>
                         <tr>
@@ -962,6 +1128,9 @@ while($teacher = mysqli_fetch_assoc($teachers)) {
                                                 <?php echo $class['locked'] ? '🔒' : '📚'; ?>
                                             </span>
                                             <?php echo htmlspecialchars($class['name']); ?>
+                                            <?php if(!empty($class['subject'])): ?>
+                                                <span style="opacity: 0.85; font-size: 11px; margin-left: 3px;">(<?php echo htmlspecialchars($class['subject']); ?>)</span>
+                                            <?php endif; ?>
                                         </span>
                                         <?php endforeach; ?>
                                     <?php else: ?>

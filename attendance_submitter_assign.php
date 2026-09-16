@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,66 +6,90 @@ $message = '';
 $error = '';
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 // Handle assignment
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['assign'])) {
-        $submitter_id = intval($_POST['submitter_id']);
-        $class_id = intval($_POST['class_id']);
-        
-        // Check if this submitter is already assigned to this class in this semester
-        $check_query = "SELECT id FROM attendance_assignments 
-                        WHERE submitter_id = $submitter_id 
-                        AND class_id = $class_id 
-                        AND semester_id = $semester_id";
-        $check_result = mysqli_query($conn, $check_query);
-        
-        if(mysqli_num_rows($check_result) > 0) {
-            $error = "ይህ የክፍል ጸሐፊ በዚህ ክፍል ቀድሞውኑ ተመድቧል! (Already assigned!)";
-        } else {
-            $query = "INSERT INTO attendance_assignments (submitter_id, class_id, semester_id) 
-                      VALUES ($submitter_id, $class_id, $semester_id)";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (isset($_POST['assign'])) {
+            $submitter_id = intval($_POST['submitter_id'] ?? 0);
+            $class_id = intval($_POST['class_id'] ?? 0);
             
-            if (mysqli_query($conn, $query)) {
-                $message = "የክፍል ጸሐፊ በተሳካ ሁኔታ ተመድቧል! (Submitter assigned successfully!)";
-            } else {
-                $error = "ስህተት: " . mysqli_error($conn);
+            if ($submitter_id > 0 && $class_id > 0 && $semester_id > 0) {
+                // Check if this submitter is already assigned to this class in this semester
+                $check = dbFetchOne(
+                    $conn,
+                    "SELECT id FROM attendance_assignments WHERE submitter_id = ? AND class_id = ? AND semester_id = ?",
+                    "iii",
+                    [$submitter_id, $class_id, $semester_id]
+                );
+                
+                if ($check) {
+                    $error = "ይህ የክፍል ጸሐፊ በዚህ ክፍል ቀድሞውኑ ተመድቧል!";
+                } else {
+                    $inserted = dbExecute(
+                        $conn,
+                        "INSERT INTO attendance_assignments (submitter_id, class_id, semester_id) VALUES (?, ?, ?)",
+                        "iii",
+                        [$submitter_id, $class_id, $semester_id]
+                    );
+                    
+                    if ($inserted) {
+                        $message = "የክፍል ጸሐፊው በተሳካ ሁኔታ ተመድቧል!";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
             }
         }
-    }
-    
-    if (isset($_POST['remove'])) {
-        $assignment_id = intval($_POST['assignment_id']);
-        mysqli_query($conn, "DELETE FROM attendance_assignments WHERE id = $assignment_id");
-        $message = "ምደባ ተሰርዟል! (Assignment removed!)";
-    }
-    
-    // ADD NEW SUBMITTER
-    if (isset($_POST['add_submitter'])) {
-        $name = mysqli_real_escape_string($conn, $_POST['submitter_name']);
-        $username = mysqli_real_escape_string($conn, $_POST['submitter_username']);
-        $phone = mysqli_real_escape_string($conn, $_POST['submitter_phone']);
-        $password = hashPassword('123');
         
-        // Check if username exists
-        $check = mysqli_query($conn, "SELECT id FROM users WHERE username = '$username'");
-        if(mysqli_num_rows($check) > 0) {
-            $error = "ይህ የተጠቃሚ ስም ቀድሞውኑ አለ! (Username already exists!)";
-        } else {
-            $query = "INSERT INTO users (name, username, phone, role, password, first_login, can_edit_marks, can_edit_attendance) 
-                      VALUES ('$name', '$username', '$phone', 'attendance_submitter', '$password', 1, 0, 1)";
-            if(mysqli_query($conn, $query)) {
-                $message = "አዲስ የክፍል ጸሐፊ ተፈጥሯል! የይለፍ ቃል: 123 (New submitter created! Password: 123)";
+        if (isset($_POST['remove'])) {
+            $assignment_id = intval($_POST['assignment_id'] ?? 0);
+            if ($assignment_id > 0) {
+                dbExecute($conn, "DELETE FROM attendance_assignments WHERE id = ?", "i", [$assignment_id]);
+                $message = "ምደባው ተሰርዟል!";
+            }
+        }
+        
+        // ADD NEW SUBMITTER
+        if (isset($_POST['add_submitter'])) {
+            $name = trim($_POST['submitter_name'] ?? '');
+            $username = trim($_POST['submitter_username'] ?? '');
+            $phone = trim($_POST['submitter_phone'] ?? '');
+            $password = password_hash('123', PASSWORD_DEFAULT);
+            
+            if (empty($name) || empty($username)) {
+                $error = "እባክዎ ሙሉ ስም እና የተጠቃሚ ስም ያስገቡ!";
             } else {
-                $error = "ስህተት: " . mysqli_error($conn);
+                // Check if username exists
+                $check = dbFetchOne($conn, "SELECT id FROM users WHERE username = ?", "s", [$username]);
+                if ($check) {
+                    $error = "ይህ የተጠቃሚ ስም ቀድሞውኑ አለ! እባክዎ ሌላ የተጠቃሚ ስም ይምረጡ።";
+                } else {
+                    $created = dbExecute(
+                        $conn,
+                        "INSERT INTO users (name, username, phone, role, password, first_login, can_edit_marks, can_edit_attendance) 
+                         VALUES (?, ?, ?, 'attendance_submitter', ?, 1, 0, 1)",
+                        "ssss",
+                        [$name, $username, $phone, $password]
+                    );
+                    if ($created) {
+                        $message = "አዲስ የክፍል ጸሐፊ በተሳካ ሁኔታ ተመዝግቧል! የመጀመሪያ የይለፍ ቃል: 123";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
             }
         }
     }
 }
 
-// Get submitters
-$submitters_query = "SELECT * FROM users WHERE role = 'attendance_submitter' ORDER BY name";
+// Get submitters - now includes teachers, since a teacher can also be
+// granted attendance-marking rights via attendance_assignments (this is
+// how Children division teachers get it, reusing this exact mechanism).
+$submitters_query = "SELECT * FROM users WHERE role IN ('attendance_submitter', 'teacher') ORDER BY role, name";
 $submitters = mysqli_query($conn, $submitters_query);
 
 // Get classes
@@ -104,20 +127,21 @@ while($class = mysqli_fetch_assoc($classes)) {
 
 // Get all submitters with their assignments
 $submitter_assignments = [];
-$submitter_detail_query = "SELECT u.id as submitter_id, u.name as submitter_name, u.phone,
+$submitter_detail_query = "SELECT u.id as submitter_id, u.name as submitter_name, u.phone, u.role,
                            c.id as class_id, c.name as class_name,
                            aa.id as assignment_id,
                            (SELECT COUNT(*) FROM students s WHERE s.class_id = c.id) as student_count
                            FROM users u
                            LEFT JOIN attendance_assignments aa ON u.id = aa.submitter_id AND aa.semester_id = $semester_id
                            LEFT JOIN classes c ON aa.class_id = c.id
-                           WHERE u.role = 'attendance_submitter'
-                           ORDER BY u.name, c.name";
+                           WHERE u.role IN ('attendance_submitter', 'teacher')
+                           ORDER BY u.role, u.name, c.name";
 $submitter_detail = mysqli_query($conn, $submitter_detail_query);
 if($submitter_detail) {
     while($row = mysqli_fetch_assoc($submitter_detail)) {
         $submitter_assignments[$row['submitter_id']]['name'] = $row['submitter_name'];
         $submitter_assignments[$row['submitter_id']]['phone'] = $row['phone'];
+        $submitter_assignments[$row['submitter_id']]['role'] = $row['role'];
         if($row['class_id']) {
             $submitter_assignments[$row['submitter_id']]['classes'][] = [
                 'assignment_id' => $row['assignment_id'],
@@ -132,14 +156,14 @@ if($submitter_detail) {
         }
     }
 }
+$nav_active = 'attendance_submitter_assign';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>የክፍል ጸሐፊ ምደባ | Attendance Submitter Assignment</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -257,12 +281,14 @@ if($submitter_detail) {
             outline: none; border-color: var(--gold-primary);
         }
 
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; }
+        .table-responsive table { min-width: 550px; }
         th { background: var(--brown-dark); color: white; padding: 12px; text-align: left; border: 1px solid var(--gold-dark); }
         td { padding: 10px 12px; border-bottom: 1px solid #E2E8F0; }
 
         .class-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
         }
         .class-card-item {
             background: #F8F9FA; border-radius: 12px; padding: 15px;
@@ -284,47 +310,26 @@ if($submitter_detail) {
         .add-submitter-form h4 { color: var(--purple); margin-bottom: 15px; }
 
         @media (max-width: 768px) {
-            .class-grid { grid-template-columns: 1fr; }
-            .form-row { flex-direction: column; }
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .card { padding: 16px 12px; border-radius: 12px; margin-bottom: 18px; }
+            .card-title { font-size: 17px; }
+            .class-grid { grid-template-columns: 1fr; gap: 12px; }
+            .form-row { flex-direction: column; gap: 10px; }
+            .form-group { width: 100%; min-width: 0; }
+            .btn { width: 100%; justify-content: center; min-height: 44px; }
+            .add-submitter-form { padding: 15px 10px; border-radius: 10px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">📋</div>
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>የክፍል ጸሐፊ ምደባ | Attendance Submitter Assignment</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="btn btn-back">← ወደ ዳሽቦርድ</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if ($message): ?>
-        <div class="message success">✅ <?php echo $message; ?></div>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
         <?php if ($error): ?>
-        <div class="message error">⚠️ <?php echo $error; ?></div>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if(!$current_semester): ?>
@@ -341,9 +346,10 @@ if($submitter_detail) {
                 <span>➕</span> አዲስ ምደባ / New Assignment
             </div>
             <form method="POST">
+                <?php echo csrfField(); ?>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>👤 የክፍል ጸሐፊ (Submitter)</label>
+                        <label>👤 የክፍል ጸሐፊ</label>
                         <select name="submitter_id" required>
                             <option value="">ምረጥ...</option>
                             <?php 
@@ -352,12 +358,13 @@ if($submitter_detail) {
                             ?>
                             <option value="<?php echo $submitter['id']; ?>">
                                 <?php echo htmlspecialchars($submitter['name']); ?>
+                                (<?php echo $submitter['role'] === 'teacher' ? 'መምህር' : 'ጸሐፊ'; ?>)
                             </option>
                             <?php endwhile; ?>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>📚 ክፍል (Class)</label>
+                        <label>📚 ክፍል</label>
                         <select name="class_id" required>
                             <option value="">ምረጥ...</option>
                             <?php 
@@ -402,6 +409,7 @@ if($submitter_detail) {
                         <span class="submitter-tag">
                             👤 <?php echo htmlspecialchars($assignment['submitter_name']); ?>
                             <form method="POST" style="display: inline; margin-left: 8px;" onsubmit="return confirm('ምደባውን ማስወገድ እርግጠኛ ነዎት?')">
+                                <?php echo csrfField(); ?>
                                 <input type="hidden" name="assignment_id" value="<?php echo $assignment['id']; ?>">
                                 <button type="submit" name="remove" style="background:none; border:none; color:var(--error-red); cursor:pointer; font-size:14px;">✕</button>
                             </form>
@@ -425,6 +433,7 @@ if($submitter_detail) {
                 <span>👥</span> የክፍል ጸሐፊዎች አጠቃላይ እይታ / Submitter Overview
             </div>
             
+            <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
@@ -437,7 +446,9 @@ if($submitter_detail) {
                     <?php if(!empty($submitter_assignments)): ?>
                         <?php foreach($submitter_assignments as $s_id => $s_data): ?>
                         <tr>
-                            <td><strong><?php echo htmlspecialchars($s_data['name']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($s_data['name']); ?></strong>
+                                <span style="font-size:11px;color:#999;">(<?php echo $s_data['role'] === 'teacher' ? 'መምህር' : 'ጸሐፊ'; ?>)</span>
+                            </td>
                             <td><?php echo htmlspecialchars($s_data['phone'] ?? '---'); ?></td>
                             <td>
                                 <?php if(!empty($s_data['classes'])): ?>
@@ -460,28 +471,30 @@ if($submitter_detail) {
                     <?php endif; ?>
                 </tbody>
             </table>
+            </div>
         </div>
 
         <!-- SECTION 4: Add New Submitter -->
         <div class="card">
             <div class="card-title">
-                <span>➕</span> አዲስ የክፍል ጸሐፊ መፍጠሪያ / Create New Submitter
+                <span>➕</span> አዲስ የክፍል ጸሐፊ መመዝገቢያ
             </div>
             
             <div class="add-submitter-form">
                 <h4>🆕 አዲስ የክፍል ጸሐፊ መረጃ</h4>
                 <form method="POST">
+                    <?php echo csrfField(); ?>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>ሙሉ ስም (Full Name) *</label>
+                            <label>ሙሉ ስም *</label>
                             <input type="text" name="submitter_name" required placeholder="ለምሳሌ: የክፍል ጸሐፊ አበራ">
                         </div>
                         <div class="form-group">
-                            <label>የተጠቃሚ ስም (Username) *</label>
+                            <label>የተጠቃሚ ስም *</label>
                             <input type="text" name="submitter_username" required placeholder="ለምሳሌ: submitter1">
                         </div>
                         <div class="form-group">
-                            <label>ስልክ (Phone)</label>
+                            <label>ስልክ ቁጥር</label>
                             <input type="text" name="submitter_phone" placeholder="0912345678">
                         </div>
                     </div>

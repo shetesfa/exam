@@ -1,9 +1,12 @@
 <?php
-session_start();
 require_once 'db.php';
+requireLogin();
 
-// Check if user is logged in and needs to change password
-if(!isset($_SESSION['user_id']) || $_SESSION['first_login'] != 1) {
+// Check if user needs to change password or is logged in
+$user_id = intval($_SESSION['user_id']);
+$user = dbFetchOne($conn, "SELECT id, role, first_login FROM users WHERE id = ?", "i", [$user_id]);
+
+if (!$user) {
     header("Location: index.php");
     exit();
 }
@@ -11,27 +14,41 @@ if(!isset($_SESSION['user_id']) || $_SESSION['first_login'] != 1) {
 $error = '';
 $success = '';
 
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $new_password = $_POST['new_password'];
-    $confirm_password = $_POST['confirm_password'];
-    
-    if($new_password != $confirm_password) {
-        $error = "የይለፍ ቃላት አይዛመዱም! (Passwords do not match!)";
-    } elseif(strlen($new_password) < 4) {
-        $error = "የይለፍ ቃል ቢያንስ 4 ቁምፊዎች መሆን አለበት! (Password must be at least 4 characters!)";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
     } else {
-        // Hash the new password
-        $hashed_password = hashPassword($new_password);
-        $user_id = $_SESSION['user_id'];
+        $new_password = $_POST['new_password'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
         
-        $query = "UPDATE users SET password = '$hashed_password', first_login = FALSE WHERE id = $user_id";
-        
-        if(mysqli_query($conn, $query)) {
-            $_SESSION['first_login'] = 0;
-            $success = "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል! እንኳን ደህና መጡ!";
-            header("refresh:2;url=dashboard_teacher.php");
+        if ($new_password !== $confirm_password) {
+            $error = "ያስገቧቸው የይለፍ ቃሎች አይመሳሰሉም!";
+        } elseif (strlen($new_password) < 4) {
+            $error = "የይለፍ ቃል ቢያንስ 4 ዲጂት መሆን አለበት!";
         } else {
-            $error = "ስህተት ተከስቷል! (Error occurred!)";
+            $hashed_password = hashPassword($new_password);
+            
+            $updated = dbExecute(
+                $conn,
+                "UPDATE users SET password = ?, first_login = 0 WHERE id = ?",
+                "si",
+                [$hashed_password, $user_id]
+            );
+            
+            if ($updated) {
+                $_SESSION['first_login'] = 0;
+                $success = "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል! እንኳን ደህና መጡ!";
+                
+                $redirect = "dashboard_teacher.php";
+                if ($user['role'] === 'admin') {
+                    $redirect = "dashboard_admin.php";
+                } elseif ($user['role'] === 'attendance_submitter') {
+                    $redirect = "dashboard_attendance.php";
+                }
+                header("refresh:2;url=$redirect");
+            } else {
+                $error = "ስህተት ተከስቷል! እባክዎ እንደገና ይሞክሩ።";
+            }
         }
     }
 }
@@ -43,6 +60,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="images\icon.png">
     <title>የይለፍ ቃል ይቀይሩ | አጸደ ትጉሃን </title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -221,6 +239,51 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             align-items: center;
             gap: 5px;
         }
+
+        /* Dark Mode Overrides */
+        html.dark-mode body,
+        body.dark-mode,
+        [data-theme="dark"] body {
+            background: #0B1120 !important;
+            color: #F1F5F9 !important;
+        }
+        .dark-mode .change-card,
+        [data-theme="dark"] .change-card {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6) !important;
+        }
+        .dark-mode h1,
+        [data-theme="dark"] h1 {
+            color: #FCD34D !important;
+        }
+        .dark-mode label,
+        [data-theme="dark"] label {
+            color: #FCD34D !important;
+        }
+        .dark-mode .welcome-message,
+        [data-theme="dark"] .welcome-message {
+            background: #0F172A !important;
+            color: #CBD5E1 !important;
+            border: 1px solid #334155 !important;
+        }
+        .dark-mode .form-control,
+        [data-theme="dark"] .form-control {
+            background: #0F172A !important;
+            background-color: #0F172A !important;
+            border: 1.5px solid #334155 !important;
+            color: #F8FAFC !important;
+        }
+        .dark-mode .form-control:focus,
+        [data-theme="dark"] .form-control:focus {
+            border-color: #F59E0B !important;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+            color: #FFFFFF !important;
+        }
+        .dark-mode .password-hint,
+        [data-theme="dark"] .password-hint {
+            color: #94A3B8 !important;
+        }
     </style>
 </head>
 <body>
@@ -239,7 +302,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             <?php if($error): ?>
             <div class="error-message">
-                ⚠️ <?php echo $error; ?>
+                ⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
             </div>
             <?php endif; ?>
 
@@ -250,8 +313,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php endif; ?>
 
             <form method="POST" action="">
+                <?php echo csrfField(); ?>
                 <div class="form-group">
-                    <label>አዲስ የይለፍ ቃል (New Password)</label>
+                    <label>አዲስ የይለፍ ቃል</label>
                     <div class="input-group">
                         <span class="input-icon">🔑</span>
                         <input type="password" name="new_password" class="form-control" 
@@ -260,7 +324,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
 
                 <div class="form-group">
-                    <label>የይለፍ ቃል ድገም (Confirm Password)</label>
+                    <label>የይለፍ ቃሉን በድጋሚ ያረጋግጡ</label>
                     <div class="input-group">
                         <span class="input-icon">✓</span>
                         <input type="password" name="confirm_password" class="form-control" 

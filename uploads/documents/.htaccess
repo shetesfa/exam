@@ -1,0 +1,5 @@
+# Uploaded files here are user-supplied. Never execute anything as a script,
+# regardless of extension, even if a future bug lets a bad file through.
+php_flag engine off
+AddHandler cgi-script .php .php3 .php4 .php5 .php7 .phtml .pl .py .cgi .asp .aspx .jsp
+Options -ExecCGI -Indexes

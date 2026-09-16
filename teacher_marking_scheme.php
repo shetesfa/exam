@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireLogin();
 
@@ -8,11 +7,11 @@ if (!isTeacher()) {
     exit();
 }
 
-$teacher_id = $_SESSION['user_id'];
-$user_name = $_SESSION['user_name'];
+$teacher_id = intval($_SESSION['user_id'] ?? 0);
+$user_name = $_SESSION['user_name'] ?? '';
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 $message = '';
 $error = '';
@@ -21,44 +20,73 @@ $error = '';
 $classes = getTeacherClasses($conn, $teacher_id, $semester_id);
 
 // Handle save scheme
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_scheme'])) {
-    $class_id = intval($_POST['class_id']);
-    $data = [
-        'c1_name' => $_POST['c1_name'],
-        'c1_perc' => $_POST['c1_perc'],
-        'c2_name' => $_POST['c2_name'],
-        'c2_perc' => $_POST['c2_perc'],
-        'c3_name' => $_POST['c3_name'],
-        'c3_perc' => $_POST['c3_perc'],
-        'c4_name' => $_POST['c4_name'],
-        'c4_perc' => $_POST['c4_perc'],
-        'c5_name' => $_POST['c5_name'],
-        'c5_perc' => $_POST['c5_perc']
-    ];
-    
-    $result = saveMarkingScheme($conn, $teacher_id, $class_id, $semester_id, $data);
-    if ($result['success']) {
-        $message = $result['message'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_scheme'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም!";
     } else {
-        $error = $result['message'];
+        $class_id = intval($_POST['class_id'] ?? 0);
+        // IDOR Protection: verify teacher is assigned to this class
+        $tc_check = dbFetchOne(
+            $conn,
+            "SELECT id, locked FROM teacher_class WHERE teacher_id = ? AND class_id = ? AND semester_id = ?",
+            "iii",
+            [$teacher_id, $class_id, $semester_id]
+        );
+        if (!$tc_check && !isAdmin()) {
+            $error = "ለዚህ ክፍል የውጤት መስፈርት የመቀየር ፈቃድ የለዎትም!";
+        } elseif ($tc_check && intval($tc_check['locked']) === 1 && !isAdmin()) {
+            $error = "🔒 ይህ ክፍል ተቆልፏል! የውጤት መስፈርት መቀየር አይቻልም።";
+        } else {
+            $data = [
+                'c1_name' => trim($_POST['c1_name'] ?? 'Assignment'),
+                'c1_perc' => floatval($_POST['c1_perc'] ?? 0),
+                'c2_name' => trim($_POST['c2_name'] ?? 'Participation'),
+                'c2_perc' => floatval($_POST['c2_perc'] ?? 0),
+                'c3_name' => trim($_POST['c3_name'] ?? 'Attendance'),
+                'c3_perc' => floatval($_POST['c3_perc'] ?? 0),
+                'c4_name' => trim($_POST['c4_name'] ?? 'Mid Exam'),
+                'c4_perc' => floatval($_POST['c4_perc'] ?? 0),
+                'c5_name' => trim($_POST['c5_name'] ?? 'Final Exam'),
+                'c5_perc' => floatval($_POST['c5_perc'] ?? 0)
+            ];
+            
+            $result = saveMarkingScheme($conn, $teacher_id, $class_id, $semester_id, $data);
+            if ($result['success']) {
+                $message = $result['message'];
+            } else {
+                $error = $result['message'];
+            }
+        }
     }
 }
 
 // Get selected class scheme
 $selected_class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : (!empty($classes) ? $classes[0]['class_id'] : 0);
 
+// IDOR Protection: verify selected class belongs to this teacher
+$class_found = false;
+foreach ($classes as $c) {
+    if (intval($c['class_id']) === $selected_class_id) {
+        $class_found = true;
+        break;
+    }
+}
+if (!$class_found && !empty($classes)) {
+    $selected_class_id = intval($classes[0]['class_id']);
+}
+
 $current_scheme = null;
 if ($selected_class_id) {
     $current_scheme = getMarkingScheme($conn, $teacher_id, $selected_class_id, $semester_id);
 }
+$nav_active = 'teacher_marking_scheme';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
-    <title>የውጤት አሰላልፍ ማስተካከያ | Marking Scheme</title>
+    <title>የውጤት መስፈርት ማስተካከያ</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -346,31 +374,15 @@ if ($selected_class_id) {
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-wrapper">
-                <div class="logo-circle">⛪</div>
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>የውጤት አሰላልፍ ማስተካከያ | Marking Scheme</p>
-                </div>
-            </div>
-            <div class="user-info">
-                <div class="user-name">
-                    <strong><?php echo htmlspecialchars($user_name); ?></strong>
-                </div>
-                <a href="dashboard_teacher.php" class="btn btn-back">← ወደ ዳሽቦርድ</a>
-            </div>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="container">
+    <div class="main-container">
         <?php if ($message): ?>
-        <div class="message success">✅ <?php echo $message; ?></div>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-        <div class="message error">⚠️ <?php echo $error; ?></div>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if (!empty($classes)): ?>
@@ -395,11 +407,12 @@ if ($selected_class_id) {
                             break;
                         }
                     }
-                    echo 'የውጤት አሰላልፍ - ' . htmlspecialchars($className);
+                    echo 'የውጤት መስፈርት - ' . htmlspecialchars($className);
                 ?>
             </div>
 
             <form method="POST" id="schemeForm">
+                <?php echo csrfField(); ?>
                 <input type="hidden" name="class_id" value="<?php echo $selected_class_id; ?>">
 
                 <?php
@@ -420,7 +433,7 @@ if ($selected_class_id) {
                                value="<?php echo htmlspecialchars($comp['name']); ?>" required>
                     </div>
                     <div>
-                        <label class="component-label">% (Percentage)</label>
+                        <label class="component-label">መቶኛ (%)</label>
                         <input type="number" name="c<?php echo $index; ?>_perc" class="form-control percentage-input perc-input" 
                                value="<?php echo $comp['perc']; ?>" min="0" max="100" step="0.01" required>
                     </div>
@@ -428,30 +441,29 @@ if ($selected_class_id) {
                 <?php endforeach; ?>
 
                 <div class="total-row">
-                    <span>ጠቅላላ (Total):</span>
+                    <span>ጠቅላላ ድምር፦</span>
                     <span class="total-value" id="totalDisplay">100%</span>
                 </div>
 
                 <button type="submit" name="save_scheme" class="btn-save" id="saveBtn">
-                    💾 አስቀምጥ / Save Scheme
+                    💾 የውጤት መስፈርቱን አስቀምጥ
                 </button>
             </form>
 
             <div class="info-box">
                 <span>ℹ️</span>
                 <div>
-                    <strong>ማስታወሻ (Note):</strong> የሁሉም ክፍሎች መቶኛ ድምር 100% መሆን አለበት።<br>
-                    <small>The total of all component percentages must equal 100%</small>
+                    <strong>ማስታወሻ፡</strong> የሁሉም ክፍሎች መቶኛ ድምር 100% መሆን አለበት።
                 </div>
             </div>
         </div>
         <?php endif; ?>
 
         <?php else: ?>
-        <div style="text-align: center; padding: 60px; background: white; border-radius: 20px; border: 2px solid #FFD700;">
+        <div class="empty-state">
             <span style="font-size: 48px;">📚</span>
-            <h3 style="color: #8B4513; margin-top: 15px;">ምንም የተመደቡ ክፍሎች የሉም</h3>
-            <p style="color: #666;">No classes assigned for this semester</p>
+            <h3>ምንም የተመደቡ ክፍሎች የሉም</h3>
+            <p>ለዚህ መንፈቀ ዓመት የተመደበልዎት ክፍል የለም።</p>
         </div>
         <?php endif; ?>
     </div>

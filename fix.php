@@ -1,37 +1,47 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
+
+if (!APP_DEBUG) {
+    http_response_code(404);
+    die('Not found.');
+}
 
 $message = '';
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['fix_duplicates'])) {
-    // Find duplicates by name and class_id
-    $duplicates_query = "SELECT name, class_id, COUNT(*) as count, MIN(id) as keep_id
-                         FROM students 
-                         GROUP BY name, class_id 
-                         HAVING COUNT(*) > 1";
-    $duplicates_result = mysqli_query($conn, $duplicates_query);
-    
-    $deleted_count = 0;
-    while ($row = mysqli_fetch_assoc($duplicates_result)) {
-        $name_escaped = mysqli_real_escape_string($conn, $row['name']);
-        $class_id = $row['class_id'];
-        $keep_id = $row['keep_id'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fix_duplicates'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        // Find duplicates by name and class_id
+        $duplicates_query = "SELECT name, class_id, COUNT(*) as count, MIN(id) as keep_id
+                             FROM students 
+                             GROUP BY name, class_id 
+                             HAVING COUNT(*) > 1";
+        $duplicates_result = mysqli_query($conn, $duplicates_query);
         
-        // Delete duplicates, keeping the oldest record
-        $delete_query = "DELETE FROM students 
-                        WHERE name = '$name_escaped' 
-                        AND class_id = $class_id 
-                        AND id != $keep_id";
-        
-        if (mysqli_query($conn, $delete_query)) {
-            $deleted_count += mysqli_affected_rows($conn);
+        $deleted_count = 0;
+        if ($duplicates_result) {
+            while ($row = mysqli_fetch_assoc($duplicates_result)) {
+                $name = $row['name'];
+                $class_id = intval($row['class_id']);
+                $keep_id = intval($row['keep_id']);
+                
+                // Delete duplicates, keeping the oldest record
+                $deleted = dbExecute(
+                    $conn,
+                    "DELETE FROM students WHERE name = ? AND class_id = ? AND id != ?",
+                    "sii",
+                    [$name, $class_id, $keep_id]
+                );
+                if ($deleted) {
+                    $deleted_count++;
+                }
+            }
         }
+        $message = "ተደጋጋሚ ተማሪዎች ተወግደዋል! (Processed $deleted_count duplicate student groups!)";
     }
-    
-    $message = "ተደጋጋሚ ተማሪዎች ተወግደዋል! (Removed $deleted_count duplicate students!)";
 }
 ?>
 <!DOCTYPE html>
@@ -161,6 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['fix_duplicates'])) {
         <?php endif; ?>
 
         <form method="POST" onsubmit="return confirm('እርግጠኛ ነዎት? ይህ ክዋኔ ሊቀለበስ አይችልም!')">
+            <?php echo csrfField(); ?>
             <button type="submit" name="fix_duplicates" class="btn btn-fix">
                 🧹 አሁን አስተካክል / Fix Now
             </button>

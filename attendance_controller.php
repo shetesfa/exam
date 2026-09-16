@@ -1,10 +1,9 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 // Ethiopian months
 $ethiopian_months = [
@@ -22,8 +21,11 @@ $amharic_days = [
 $today_eth = getCurrentEthiopianDate();
 
 // Selected Ethiopian month/year
-$selected_eth_month = isset($_GET['eth_month']) ? intval($_GET['eth_month']) : $today_eth['month'];
-$selected_eth_year = isset($_GET['eth_year']) ? intval($_GET['eth_year']) : $today_eth['year'];
+$selected_eth_month = isset($_GET['eth_month']) ? intval($_GET['eth_month']) : intval($today_eth['month']);
+$selected_eth_year = isset($_GET['eth_year']) ? intval($_GET['eth_year']) : intval($today_eth['year']);
+
+if ($selected_eth_month < 1 || $selected_eth_month > 13) $selected_eth_month = intval($today_eth['month']);
+if ($selected_eth_year < 2000 || $selected_eth_year > 2100) $selected_eth_year = intval($today_eth['year']);
 
 // Filters
 $filter_class = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
@@ -32,122 +34,136 @@ $filter_teacher = isset($_GET['teacher_id']) ? intval($_GET['teacher_id']) : 0;
 // Build Ethiopian month days - ONLY SATURDAY & SUNDAY
 $days_in_month = getEthiopianDaysInMonth($selected_eth_year, $selected_eth_month);
 $month_days = [];
-$base_year = $selected_eth_year + 7;
-$eth_new_year = new DateTime("$base_year-09-11");
-if($base_year % 4 == 3) $eth_new_year = new DateTime("$base_year-09-12");
-
-$month_offset = ($selected_eth_month - 1) * 30;
 $month_start_greg = '';
 $month_end_greg = '';
 
-for($d = 1; $d <= $days_in_month; $d++) {
-    $greg_date = clone $eth_new_year;
-    $greg_date->modify('+' . ($month_offset + $d - 1) . ' days');
-    $ds = $greg_date->format('Y-m-d');
-    $dow = $greg_date->format('l');
+for ($d = 1; $d <= $days_in_month; $d++) {
+    $greg_str = ethiopianToGregorian($selected_eth_year, $selected_eth_month, $d);
+    if (!$greg_str) continue;
     
-    // ONLY INCLUDE SATURDAY AND SUNDAY
-    if($dow != 'Saturday' && $dow != 'Sunday') {
+    $dow = date('l', strtotime($greg_str));
+    if ($dow !== 'Saturday' && $dow !== 'Sunday') {
         continue;
     }
     
-    if($d == 1) $month_start_greg = $ds;
-    if($d == $days_in_month) $month_end_greg = $ds;
+    if (empty($month_start_greg)) $month_start_greg = $greg_str;
+    $month_end_greg = $greg_str;
     
     $month_days[] = [
-        'eth_day' => $d, 'greg_date' => $ds,
-        'day_name' => $dow, 'day_am' => $amharic_days[$dow] ?? substr($dow, 0, 3),
+        'eth_day' => $d,
+        'greg_date' => $greg_str,
+        'day_name' => $dow,
+        'day_am' => $amharic_days[$dow] ?? substr($dow, 0, 3),
         'is_weekend' => true,
-        'is_future' => $ds > date('Y-m-d'),
-        'is_today' => $ds == date('Y-m-d')
+        'is_future' => ($greg_str > date('Y-m-d')),
+        'is_today' => ($greg_str === date('Y-m-d'))
     ];
-}
-
-// Update month_end_greg to last day in array
-if(!empty($month_days)) {
-    $month_end_greg = $month_days[count($month_days)-1]['greg_date'];
 }
 
 // Get closed days (no school days)
 $closed_days_global = [];
 $closed_days_class = [];
-if(!empty($month_days)) {
+if (!empty($month_days)) {
     $first_date = $month_days[0]['greg_date'];
     $last_date = $month_days[count($month_days)-1]['greg_date'];
     
     // Global closed days
-    $cd_query = "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN '$first_date' AND '$last_date' AND is_school_day = 0 AND class_id IS NULL";
-    $cd_result = mysqli_query($conn, $cd_query);
-    if($cd_result) {
-        while($row = mysqli_fetch_assoc($cd_result)) {
-            $closed_days_global[$row['date_gregorian']] = true;
-        }
+    $cd_rows = dbFetchAll(
+        $conn,
+        "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN ? AND ? AND is_school_day = 0 AND class_id IS NULL",
+        "ss",
+        [$first_date, $last_date]
+    );
+    foreach ($cd_rows as $row) {
+        $closed_days_global[$row['date_gregorian']] = true;
     }
     
     // Per-class closed days
-    if($filter_class) {
-        $cd_query2 = "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN '$first_date' AND '$last_date' AND is_school_day = 0 AND class_id = $filter_class";
-        $cd_result2 = mysqli_query($conn, $cd_query2);
-        if($cd_result2) {
-            while($row = mysqli_fetch_assoc($cd_result2)) {
-                $closed_days_class[$row['date_gregorian']] = true;
-            }
+    if ($filter_class > 0) {
+        $cd_rows2 = dbFetchAll(
+            $conn,
+            "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN ? AND ? AND is_school_day = 0 AND class_id = ?",
+            "ssi",
+            [$first_date, $last_date, $filter_class]
+        );
+        foreach ($cd_rows2 as $row) {
+            $closed_days_class[$row['date_gregorian']] = true;
         }
     }
 }
 
 // Mark closed days in month_days
-foreach($month_days as &$day) {
+foreach ($month_days as &$day) {
     $day['is_closed'] = isset($closed_days_global[$day['greg_date']]) || isset($closed_days_class[$day['greg_date']]);
 }
 unset($day);
 
-// Get classes, teachers for filters
-$classes_query = "SELECT * FROM classes ORDER BY name";
-$classes = mysqli_query($conn, $classes_query);
-
-$teachers_query = "SELECT * FROM users WHERE role = 'teacher' ORDER BY name";
-$teachers = mysqli_query($conn, $teachers_query);
+// Get classes, teachers for filters - classes now grouped by division/grade (if assigned)
+$classes = dbQuery($conn, "SELECT c.*, g.name_am AS grade_name, d.name_am AS division_name, d.sort_order, g.level_number
+                            FROM classes c
+                            LEFT JOIN grades g ON c.grade_id = g.id
+                            LEFT JOIN divisions d ON g.division_id = d.id
+                            ORDER BY d.sort_order, g.level_number, c.name");
+$teachers = dbQuery($conn, "SELECT * FROM users WHERE role = 'teacher' ORDER BY name");
 
 // Get students and attendance for selected class
 $students = [];
 $attendance_data = [];
-if($filter_class && !empty($month_days)) {
-    $sq = "SELECT * FROM students WHERE class_id = $filter_class ORDER BY name";
-    $sr = mysqli_query($conn, $sq);
-    while($s = mysqli_fetch_assoc($sr)) { $students[] = $s; }
+if ($filter_class > 0 && !empty($month_days)) {
+    $students = dbFetchAll(
+        $conn,
+        "SELECT * FROM students WHERE class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL) ORDER BY name",
+        "i",
+        [$filter_class]
+    );
     
-    foreach($students as $st) {
-        foreach($month_days as $day) {
-            if($day['is_closed']) continue; // Skip closed days
-            
-            $aq = "SELECT status FROM attendance_records 
-                   WHERE student_id = {$st['id']} AND class_id = $filter_class
-                   AND attendance_date = '{$day['greg_date']}'";
-            if($filter_teacher) $aq .= " AND teacher_id = $filter_teacher";
-            $aq .= " LIMIT 1";
-            $ar = mysqli_query($conn, $aq);
-            if($ar && mysqli_num_rows($ar) > 0) {
-                $att = mysqli_fetch_assoc($ar);
-                $attendance_data[$st['id']][$day['greg_date']] = $att['status'];
-            }
+    if (!empty($students)) {
+        $student_ids = array_column($students, 'id');
+        $first_date = $month_days[0]['greg_date'];
+        $last_date = $month_days[count($month_days)-1]['greg_date'];
+        
+        $rec_query = "SELECT student_id, attendance_date, status FROM attendance_records 
+                      WHERE class_id = ? AND attendance_date BETWEEN ? AND ?";
+        $params = [$filter_class, $first_date, $last_date];
+        $types = "iss";
+        
+        if ($filter_teacher > 0) {
+            $rec_query .= " AND teacher_id = ?";
+            $params[] = $filter_teacher;
+            $types .= "i";
+        }
+        
+        $records = dbFetchAll($conn, $rec_query, $types, $params);
+        foreach ($records as $r) {
+            $attendance_data[$r['student_id']][$r['attendance_date']] = $r['status'];
         }
     }
 }
 
 // Statistics
-$stats = ['total' => 0, 'present' => 0, 'absent' => 0, 'permission' => 0];
-if($month_start_greg && $month_end_greg) {
+$stats = ['total' => 0, 'present' => 0, 'absent' => 0, 'permission' => 0, 'late' => 0, 'excused' => 0];
+if ($month_start_greg && $month_end_greg) {
     $stats_query = "SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
         SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-        SUM(CASE WHEN status = 'permission' THEN 1 ELSE 0 END) as permission
+        SUM(CASE WHEN status = 'permission' THEN 1 ELSE 0 END) as permission,
+        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late,
+        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
         FROM attendance_records 
-        WHERE attendance_date BETWEEN '$month_start_greg' AND '$month_end_greg'";
-    if($filter_class) $stats_query .= " AND class_id = $filter_class";
-    $sr = mysqli_query($conn, $stats_query);
-    if($sr) $stats = mysqli_fetch_assoc($sr);
+        WHERE attendance_date BETWEEN ? AND ?";
+    $sparams = [$month_start_greg, $month_end_greg];
+    $stypes = "ss";
+    
+    if ($filter_class > 0) {
+        $stats_query .= " AND class_id = ?";
+        $sparams[] = $filter_class;
+        $stypes .= "i";
+    }
+    $srow = dbFetchOne($conn, $stats_query, $stypes, $sparams);
+    if ($srow) {
+        $stats = $srow;
+    }
 }
 
 // Navigation
@@ -195,7 +211,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
        foreach($month_days as $day) { if(!$day['is_closed']) $visibleDays[] = $day; }
        $totalCols = 2 + count($visibleDays);
        
-       echo '<Row><Cell ss:MergeAcross="' . ($totalCols - 1) . '" ss:StyleID="header"><Data ss:Type="String">የመገኘት ሪፖርት - ' . $ethiopian_months[$selected_eth_month] . ' ' . $selected_eth_year . '</Data></Cell></Row>';
+       echo '<Row><Cell ss:MergeAcross="' . ($totalCols - 1) . '" ss:StyleID="header"><Data ss:Type="String">የአቴንዳንስ ሪፖርት - ' . $ethiopian_months[$selected_eth_month] . ' ' . $selected_eth_year . '</Data></Cell></Row>';
        echo '<Row><Cell ss:StyleID="header"><Data ss:Type="String">ተ.ቁ</Data></Cell><Cell ss:StyleID="header"><Data ss:Type="String">ስም</Data></Cell>';
        foreach($visibleDays as $day) {
            echo '<Cell ss:StyleID="header"><Data ss:Type="String">' . $day['day_am'] . ' ' . $day['eth_day'] . '</Data></Cell>';
@@ -223,14 +239,14 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
     <?php
     exit;
 }
+$nav_active = 'attendance_controller';
 ?>
 <!DOCTYPE html>
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="icon" type="image/png" href="images/icon.png">
-    <title>የመገኘት መቆጣጠሪያ | አጸደ ትጉሃን</title>
+    <title>የአቴንዳንስ መቆጣጠሪያ | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root { --primary: #8B4513; --gold: #FFD700; --gold-dark: #DAA520; --pale: #FFF8DC; --success: #10B981; --danger: #EF4444; --warning: #F59E0B; --bg: #FAF9F6; --white: #FFFFFF; --gray-100: #F3F4F6; --gray-300: #D1D5DB; --closed-color: #9CA3AF; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Nyala', sans-serif; }
@@ -306,26 +322,28 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
         .empty-state { text-align: center; padding: 50px 20px; color: #999; background: white; border-radius: 16px; }
 
         @media (min-width: 768px) { .container { max-width: 1400px; margin: 15px auto; } .day-col { min-width: 48px; } .stats-row { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 768px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+            .stat-card { padding: 8px 6px; }
+            .stat-val { font-size: 18px; }
+            .month-card { padding: 12px 10px; }
+            .month-title { font-size: 16px; }
+            .month-nav a { padding: 8px 10px; font-size: 11px; min-width: 60px; }
+            .filter-card { padding: 10px; }
+            .btn-excel { font-size: 11px; padding: 6px 12px; }
+        }
+        @media (max-width: 480px) {
+            .table-scroll th:nth-child(2), .table-scroll td:nth-child(2) { min-width: 90px; font-size: 9.5px; }
+            .month-nav { gap: 4px; }
+            .month-title { font-size: 14px; }
+            .month-nav a { padding: 6px 8px; font-size: 10px; min-width: 50px; }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-top">
-            <div class="logo">
-            <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.innerHTML='⛪'">
-                <div><h2>አጸደ ትጉሃን</h2><span>የመገኘት መቆጣጠሪያ</span></div>
-            </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <?php if ($filter_class && !empty($students)): ?>
-                <a href="?eth_month=<?php echo $selected_eth_month; ?>&eth_year=<?php echo $selected_eth_year; ?><?php echo $query_params; ?>&export=excel" class="btn-excel">📥 ወደ Excel</a>
-                <?php endif; ?>
-                <a href="attendance_days_control.php" class="btn-back" style="background:#F59E0B; color:white;">📅 ቀናት ቆጣጠር</a>
-                <a href="dashboard_admin.php" class="btn-back">← ዳሽቦርድ</a>
-            </div>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="container">
+    <div class="main-container">
         <!-- Filters -->
         <div class="filter-card">
             <form method="GET" class="filter-row">
@@ -335,9 +353,21 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
                     <label>📚 ክፍል</label>
                     <select name="class_id" onchange="this.form.submit()">
                         <option value="">ሁሉም</option>
-                        <?php mysqli_data_seek($classes, 0); while($c = mysqli_fetch_assoc($classes)): ?>
-                        <option value="<?php echo $c['id']; ?>" <?php echo $filter_class == $c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name']); ?></option>
-                        <?php endwhile; ?>
+                        <?php
+                        mysqli_data_seek($classes, 0);
+                        $grouped = [];
+                        while($c = mysqli_fetch_assoc($classes)) {
+                            $grouped[$c['division_name'] ?: 'ያልተመደበ']['sort'] = $c['sort_order'] ?? 99;
+                            $grouped[$c['division_name'] ?: 'ያልተመደበ']['classes'][] = $c;
+                        }
+                        uasort($grouped, fn($a, $b) => $a['sort'] <=> $b['sort']);
+                        foreach ($grouped as $divName => $g): ?>
+                        <optgroup label="<?php echo htmlspecialchars($divName); ?>">
+                            <?php foreach ($g['classes'] as $c): ?>
+                            <option value="<?php echo $c['id']; ?>" <?php echo $filter_class == $c['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['name']); ?></option>
+                            <?php endforeach; ?>
+                        </optgroup>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -354,11 +384,15 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
         </div>
 
         <!-- Statistics -->
+        <?php
+        $stat_total = (int)($stats['total'] ?? 0);
+        $pct = function($n) use ($stat_total) { return $stat_total > 0 ? round(($n / $stat_total) * 100) : 0; };
+        ?>
         <div class="stats-row">
-            <div class="stat-card"><div class="stat-val"><?php echo $stats['total'] ?? 0; ?></div><div class="stat-lbl">ጠቅላላ</div></div>
-            <div class="stat-card"><div class="stat-val" style="color:#10B981;"><?php echo $stats['present'] ?? 0; ?></div><div class="stat-lbl">✅ ተገኝቷል</div></div>
-            <div class="stat-card"><div class="stat-val" style="color:#EF4444;"><?php echo $stats['absent'] ?? 0; ?></div><div class="stat-lbl">❌ አልተገኘም</div></div>
-            <div class="stat-card"><div class="stat-val" style="color:#F59E0B;"><?php echo $stats['permission'] ?? 0; ?></div><div class="stat-lbl">📝 በፈቃድ</div></div>
+            <div class="stat-card"><div class="stat-val"><?php echo $stat_total; ?></div><div class="stat-lbl">ጠቅላላ</div></div>
+            <div class="stat-card"><div class="stat-val" style="color:#10B981;"><?php echo $stats['present'] ?? 0; ?><?php if($stat_total): ?><span style="font-size:12px;color:#6B7280;"> (<?php echo $pct($stats['present'] ?? 0); ?>%)</span><?php endif; ?></div><div class="stat-lbl">✅ ተገኝቷል</div></div>
+            <div class="stat-card"><div class="stat-val" style="color:#EF4444;"><?php echo $stats['absent'] ?? 0; ?><?php if($stat_total): ?><span style="font-size:12px;color:#6B7280;"> (<?php echo $pct($stats['absent'] ?? 0); ?>%)</span><?php endif; ?></div><div class="stat-lbl">❌ አልተገኘም</div></div>
+            <div class="stat-card"><div class="stat-val" style="color:#F59E0B;"><?php echo $stats['permission'] ?? 0; ?><?php if($stat_total): ?><span style="font-size:12px;color:#6B7280;"> (<?php echo $pct($stats['permission'] ?? 0); ?>%)</span><?php endif; ?></div><div class="stat-lbl">📝 በፈቃድ</div></div>
         </div>
 
         <!-- Month Navigation -->
@@ -373,6 +407,8 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
                 <div class="legend-item"><span class="legend-dot ld-present"></span> ✅ ተገኝቷል</div>
                 <div class="legend-item"><span class="legend-dot ld-absent"></span> ❌ አልተገኘም</div>
                 <div class="legend-item"><span class="legend-dot ld-permission"></span> 📝 በፈቃድ</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#3B82F6;"></span> ⏰ ዘግይቷል</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#8B5CF6;"></span> 📄 በምክንያት</div>
                 <div class="legend-item"><span class="legend-dot ld-closed"></span> 🚫 ትምህርት የለም</div>
             </div>
         </div>
@@ -381,10 +417,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
         <?php if($filter_class && !empty($students)): ?>
         <div class="table-wrapper">
             <div class="table-header-bar">
-                <span>📋 ወርሃዊ የመገኘት ሰንጠረዥ (ቅዳሜ & እሁድ)</span>
+                <span>📋 ወርሃዊ የአቴንዳንስ ሰንጠረዥ (ቅዳሜ & እሁድ)</span>
                 <span style="font-size:11px;">👥 <?php echo count($students); ?> ተማሪዎች | 📅 <?php echo count($month_days); ?> ቀናት</span>
             </div>
-            <div class="table-scroll">
+            <div class="table-scroll table-responsive">
                 <table>
                     <thead>
                         <tr>
@@ -426,6 +462,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
                                     <span class="status-dot status-absent" title="❌ አልተገኘም"></span>
                                 <?php elseif($stat == 'permission'): ?>
                                     <span class="status-dot status-permission" title="📝 በፈቃድ"></span>
+                                <?php elseif($stat == 'late'): ?>
+                                    <span class="status-dot" style="background:#3B82F6;" title="⏰ ዘግይቷል"></span>
+                                <?php elseif($stat == 'excused'): ?>
+                                    <span class="status-dot" style="background:#8B5CF6;" title="📄 በምክንያት"></span>
                                 <?php elseif(!$day['is_future']): ?>
                                     <span class="status-dot" style="background:#F3F4F6; border:1px solid #D1D5DB;"></span>
                                 <?php endif; ?>
@@ -438,7 +478,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel' && $filter_class) {
             </div>
         </div>
         <?php else: ?>
-        <div class="empty-state"><span class="icon">📊</span><h3>እባክዎ ክፍል ይምረጡ</h3><p>የመገኘት ሪፖርት ለማየት መጀመሪያ ክፍል መምረጥ ያስፈልጋል</p></div>
+        <div class="empty-state"><span class="icon">📊</span><h3>እባክዎ ክፍል ይምረጡ</h3><p>የአቴንዳንስ ሪፖርት ለማየት መጀመሪያ ክፍል መምረጥ ያስፈልጋል</p></div>
         <?php endif; ?>
     </div>
 </body>

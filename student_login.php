@@ -1,9 +1,10 @@
 <?php
-session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
 require_once 'db.php';
 
 // Redirect if already logged in as student
-if (isset($_SESSION['student_id']) && !empty($_SESSION['student_id'])) {
+if (isStudent()) {
     header("Location: dashboard_student.php");
     exit();
 }
@@ -12,26 +13,31 @@ $error = '';
 $suggestions = [];
 
 // AJAX endpoint for name search
-if (isset($_GET['ajax']) && $_GET['ajax'] == 'search') {
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'search') {
     header('Content-Type: application/json');
     
-    $search = isset($_GET['q']) ? trim(mysqli_real_escape_string($conn, $_GET['q'])) : '';
+    $search = isset($_GET['q']) ? trim($_GET['q']) : '';
     
-    if (strlen($search) >= 1) {
-        $query = "SELECT s.id, s.name, c.name as class_name, s.parent_phone
-                  FROM students s
-                  JOIN classes c ON s.class_id = c.id
-                  LEFT JOIN student_logins sl ON s.id = sl.student_id
-                  WHERE s.name LIKE '%$search%' 
-                    AND s.student_portal_enabled = 1
-                  ORDER BY s.name
-                  LIMIT 15";
-        $result = mysqli_query($conn, $query);
+    if (mb_strlen($search) >= 1) {
+        $searchTerm = '%' . $search . '%';
+        $rows = dbFetchAll(
+            $conn,
+            "SELECT s.id, s.name, c.name as class_name, s.parent_phone
+             FROM students s
+             JOIN classes c ON s.class_id = c.id
+             WHERE s.name LIKE ? 
+               AND s.student_portal_enabled = 1
+               AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
+             ORDER BY s.name
+             LIMIT 15",
+            "s",
+            [$searchTerm]
+        );
         
         $students = [];
-        while ($row = mysqli_fetch_assoc($result)) {
+        foreach ($rows as $row) {
             $students[] = [
-                'id' => $row['id'],
+                'id' => (int)$row['id'],
                 'name' => $row['name'],
                 'class' => $row['class_name']
             ];
@@ -45,65 +51,114 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 'search') {
 }
 
 // Handle login
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $submitted_token = $_POST['csrf_token'] ?? '';
+    $csrf_valid = verifyCsrfToken($submitted_token);
+
     $student_id = isset($_POST['student_id']) ? intval($_POST['student_id']) : 0;
     $pin = isset($_POST['pin']) ? trim($_POST['pin']) : '';
+    $typed_name = trim($_POST['student_name'] ?? '');
     
-    if ($student_id > 0) {
-        $query = "SELECT s.*, sl.pin as hashed_pin, sl.first_login, sl.login_attempts, sl.locked_until,
-                  c.name as class_name
-                  FROM students s
-                  JOIN classes c ON s.class_id = c.id
-                  LEFT JOIN student_logins sl ON s.id = sl.student_id
-                  WHERE s.id = $student_id AND s.student_portal_enabled = 1";
-        
-        $result = mysqli_query($conn, $query);
-        
-        if ($result && mysqli_num_rows($result) == 1) {
-            $student = mysqli_fetch_assoc($result);
-            
-            // Check locked
-            if ($student['locked_until'] && strtotime($student['locked_until']) > time()) {
-                $lock_time = date('h:i A', strtotime($student['locked_until']));
-                $error = "መለያዎ ተቆልፏል! እባክዎ $lock_time ድረስ ይጠብቁ።";
+    // If student_id is empty, try looking up by typed name
+    if ($student_id <= 0 && !empty($typed_name)) {
+        // Check if user accidentally entered a staff/admin username
+        $staff_check = dbFetchOne($conn, "SELECT id, role FROM users WHERE username = ? OR name = ?", "ss", [$typed_name, $typed_name]);
+        if ($staff_check) {
+            $error = "ይህ የመምህር ወይም የአስተዳዳሪ አካውንት ነው። እባክዎ <a href='index.php' style='color:#8B4513;font-weight:bold;text-decoration:underline;'>በዋናው መግቢያ</a> ይግቡ!";
+        } else {
+            $matched_s = dbFetchOne($conn, "SELECT id FROM students WHERE name = ? AND student_portal_enabled = 1 AND (is_deleted = 0 OR is_deleted IS NULL)", "s", [$typed_name]);
+            if ($matched_s) {
+                $student_id = intval($matched_s['id']);
             }
-            // Verify PIN
-            elseif (!empty($student['hashed_pin']) && password_verify($pin, $student['hashed_pin'])) {
-                // Reset attempts
-                mysqli_query($conn, "UPDATE student_logins SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE student_id = $student_id");
-                
-                session_regenerate_id(true);
-                $_SESSION['student_id'] = $student['id'];
-                $_SESSION['student_name'] = $student['name'];
-                $_SESSION['student_class'] = $student['class_name'];
-                $_SESSION['student_class_id'] = $student['class_id'];
-                $_SESSION['student_first_login'] = $student['first_login'] ?? 1;
-                
-                if (($student['first_login'] ?? 1) == 1) {
-                    header("Location: student_change_pin.php");
-                } else {
-                    header("Location: dashboard_student.php");
+        }
+    }
+
+    // If CSRF token check failed (e.g. stale tab, bfcache, or browser session cookie timing),
+    // verify whether valid credentials were submitted. If credentials are correct, allow login!
+    if (!$csrf_valid && $student_id > 0 && !empty($pin)) {
+        $pin_candidate = dbFetchOne($conn, "SELECT pin FROM student_logins WHERE student_id = ?", "i", [$student_id]);
+        if ($pin_candidate && !empty($pin_candidate['pin']) && password_verify($pin, $pin_candidate['pin'])) {
+            $csrf_valid = true;
+        }
+    }
+
+    if (!$csrf_valid && empty($error)) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } elseif (empty($error)) {
+        
+        if (empty($error) && $student_id > 0 && !empty($pin)) {
+            $student = dbFetchOne(
+                $conn,
+                "SELECT s.*, sl.pin as hashed_pin, sl.first_login, sl.login_attempts, sl.locked_until, sl.dark_mode,
+                        c.name as class_name
+                 FROM students s
+                 JOIN classes c ON s.class_id = c.id
+                 LEFT JOIN student_logins sl ON s.id = sl.student_id
+                 WHERE s.id = ? AND s.student_portal_enabled = 1 AND (s.is_deleted = 0 OR s.is_deleted IS NULL)",
+                "i",
+                [$student_id]
+            );
+            
+            if ($student) {
+                // Check locked
+                if (!empty($student['locked_until']) && strtotime($student['locked_until']) > time()) {
+                    $lock_time = date('h:i A', strtotime($student['locked_until']));
+                    $error = "አካውንትዎ ተቆልፏል! እባክዎ $lock_time ድረስ ይጠብቁ።";
                 }
-                exit();
+                // Verify PIN
+                elseif (!empty($student['hashed_pin']) && password_verify($pin, $student['hashed_pin'])) {
+                    // Reset attempts
+                    dbExecute(
+                        $conn,
+                        "UPDATE student_logins SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE student_id = ?",
+                        "i",
+                        [$student_id]
+                    );
+                    
+                    session_regenerate_id(true);
+                    $_SESSION['student_id'] = $student['id'];
+                    $_SESSION['student_name'] = $student['name'];
+                    $_SESSION['student_class'] = $student['class_name'];
+                    $_SESSION['student_class_id'] = $student['class_id'];
+                    $_SESSION['student_first_login'] = $student['first_login'] ?? 1;
+                    $_SESSION['dark_mode'] = intval($student['dark_mode'] ?? 0);
+                    
+                    if (($student['first_login'] ?? 1) == 1) {
+                        header("Location: student_change_pin.php");
+                    } else {
+                        header("Location: dashboard_student.php");
+                    }
+                    exit();
+                } else {
+                    // Wrong PIN
+                    $attempts = ($student['login_attempts'] ?? 0) + 1;
+                    
+                    if ($attempts >= 5) {
+                        $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+                        dbExecute(
+                            $conn,
+                            "UPDATE student_logins SET login_attempts = ?, locked_until = ? WHERE student_id = ?",
+                            "isi",
+                            [$attempts, $lock_time, $student_id]
+                        );
+                        $error = "በጣም ብዙ ሙከራ! አካውንትዎ ለ15 ደቂቃ ተቆልፏል።";
+                    } else {
+                        dbExecute(
+                            $conn,
+                            "UPDATE student_logins SET login_attempts = ? WHERE student_id = ?",
+                            "ii",
+                            [$attempts, $student_id]
+                        );
+                        $remaining = 5 - $attempts;
+                        $error = "የተሳሳተ ፒን! $remaining ሙከራዎች ቀርተዋል።";
+                    }
+                }
             } else {
-                // Wrong PIN
-                $attempts = ($student['login_attempts'] ?? 0) + 1;
-                
-                if ($attempts >= 5) {
-                    $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
-                    mysqli_query($conn, "UPDATE student_logins SET login_attempts = $attempts, locked_until = '$lock_time' WHERE student_id = $student_id");
-                    $error = "በጣም ብዙ ሙከራ! መለያዎ ለ15 ደቂቃ ተቆልፏል።";
-                } else {
-                    mysqli_query($conn, "UPDATE student_logins SET login_attempts = $attempts WHERE student_id = $student_id");
-                    $remaining = 5 - $attempts;
-                    $error = "የተሳሳተ ፒን! $remaining ሙከራዎች ቀርተዋል። (ነባሪ ፒን: 123)";
-                }
+                $error = "ተማሪ አልተገኘም!";
             }
         } else {
-            $error = "ተማሪ አልተገኘም!";
+            $error = "እባክዎ ስምዎን መርጠው ፒን ያስገቡ!";
         }
-    } else {
-        $error = "እባክዎ ስምዎን ከዝርዝሩ ይምረጡ!";
     }
 }
 ?>
@@ -111,9 +166,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>የተማሪ መግቢያ | Student Login</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -313,10 +367,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </div>
 
         <?php if ($error): ?>
-        <div class="error-message">⚠️ <?php echo $error; ?></div>
+        <div class="error-message">⚠️ <?php echo strip_tags($error, '<a><b><strong>'); ?></div>
         <?php endif; ?>
 
         <form method="POST" id="loginForm">
+            <?php echo csrfField(); ?>
             <input type="hidden" name="student_id" id="studentIdInput" value="">
             
             <!-- Search Box -->
@@ -325,6 +380,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     🔍 ስምዎን ይፈልጉ / Search Your Name
                 </label>
                 <input type="text" 
+                       name="student_name"
                        id="searchInput" 
                        placeholder="የመጀመሪያ ስምዎን ይተይቡ... (Type your first name...)" 
                        autocomplete="off"
@@ -345,23 +401,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             <!-- PIN Input -->
             <div class="pin-group" id="pinGroup">
-                <label>🔒 ፒን / የይለፍ ቃል (PIN)</label>
+                <label>🔒 ሚስጥራዊ ፒን / የይለፍ ቃል</label>
                 <input type="password" name="pin" id="pinInput" 
-                       placeholder="•••" required maxlength="20">
+                       placeholder="••••" required maxlength="20">
             </div>
 
             <button type="submit" class="btn-login" id="loginBtn" disabled>
-                🔑 ግባ / Login
+                🔑 ወደ አካውንትህ ግባ
             </button>
         </form>
 
         <div class="hint-box">
-            <strong>📋 መመሪያ / Instructions:</strong><br>
+            <strong>📋 መመሪያ፦</strong><br>
             1. ስምዎን ይፈልጉና ይምረጡ<br>
-            2. የይለፍ ቃል <span class="pin-highlight">123</span> ያስገቡ<br>
-            3. ለመጀመሪያ ጊዜ ከሆነ አዲስ ፒን ይመርጣሉ<br>
+            2. የተሰጠዎትን የይለፍ ቃል/ፒን ያስገቡ<br>
+            3. ለመጀመሪያ ጊዜ ከሆነ አዲስ ፒን ይቀይራሉ<br>
             <br>
-            <strong>💡 ማስታወሻ:</strong> ስምዎ ካልተገኘ አስተዳዳሪዎን ያነጋግሩ።
+            <strong>💡 ማስታወሻ:</strong> ስምዎ ካልተገኘ ወይም ፒን ከረሱ አስተዳዳሪዎን ያነጋግሩ።
         </div>
 
         <a href="index.php" class="back-link">← ወደ ዋና ገፅ</a>
@@ -467,6 +523,127 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
             }
         });
+    </script>
+    <script src="exam-main/assets/js/offline-db.js"></script>
+    <script src="exam-main/assets/js/sync-manager.js"></script>
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/exam/sw.js').catch(() => {});
+            });
+        }
+
+        // Offline-aware search handler
+        searchStudents = async function(query) {
+            try {
+                // First try live server search (works on XAMPP localhost/LAN even without internet)
+                const controller = new AbortController();
+                const t = setTimeout(() => controller.abort(), 1500);
+                const res = await fetch('student_live_search.php?q=' + encodeURIComponent(query), { signal: controller.signal });
+                clearTimeout(t);
+                if (res.ok) {
+                    const data = await res.json();
+                    const resultsDiv = document.getElementById('searchResults');
+                    if (data && data.length > 0) {
+                        let html = '';
+                        data.forEach(s => {
+                            html += `
+                                <div class="result-item" onclick="selectStudent(${s.id}, '${escapeHtml(s.name)}', '${s.class_name || ''}')">
+                                    <div class="name">${escapeHtml(s.name)}</div>
+                                    <div class="class-badge">${escapeHtml(s.class_name || '')}</div>
+                                </div>
+                            `;
+                        });
+                        resultsDiv.innerHTML = html;
+                        resultsDiv.classList.add('show');
+                        return;
+                    } else {
+                        resultsDiv.innerHTML = '<div class="no-results">ተማሪ አልተገኘም</div>';
+                        resultsDiv.classList.add('show');
+                        return;
+                    }
+                }
+            } catch (_) {
+                // If server is unreachable, fall back to offline IndexedDB
+            }
+
+            // Offline search directly from IndexedDB
+            const allStudents = await OfflineDB.getAllStudents();
+            const filtered = allStudents.filter(s => s.name && s.name.toLowerCase().includes(query.toLowerCase()));
+            const resultsDiv = document.getElementById('searchResults');
+            if (filtered.length > 0) {
+                let html = '';
+                filtered.slice(0, 15).forEach(s => {
+                    html += `
+                        <div class="result-item" onclick="selectStudent(${s.id}, '${escapeHtml(s.name)}', '${s.class_id || ''}')">
+                            <div class="name">${escapeHtml(s.name)}</div>
+                            <div class="class-badge">ክፍል ${s.class_id || ''}</div>
+                        </div>
+                    `;
+                });
+                resultsDiv.innerHTML = html;
+                resultsDiv.classList.add('show');
+            } else {
+                resultsDiv.innerHTML = '<div class="no-results">ተማሪ አልተገኘም</div>';
+                resultsDiv.classList.add('show');
+            }
+        };
+
+        // Cache student login online & handle offline submit
+        const studentLoginForm = document.getElementById('loginForm');
+        if (studentLoginForm) {
+            let isSubmitting = false;
+            studentLoginForm.addEventListener('submit', async function(e) {
+                if (isSubmitting) return;
+                e.preventDefault();
+
+                const studentId = document.getElementById('studentIdInput').value;
+                const name = document.getElementById('searchInput').value;
+                const pin = document.getElementById('pinInput').value;
+
+                // Probe if local or remote server is reachable
+                let isServerUp = false;
+                try {
+                    const controller = new AbortController();
+                    const t = setTimeout(() => controller.abort(), 1200);
+                    const ping = await fetch('api/ping.php?t=' + Date.now(), { method: 'GET', cache: 'no-store', signal: controller.signal });
+                    clearTimeout(t);
+                    isServerUp = ping.ok;
+                } catch (_) {
+                    isServerUp = false;
+                }
+
+                if (isServerUp) {
+                    // Server reachable: cache credentials in background for future PWA use
+                    try {
+                        const authRes = await fetch('api/auth.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ student_name: name, pin: pin, is_student: true })
+                        });
+                        const authData = await authRes.json();
+                        if (authData.success && authData.token) {
+                            await OfflineDB.saveAuth(authData.user, authData.token, authData.expires_at);
+                        }
+                    } catch (_) {}
+
+                    // Submit form normally to PHP
+                    isSubmitting = true;
+                    studentLoginForm.submit();
+                } else {
+                    // Server unreachable: attempt offline login
+                    const auth = await OfflineDB.getAuth();
+                    if (auth && auth.user && auth.user.role === 'student' && auth.user.id == studentId) {
+                        sessionStorage.setItem('offline_user', JSON.stringify(auth.user));
+                        sessionStorage.setItem('offline_token', auth.token);
+                        window.location.href = 'dashboard_student.php';
+                    } else {
+                        alert('ከመስመር ውጭ ለመግባት አስቀድመው አንዴ ከሰርቨሩ ጋር ተገናኝተው መግባት አለብዎት!');
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>

@@ -1,16 +1,11 @@
 <?php
-session_start();
 require_once 'db.php';
+requireStudent();
 
-if (!isset($_SESSION['student_id']) || empty($_SESSION['student_id'])) {
-    header("Location: student_login.php");
-    exit();
-}
-
-$student_id = $_SESSION['student_id'];
-$student_name = $_SESSION['student_name'];
-$student_class_id = $_SESSION['student_class_id'];
-$student_class = $_SESSION['student_class'];
+$student_id = intval($_SESSION['student_id']);
+$student_name = $_SESSION['student_name'] ?? 'ተማሪ';
+$student_class_id = intval($_SESSION['student_class_id'] ?? 0);
+$student_class = $_SESSION['student_class'] ?? '';
 
 // Ethiopian months
 $ethiopian_months = [
@@ -25,21 +20,20 @@ $amharic_days = [
 ];
 
 // Get ALL semesters
-$all_semesters_query = "SELECT DISTINCT sem.id, sem.name, sem.status, sem.ethiopian_year, sem.semester_number
-                        FROM semesters sem
-                        WHERE sem.id IN (
-                            SELECT DISTINCT m.semester_id FROM marks m WHERE m.student_id = $student_id
-                            UNION
-                            SELECT DISTINCT tc.semester_id FROM teacher_class tc WHERE tc.class_id = $student_class_id
-                        )
-                        OR sem.status = 'active'
-                        ORDER BY sem.ethiopian_year DESC, sem.semester_number ASC";
-
-$all_semesters_result = mysqli_query($conn, $all_semesters_query);
-$all_semesters = [];
-while ($row = mysqli_fetch_assoc($all_semesters_result)) {
-    $all_semesters[] = $row;
-}
+$all_semesters = dbFetchAll(
+    $conn,
+    "SELECT DISTINCT sem.id, sem.name, sem.status, sem.ethiopian_year, sem.semester_number
+     FROM semesters sem
+     WHERE sem.id IN (
+         SELECT DISTINCT m.semester_id FROM marks m WHERE m.student_id = ?
+         UNION
+         SELECT DISTINCT tc.semester_id FROM teacher_class tc WHERE tc.class_id = ?
+     )
+     OR sem.status = 'active'
+     ORDER BY sem.ethiopian_year DESC, sem.semester_number ASC",
+    "ii",
+    [$student_id, $student_class_id]
+);
 
 $selected_semester_id = isset($_GET['semester_id']) ? intval($_GET['semester_id']) : 
                         (!empty($all_semesters) ? $all_semesters[0]['id'] : 0);
@@ -72,16 +66,12 @@ $days_in_month = getEthiopianDaysInMonth($selected_eth_year, $selected_eth_month
 $month_days = [];
 $month_start_greg = '';
 
-$base_year = $selected_eth_year + 7;
-$eth_new_year = new DateTime("$base_year-09-11");
-if($base_year % 4 == 3) {
-    $eth_new_year = new DateTime("$base_year-09-12");
-}
-
-$month_offset = ($selected_eth_month - 1) * 30;
+// Use the accurate ethiopianToGregorian() function (handles leap years correctly)
+$month_start_str = ethiopianToGregorian($selected_eth_year, $selected_eth_month, 1);
+$eth_new_year = new DateTime($month_start_str);
 
 for($d = 1; $d <= $days_in_month; $d++) {
-    $day_offset = $month_offset + ($d - 1);
+    $day_offset = $d - 1;
     $greg_date = clone $eth_new_year;
     $greg_date->modify("+$day_offset days");
     $ds = $greg_date->format('Y-m-d');
@@ -106,19 +96,21 @@ for($d = 1; $d <= $days_in_month; $d++) {
 
 // Get closed days
 $closed_days = [];
-if(!empty($month_days)) {
+if (!empty($month_days)) {
     $first_date = $month_days[0]['greg_date'];
     $last_date = $month_days[count($month_days)-1]['greg_date'];
     
-    $cd_query = "SELECT date_gregorian FROM attendance_days 
-                 WHERE date_gregorian BETWEEN '$first_date' AND '$last_date' 
-                 AND is_school_day = 0 
-                 AND (class_id IS NULL OR class_id = $student_class_id)";
-    $cd_result = mysqli_query($conn, $cd_query);
-    if($cd_result) {
-        while($row = mysqli_fetch_assoc($cd_result)) {
-            $closed_days[$row['date_gregorian']] = true;
-        }
+    $cd_rows = dbFetchAll(
+        $conn,
+        "SELECT date_gregorian FROM attendance_days 
+         WHERE date_gregorian BETWEEN ? AND ? 
+         AND is_school_day = 0 
+         AND (class_id IS NULL OR class_id = ?)",
+        "ssi",
+        [$first_date, $last_date, $student_class_id]
+    );
+    foreach ($cd_rows as $row) {
+        $closed_days[$row['date_gregorian']] = true;
     }
 }
 
@@ -149,17 +141,17 @@ $marks_query = "SELECT
                 ms.component5_name, ms.component5_percentage
                 FROM teacher_class tc
                 JOIN users u ON tc.teacher_id = u.id
-                LEFT JOIN marks m ON m.student_id = $student_id AND m.teacher_id = u.id AND m.semester_id = $selected_semester_id
-                LEFT JOIN marking_schemes ms ON ms.teacher_id = u.id AND ms.class_id = tc.class_id AND ms.semester_id = $selected_semester_id
-                WHERE tc.class_id = $student_class_id AND tc.semester_id = $selected_semester_id
+                LEFT JOIN marks m ON m.student_id = ? AND m.teacher_id = u.id AND m.semester_id = ?
+                LEFT JOIN marking_schemes ms ON ms.teacher_id = u.id AND ms.class_id = tc.class_id AND ms.semester_id = ?
+                WHERE tc.class_id = ? AND tc.semester_id = ?
                 ORDER BY u.name";
 
-$marks_result = mysqli_query($conn, $marks_query);
+$marks_rows = dbFetchAll($conn, $marks_query, "iiiii", [$student_id, $selected_semester_id, $selected_semester_id, $student_class_id, $selected_semester_id]);
 $all_marks = [];
 $overall_total = 0;
 $teacher_count = 0;
 
-while ($row = mysqli_fetch_assoc($marks_result)) {
+foreach ($marks_rows as $row) {
     $teacher_count++;
     $row['c1_name'] = !empty($row['component1_name']) ? $row['component1_name'] : 'Assignment';
     $row['c2_name'] = !empty($row['component2_name']) ? $row['component2_name'] : 'Participation';
@@ -178,71 +170,84 @@ while ($row = mysqli_fetch_assoc($marks_result)) {
 $average = $teacher_count > 0 ? round($overall_total / $teacher_count, 1) : 0;
 
 // Get student rank
-$rank_query = "SELECT COUNT(*) + 1 as rank FROM (
-    SELECT s.id, AVG(COALESCE(m.total, 0)) as avg_mark
-    FROM students s
-    JOIN teacher_class tc ON s.class_id = tc.class_id AND tc.semester_id = $selected_semester_id
-    LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = $selected_semester_id AND m.teacher_id = tc.teacher_id
-    WHERE s.class_id = $student_class_id
-    GROUP BY s.id
-    HAVING AVG(COALESCE(m.total, 0)) > $average
-) as better_students";
-$rank_result = mysqli_query($conn, $rank_query);
-$rank_row = mysqli_fetch_assoc($rank_result);
+$rank_row = dbFetchOne(
+    $conn,
+    "SELECT COUNT(*) + 1 as rank FROM (
+        SELECT s.id, AVG(COALESCE(m.total, 0)) as avg_mark
+        FROM students s
+        JOIN teacher_class tc ON s.class_id = tc.class_id AND tc.semester_id = ?
+        LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = ? AND m.teacher_id = tc.teacher_id
+        WHERE s.class_id = ?
+        GROUP BY s.id
+        HAVING AVG(COALESCE(m.total, 0)) > ?
+    ) as better_students",
+    "iiid",
+    [$selected_semester_id, $selected_semester_id, $student_class_id, $average]
+);
 $rank = $rank_row ? $rank_row['rank'] : 1;
 
-$total_students_query = "SELECT COUNT(*) as total FROM students WHERE class_id = $student_class_id";
-$total_students_result = mysqli_query($conn, $total_students_query);
-$total_students_row = mysqli_fetch_assoc($total_students_result);
-$total_students = $total_students_row['total'];
+$tot_row = dbFetchOne($conn, "SELECT COUNT(*) as total FROM students WHERE class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)", "i", [$student_class_id]);
+$total_students = $tot_row ? $tot_row['total'] : 0;
 
 // Get attendance data
 $attendance_data = [];
-$att_query = "SELECT attendance_date, status FROM attendance_records 
-              WHERE student_id = $student_id AND class_id = $student_class_id ORDER BY attendance_date";
-$att_result = mysqli_query($conn, $att_query);
-while ($att_row = mysqli_fetch_assoc($att_result)) {
+$att_rows = dbFetchAll(
+    $conn,
+    "SELECT attendance_date, status FROM attendance_records 
+     WHERE student_id = ? AND class_id = ? ORDER BY attendance_date",
+    "ii",
+    [$student_id, $student_class_id]
+);
+foreach ($att_rows as $att_row) {
     $attendance_data[$att_row['attendance_date']] = $att_row['status'];
 }
 
 // Get attendance summary
-$attendance_summary = ['present' => 0, 'absent' => 0, 'permission' => 0, 'total_days' => 0];
-$att_summary_sql = "SELECT 
-    SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-    SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-    SUM(CASE WHEN status = 'permission' THEN 1 ELSE 0 END) as permission,
-    COUNT(*) as total_days
-    FROM attendance_records WHERE student_id = $student_id AND class_id = $student_class_id";
-$att_summary_result = mysqli_query($conn, $att_summary_sql);
-if ($att_summary_result && mysqli_num_rows($att_summary_result) > 0) {
-    $attendance_summary = mysqli_fetch_assoc($att_summary_result);
-}
+$att_summary = dbFetchOne(
+    $conn,
+    "SELECT 
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN status = 'permission' THEN 1 ELSE 0 END) as permission,
+        COUNT(*) as total_days
+     FROM attendance_records WHERE student_id = ? AND class_id = ?",
+    "ii",
+    [$student_id, $student_class_id]
+);
+$attendance_summary = $att_summary ?: ['present' => 0, 'absent' => 0, 'permission' => 0, 'total_days' => 0];
 
 // Get class average
-$class_avg_query = "SELECT AVG(COALESCE(m.total, 0)) as class_avg
-    FROM students s
-    JOIN teacher_class tc ON s.class_id = tc.class_id AND tc.semester_id = $selected_semester_id
-    LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = $selected_semester_id AND m.teacher_id = tc.teacher_id
-    WHERE s.class_id = $student_class_id";
-$class_avg_result = mysqli_query($conn, $class_avg_query);
-$class_avg_row = mysqli_fetch_assoc($class_avg_result);
+$class_avg_row = dbFetchOne(
+    $conn,
+    "SELECT AVG(COALESCE(m.total, 0)) as class_avg
+     FROM students s
+     JOIN teacher_class tc ON s.class_id = tc.class_id AND tc.semester_id = ?
+     LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = ? AND m.teacher_id = tc.teacher_id
+     WHERE s.class_id = ?",
+    "iii",
+    [$selected_semester_id, $selected_semester_id, $student_class_id]
+);
 $class_average = round($class_avg_row['class_avg'] ?? 0, 1);
 
 // Get history
-$history_query = "SELECT 
-    sem.id as semester_id, sem.name as semester_name, sem.ethiopian_year,
-    sem.semester_number, sem.status,
-    COUNT(DISTINCT u.id) as teacher_count,
-    AVG(COALESCE(m.total, 0)) as avg_total, SUM(COALESCE(m.total, 0)) as total_marks
-    FROM semesters sem
-    JOIN teacher_class tc ON tc.semester_id = sem.id AND tc.class_id = $student_class_id
-    JOIN users u ON tc.teacher_id = u.id
-    LEFT JOIN marks m ON m.student_id = $student_id AND m.semester_id = sem.id AND m.teacher_id = u.id
-    GROUP BY sem.id, sem.name, sem.ethiopian_year, sem.semester_number, sem.status
-    ORDER BY sem.ethiopian_year DESC, sem.semester_number ASC";
-$history_result = mysqli_query($conn, $history_query);
+$history_rows = dbFetchAll(
+    $conn,
+    "SELECT 
+        sem.id as semester_id, sem.name as semester_name, sem.ethiopian_year,
+        sem.semester_number, sem.status,
+        COUNT(DISTINCT u.id) as teacher_count,
+        AVG(COALESCE(m.total, 0)) as avg_total, SUM(COALESCE(m.total, 0)) as total_marks
+     FROM semesters sem
+     JOIN teacher_class tc ON tc.semester_id = sem.id AND tc.class_id = ?
+     JOIN users u ON tc.teacher_id = u.id
+     LEFT JOIN marks m ON m.student_id = ? AND m.semester_id = sem.id AND m.teacher_id = u.id
+     GROUP BY sem.id, sem.name, sem.ethiopian_year, sem.semester_number, sem.status
+     ORDER BY sem.ethiopian_year DESC, sem.semester_number ASC",
+    "ii",
+    [$student_class_id, $student_id]
+);
 $history_by_year = [];
-while ($row = mysqli_fetch_assoc($history_result)) {
+foreach ($history_rows as $row) {
     $year = $row['ethiopian_year'];
     if (!isset($history_by_year[$year])) {
         $history_by_year[$year] = [];
@@ -254,9 +259,8 @@ while ($row = mysqli_fetch_assoc($history_result)) {
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>የተማሪ ዳሽቦርድ | Student Dashboard</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513; --brown-medium: #A52A2A; --gold-primary: #FFD700;
@@ -414,21 +418,24 @@ while ($row = mysqli_fetch_assoc($history_result)) {
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="student-info">
-            <img src="images/icon.png" alt="Logo" class="avatar-img" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','🎓');">
-            <div class="student-details">
-                <h2><?php echo htmlspecialchars($student_name); ?></h2>
-                <span><?php echo htmlspecialchars($student_class); ?></span>
+<?php $nav_active = 'dashboard_student'; include 'mobile_nav.php'; ?>
+
+    <div class="main-container">
+        <div class="header">
+            <div class="student-info">
+                <img src="images/icon.png" alt="Logo" class="avatar-img" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','🎓');">
+                <div class="student-details">
+                    <h2><?php echo htmlspecialchars($student_name); ?></h2>
+                    <span><?php echo htmlspecialchars($student_class); ?></span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a href="student_change_pin.php?<?php echo $base_params; ?>" class="btn-header btn-changepin">🔒 ፒን ቀይር</a>
+                <a href="student_logout.php" class="btn-header btn-logout">🚪 ውጣ</a>
             </div>
         </div>
-        <div class="header-actions">
-            <a href="student_change_pin.php?<?php echo $base_params; ?>" class="btn-header btn-changepin">🔒 ፒን ቀይር</a>
-            <a href="student_logout.php" class="btn-header btn-logout">🚪 ውጣ</a>
-        </div>
-    </div>
 
-    <div class="container">
+        <div class="container">
         <?php if (!empty($all_semesters)): ?>
         <div class="semester-tabs">
             <?php 
@@ -504,7 +511,7 @@ while ($row = mysqli_fetch_assoc($history_result)) {
         <!-- Attendance Calendar -->
         <div class="section-card">
             <div class="section-title">
-                📅 የመገኘት ቀን መቁጠሪያ
+                📅 የአቴንዳንስ ቀን መቁጠሪያ
                 <span style="font-size:12px; color:#999; margin-left:auto;">ቅዳሜ & እሁድ | 👁️ ለእይታ</span>
             </div>
 

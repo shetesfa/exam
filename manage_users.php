@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,70 +6,120 @@ $message = '';
 $error = '';
 
 // Handle Add User
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if(isset($_POST['add_user'])) {
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $username = mysqli_real_escape_string($conn, $_POST['username']);
-        $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-        $role = mysqli_real_escape_string($conn, $_POST['role']);
-        $password = hashPassword('123');
-        
-        // Check if username exists
-        $check = mysqli_query($conn, "SELECT id FROM users WHERE username = '$username'");
-        if(mysqli_num_rows($check) > 0) {
-            $error = "ይህ የተጠቃሚ ስም ቀድሞውኑ አለ! (Username already exists!)";
-        } else {
-            $query = "INSERT INTO users (name, username, phone, role, password, first_login) 
-                      VALUES ('$name', '$username', '$phone', '$role', '$password', 1)";
-            if(mysqli_query($conn, $query)) {
-                $new_id = mysqli_insert_id($conn);
-                $message = "ተጠቃሚ በተሳካ ሁኔታ ተፈጥሯል! የይለፍ ቃል: 123";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (isset($_POST['add_user'])) {
+            $name = trim($_POST['name'] ?? '');
+            $username = trim($_POST['username'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $role = trim($_POST['role'] ?? 'teacher');
+            $password = hashPassword('123');
+            
+            if (!in_array($role, ['admin', 'teacher', 'attendance_submitter'])) {
+                $role = 'teacher';
+            }
+            
+            if (!empty($name) && !empty($username)) {
+                // Check if username exists
+                $check = dbFetchOne($conn, "SELECT id FROM users WHERE username = ?", "s", [$username]);
+                if ($check) {
+                    $error = "ይህ የተጠቃሚ ስም ቀድሞውኑ አለ! (Username already exists!)";
+                } else {
+                    $saved = dbExecute(
+                        $conn,
+                        "INSERT INTO users (name, username, phone, role, password, first_login) VALUES (?, ?, ?, ?, ?, 1)",
+                        "sssss",
+                        [$name, $username, $phone, $role, $password]
+                    );
+                    if ($saved) {
+                        $message = "ተጠቃሚ በተሳካ ሁኔታ ተፈጥሯል! የይለፍ ቃል: 123";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
             } else {
-                $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+                $error = "እባክዎ ስም እና የተጠቃሚ ስም ያስገቡ!";
             }
         }
-    }
-    
-    if(isset($_POST['edit_user'])) {
-        $user_id = mysqli_real_escape_string($conn, $_POST['user_id']);
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
-        $username = mysqli_real_escape_string($conn, $_POST['username']);
-        $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-        $role = mysqli_real_escape_string($conn, $_POST['role']);
         
-        $query = "UPDATE users SET name='$name', username='$username', phone='$phone', role='$role' WHERE id=$user_id";
-        if(mysqli_query($conn, $query)) {
-            $message = "የተጠቃሚ መረጃ ተሻሽሏል!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
-        }
-    }
-    
-    if(isset($_POST['delete_user'])) {
-        $user_id = mysqli_real_escape_string($conn, $_POST['user_id']);
-        
-        // Don't allow deleting own account
-        if($user_id == $_SESSION['user_id']) {
-            $error = "የራስዎን አካውንት መሰረዝ አይችሉም!";
-        } else {
-            $query = "DELETE FROM users WHERE id=$user_id";
-            if(mysqli_query($conn, $query)) {
-                $message = "ተጠቃሚ ተሰርዟል!";
-            } else {
-                $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+        if (isset($_POST['edit_user'])) {
+            $user_id = intval($_POST['user_id'] ?? 0);
+            $name = trim($_POST['name'] ?? '');
+            $username = trim($_POST['username'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $role = trim($_POST['role'] ?? 'teacher');
+            
+            if (!in_array($role, ['admin', 'teacher', 'attendance_submitter'])) {
+                $role = 'teacher';
+            }
+            
+            if ($user_id > 0 && !empty($name) && !empty($username)) {
+                // Check if username is taken by someone else
+                $check = dbFetchOne($conn, "SELECT id FROM users WHERE username = ? AND id != ?", "si", [$username, $user_id]);
+                if ($check) {
+                    $error = "ይህ የተጠቃሚ ስም በሌላ ተጠቃሚ ተይዟል!";
+                } else {
+                    $updated = dbExecute(
+                        $conn,
+                        "UPDATE users SET name = ?, username = ?, phone = ?, role = ? WHERE id = ?",
+                        "ssssi",
+                        [$name, $username, $phone, $role, $user_id]
+                    );
+                    if ($updated) {
+                        $message = "የተጠቃሚ መረጃ ተሻሽሏል!";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
             }
         }
-    }
-    
-    if(isset($_POST['reset_password'])) {
-        $user_id = mysqli_real_escape_string($conn, $_POST['user_id']);
-        $new_password = hashPassword('123');
         
-        $query = "UPDATE users SET password='$new_password', first_login=1 WHERE id=$user_id";
-        if(mysqli_query($conn, $query)) {
-            $message = "የይለፍ ቃል ወደ 123 ተመልሷል!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+        if (isset($_POST['delete_user'])) {
+            $user_id = intval($_POST['user_id'] ?? 0);
+            
+            // Don't allow deleting own account
+            if ($user_id === intval($_SESSION['user_id'])) {
+                $error = "የራስዎን አካውንት መሰረዝ አይችሉም!";
+            } elseif ($user_id > 0) {
+                // Check for active teacher class assignments
+                $active_assignments = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM teacher_class WHERE teacher_id = ?", "i", [$user_id]);
+                $active_marks = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM marks WHERE teacher_id = ? AND is_deleted = 0", "i", [$user_id]);
+                
+                if ($active_assignments && $active_assignments['cnt'] > 0) {
+                    $error = "ይህ ተጠቃሚ ለክፍሎች ተምድቧል! መጀመሪያ ምደባዎቹን ያስወግዱ። (User has active class assignments!)";
+                } elseif ($active_marks && $active_marks['cnt'] > 0) {
+                    $error = "ይህ ተጠቃሚ ምልክቶች አስገብቷል! ሊሰረዝ አይችልም። (User has entered marks data!)";
+                } else {
+                    $deleted = dbExecute($conn, "DELETE FROM users WHERE id = ?", "i", [$user_id]);
+                    if ($deleted) {
+                        auditLog($conn, 'user_deleted', 'users', $user_id, null);
+                        $message = "ተጠቃሚ ተሰርዟል!";
+                    } else {
+                        $error = "ስህተት ተከስቷል!";
+                    }
+                }
+            }
+        }
+        
+        if (isset($_POST['reset_password'])) {
+            $user_id = intval($_POST['user_id'] ?? 0);
+            $new_password = hashPassword('123');
+            
+            if ($user_id > 0) {
+                $reset = dbExecute(
+                    $conn,
+                    "UPDATE users SET password = ?, first_login = 1 WHERE id = ?",
+                    "si",
+                    [$new_password, $user_id]
+                );
+                if ($reset) {
+                    $message = "የይለፍ ቃል ወደ 123 ተመልሷል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
         }
     }
 }
@@ -78,14 +127,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 // Get all users
 $users_query = "SELECT * FROM users ORDER BY role, name";
 $users = mysqli_query($conn, $users_query);
+$nav_active = 'manage_users';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>ተጠቃሚዎች አስተዳደር | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -357,12 +406,16 @@ $users = mysqli_query($conn, $users_query);
 
         .table-responsive {
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 700px;
+        }
+
+        .table-responsive table {
+            min-width: 650px;
         }
 
         th {
@@ -428,55 +481,36 @@ $users = mysqli_query($conn, $users_query);
         }
 
         @media (max-width: 768px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .form-section, .section-card { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
+            .form-title, .section-header h2 { font-size: 17px; }
             .form-grid {
                 grid-template-columns: 1fr;
             }
-            
             .action-buttons {
                 flex-direction: column;
+                gap: 4px;
             }
+            .action-buttons .btn {
+                width: 100%;
+                justify-content: center;
+                min-height: 38px;
+            }
+            .btn-primary { width: 100%; justify-content: center; min-height: 44px; }
+            .modal-card { width: 95% !important; padding: 20px 14px !important; border-radius: 12px !important; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-            <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.innerHTML='⛪'">
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>ተጠቃሚዎች አስተዳደር | User Management</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="nav-link" style="background: var(--gold-primary); color: var(--brown-dark);">
-                ← ወደ ዳሽቦርድ
-            </a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
-        <div class="message success">✅ <?php echo $message; ?></div>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if($error): ?>
-        <div class="message error">⚠️ <?php echo $error; ?></div>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <!-- Add User Form -->
@@ -485,6 +519,7 @@ $users = mysqli_query($conn, $users_query);
                 <span>➕</span> አዲስ ተጠቃሚ መፍጠሪያ / Add New User
             </div>
             <form method="POST">
+                <?php echo csrfField(); ?>
                 <div class="form-grid">
                     <div class="form-group">
                         <label>ሙሉ ስም / Full Name</label>
@@ -579,12 +614,14 @@ $users = mysqli_query($conn, $users_query);
                                 </button>
                                 <?php if($user['id'] != $_SESSION['user_id']): ?>
                                 <form method="POST" style="display: inline;" onsubmit="return confirm('የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
+                                    <?php echo csrfField(); ?>
                                     <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
                                     <button type="submit" name="reset_password" class="btn btn-reset">
                                         🔄 ይለፍ ቃል መልስ
                                     </button>
                                 </form>
                                 <form method="POST" style="display: inline;" onsubmit="return confirm('ተጠቃሚውን መሰረዝ እርግጠኛ ነዎት?')">
+                                    <?php echo csrfField(); ?>
                                     <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
                                     <button type="submit" name="delete_user" class="btn btn-delete">
                                         🗑️ ሰርዝ
@@ -611,29 +648,30 @@ $users = mysqli_query($conn, $users_query);
     </div>
 
     <!-- Edit Modal -->
-    <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-        <div style="background:white; width:90%; max-width:500px; padding:30px; border-radius:20px; border:3px solid #FFD700;">
+    <div id="editModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; justify-content:center; align-items:center;">
+        <div class="modal-card modal-box" style="width:90%; max-width:500px; padding:30px; border-radius:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="color:#8B4513;">✏️ የተጠቃሚ መረጃ አስተካክል</h2>
+                <h2 style="color:var(--brown-dark);">✏️ የተጠቃሚ መረጃ አስተካክል</h2>
                 <span onclick="closeModal()" style="font-size:28px; cursor:pointer;">&times;</span>
             </div>
             <form method="POST" id="editForm">
+                <?php echo csrfField(); ?>
                 <input type="hidden" name="user_id" id="edit_id">
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>ሙሉ ስም</label>
-                    <input type="text" name="name" id="edit_name" class="form-control" style="width:100%; padding:12px; border:2px solid #E2E8F0; border-radius:10px;" required>
+                    <input type="text" name="name" id="edit_name" class="form-control" required>
                 </div>
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>የተጠቃሚ ስም</label>
-                    <input type="text" name="username" id="edit_username" class="form-control" style="width:100%; padding:12px; border:2px solid #E2E8F0; border-radius:10px;" required>
+                    <input type="text" name="username" id="edit_username" class="form-control" required>
                 </div>
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>ስልክ</label>
-                    <input type="text" name="phone" id="edit_phone" class="form-control" style="width:100%; padding:12px; border:2px solid #E2E8F0; border-radius:10px;">
+                    <input type="text" name="phone" id="edit_phone" class="form-control">
                 </div>
                 <div class="form-group" style="margin-bottom:20px;">
                     <label>ሚና</label>
-                    <select name="role" id="edit_role" class="form-control" style="width:100%; padding:12px; border:2px solid #E2E8F0; border-radius:10px;" required>
+                    <select name="role" id="edit_role" class="form-control" required>
                         <option value="teacher">👨‍🏫 መምህር / Teacher</option>
                         <option value="attendance_submitter">📋 የክፍል ጸሐፊ / Attendance Submitter</option>
                         <option value="admin">👑 አስተዳዳሪ / Admin</option>

@@ -1,5 +1,4 @@
 <?php
-session_start();
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -9,48 +8,79 @@ require_once 'db.php';
 requireLogin();
 
 // Check if first login - force password change for attendance submitter
-if(isset($_SESSION['first_login']) && $_SESSION['first_login'] == 1) {
+if (isset($_SESSION['first_login']) && $_SESSION['first_login'] == 1) {
     header("Location: change_password.php");
     exit();
 }
 
-if(!isAttendanceSubmitter()) {
+$current_semester = getCurrentSemester($conn);
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
+$submitter_id = intval($_SESSION['user_id'] ?? 0);
+
+if (!canMarkAttendance($conn, $submitter_id, $semester_id)) {
+    if (isTeacher()) {
+        header("Location: teacher_attendance_view.php");
+        exit();
+    }
     header("Location: index.php");
     exit();
 }
 
-$submitter_id = $_SESSION['user_id'] ?? 0;
 $user_name = $_SESSION['user_name'] ?? 'የክፍል ጸሐፊ';
 
 // Get admin contact
-$admin1_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_1'");
-$admin1 = $admin1_query ? mysqli_fetch_assoc($admin1_query)['setting_value'] : 'አስተዳዳሪ';
-$phone1_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_1'");
-$phone1 = $phone1_query ? mysqli_fetch_assoc($phone1_query)['setting_value'] : '';
-
-$current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$admin1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_1'");
+$admin1 = $admin1_row ? $admin1_row['setting_value'] : 'አስተዳዳሪ';
+$phone1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_1'");
+$phone1 = $phone1_row ? $phone1_row['setting_value'] : '';
 
 // Get assigned classes
 $assigned_classes = [];
-if($submitter_id && $semester_id) {
-    $classes_query = "SELECT aa.*, c.name as class_name, c.id as class_id,
-                      COUNT(DISTINCT s.id) as student_count
-                      FROM attendance_assignments aa
-                      JOIN classes c ON aa.class_id = c.id
-                      LEFT JOIN students s ON c.id = s.class_id
-                      WHERE aa.submitter_id = $submitter_id AND aa.semester_id = $semester_id
-                      GROUP BY c.id ORDER BY c.name";
-    $classes_result = mysqli_query($conn, $classes_query);
-    if($classes_result && mysqli_num_rows($classes_result) > 0) {
-        while($row = mysqli_fetch_assoc($classes_result)) {
-            $assigned_classes[] = $row;
-        }
+if ($submitter_id && $semester_id) {
+    if (isAdmin()) {
+        $classes_query = "SELECT c.id as class_id, c.name as class_name,
+                          COUNT(DISTINCT s.id) as student_count
+                          FROM classes c
+                          LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
+                          GROUP BY c.id ORDER BY c.name";
+        $assigned_classes = dbFetchAll($conn, $classes_query);
+    } elseif (isTeacher()) {
+        $setting = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'youth_can_write_attendance'");
+        $youth_enabled = ($setting && trim($setting['setting_value']) === '1');
+        $youth_filter = $youth_enabled ? "1 = 1" : "(g.division_id = 1 OR (g.level_number > 0 AND g.level_number <= 6))";
+
+        $classes_query = "
+            SELECT c.id as class_id, c.name as class_name,
+                   COUNT(DISTINCT s.id) as student_count
+            FROM (
+                SELECT tc.class_id
+                FROM teacher_class tc
+                JOIN classes c ON tc.class_id = c.id
+                LEFT JOIN grades g ON c.grade_id = g.id
+                WHERE tc.teacher_id = ? AND tc.semester_id = ? AND $youth_filter
+                UNION
+                SELECT aa.class_id
+                FROM attendance_assignments aa
+                WHERE aa.submitter_id = ? AND aa.semester_id = ?
+            ) u_classes
+            JOIN classes c ON u_classes.class_id = c.id
+            LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
+            GROUP BY c.id ORDER BY c.name";
+        $assigned_classes = dbFetchAll($conn, $classes_query, "iiii", [$submitter_id, $semester_id, $submitter_id, $semester_id]);
+    } else {
+        $classes_query = "SELECT aa.*, c.name as class_name, c.id as class_id,
+                          COUNT(DISTINCT s.id) as student_count
+                          FROM attendance_assignments aa
+                          JOIN classes c ON aa.class_id = c.id
+                          LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
+                          WHERE aa.submitter_id = ? AND aa.semester_id = ?
+                          GROUP BY c.id ORDER BY c.name";
+        $assigned_classes = dbFetchAll($conn, $classes_query, "ii", [$submitter_id, $semester_id]);
     }
 }
 
 $error_message = '';
-if(empty($assigned_classes)) {
+if (empty($assigned_classes)) {
     $error_message = "ለዚህ ሴሚስተር ምንም ክፍል አልተመደበልዎትም!";
 }
 
@@ -68,44 +98,32 @@ $amharic_days = [
 
 // Get current Ethiopian date
 $today_eth = getCurrentEthiopianDate();
-// FIXED: Use 'm' and 'y' as parameter names to avoid Amharic character issues
-$selected_eth_month = isset($_GET['m']) ? intval($_GET['m']) : $today_eth['month'];
-$selected_eth_year = isset($_GET['y']) ? intval($_GET['y']) : $today_eth['year'];
+$selected_eth_month = isset($_GET['m']) ? intval($_GET['m']) : intval($today_eth['month']);
+$selected_eth_year = isset($_GET['y']) ? intval($_GET['y']) : intval($today_eth['year']);
 
 // Validate
-if($selected_eth_month < 1 || $selected_eth_month > 13) {
-    $selected_eth_month = $today_eth['month'];
+if ($selected_eth_month < 1 || $selected_eth_month > 13) {
+    $selected_eth_month = intval($today_eth['month']);
 }
-if($selected_eth_year < 2000 || $selected_eth_year > 2100) {
-    $selected_eth_year = $today_eth['year'];
+if ($selected_eth_year < 2000 || $selected_eth_year > 2100) {
+    $selected_eth_year = intval($today_eth['year']);
 }
 
 // Build Ethiopian month calendar - ONLY SATURDAY & SUNDAY
 $days_in_eth_month = getEthiopianDaysInMonth($selected_eth_year, $selected_eth_month);
 $eth_month_days = [];
 
-$base_year = $selected_eth_year + 7;
-$eth_new_year = new DateTime("$base_year-09-11");
-if($base_year % 4 == 3) {
-    $eth_new_year = new DateTime("$base_year-09-12");
-}
-
-$month_offset = ($selected_eth_month - 1) * 30;
-
-for($d = 1; $d <= $days_in_eth_month; $d++) {
-    $day_offset = $month_offset + ($d - 1);
-    $greg_date = clone $eth_new_year;
-    $greg_date->modify("+$day_offset days");
-    $date_str = $greg_date->format('Y-m-d');
+for ($d = 1; $d <= $days_in_eth_month; $d++) {
+    $date_str = ethiopianToGregorian($selected_eth_year, $selected_eth_month, $d);
+    if (!$date_str) continue;
     
-    $day_of_week = $greg_date->format('l');
-    
-    if($day_of_week != 'Saturday' && $day_of_week != 'Sunday') {
+    $day_of_week = date('l', strtotime($date_str));
+    if ($day_of_week !== 'Saturday' && $day_of_week !== 'Sunday') {
         continue;
     }
     
-    $is_future = $date_str > date('Y-m-d');
-    $is_today = $date_str == date('Y-m-d');
+    $is_future = ($date_str > date('Y-m-d'));
+    $is_today = ($date_str === date('Y-m-d'));
     $clickable = (!$is_future);
     
     $eth_month_days[] = [
@@ -121,108 +139,188 @@ for($d = 1; $d <= $days_in_eth_month; $d++) {
 }
 
 // Get selected class
-$selected_class_id = isset($_GET['c']) ? intval($_GET['c']) : (!empty($assigned_classes) ? $assigned_classes[0]['class_id'] : 0);
+$selected_class_id = isset($_GET['c']) ? intval($_GET['c']) : (!empty($assigned_classes) ? intval($assigned_classes[0]['class_id']) : 0);
 $selected_class = null;
 $students = [];
 $teachers = [];
 
 // Get closed days
 $closed_days = [];
-if($selected_class_id > 0 && !empty($eth_month_days)) {
+if ($selected_class_id > 0 && !empty($eth_month_days)) {
     $first_date = $eth_month_days[0]['greg_date'];
     $last_date = $eth_month_days[count($eth_month_days)-1]['greg_date'];
     
-    $cd_query = "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN '$first_date' AND '$last_date' AND is_school_day = 0 AND class_id IS NULL";
-    $cd_result = mysqli_query($conn, $cd_query);
-    if($cd_result) {
-        while($row = mysqli_fetch_assoc($cd_result)) {
-            $closed_days[$row['date_gregorian']] = true;
-        }
-    }
-    
-    $cd_query2 = "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN '$first_date' AND '$last_date' AND is_school_day = 0 AND class_id = $selected_class_id";
-    $cd_result2 = mysqli_query($conn, $cd_query2);
-    if($cd_result2) {
-        while($row = mysqli_fetch_assoc($cd_result2)) {
-            $closed_days[$row['date_gregorian']] = true;
-        }
+    $cd_rows = dbFetchAll(
+        $conn,
+        "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN ? AND ? AND is_school_day = 0 AND (class_id IS NULL OR class_id = ?)",
+        "ssi",
+        [$first_date, $last_date, $selected_class_id]
+    );
+    foreach ($cd_rows as $row) {
+        $closed_days[$row['date_gregorian']] = true;
     }
 }
 
-foreach($eth_month_days as &$day) {
+foreach ($eth_month_days as &$day) {
     $day['is_closed'] = isset($closed_days[$day['greg_date']]);
-    if($day['is_closed']) {
+    if ($day['is_closed']) {
         $day['clickable'] = false;
     }
 }
 unset($day);
 
-if($selected_class_id > 0) {
-    foreach($assigned_classes as $class) {
-        if($class['class_id'] == $selected_class_id) { $selected_class = $class; break; }
+if ($selected_class_id > 0) {
+    foreach ($assigned_classes as $class) {
+        if (intval($class['class_id']) === $selected_class_id) {
+            $selected_class = $class;
+            break;
+        }
     }
-    if($selected_class) {
-        $students_query = "SELECT * FROM students WHERE class_id = {$selected_class['class_id']} ORDER BY name";
-        $students_result = mysqli_query($conn, $students_query);
-        while($s = mysqli_fetch_assoc($students_result)) { $students[] = $s; }
+    if ($selected_class) {
+        $students = dbFetchAll(
+            $conn,
+            "SELECT * FROM students WHERE class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL) ORDER BY name",
+            "i",
+            [$selected_class_id]
+        );
         
-        $teachers_query = "SELECT u.id, u.name FROM teacher_class tc
-                           JOIN users u ON tc.teacher_id = u.id
-                           WHERE tc.class_id = {$selected_class['class_id']} AND tc.semester_id = $semester_id";
-        $teachers_result = mysqli_query($conn, $teachers_query);
-        while($t = mysqli_fetch_assoc($teachers_result)) { $teachers[] = $t; }
+        $teachers = dbFetchAll(
+            $conn,
+            "SELECT u.id, u.name FROM teacher_class tc
+             JOIN users u ON tc.teacher_id = u.id
+             WHERE tc.class_id = ? AND tc.semester_id = ?",
+            "ii",
+            [$selected_class_id, $semester_id]
+        );
     }
 }
 
 // Get existing attendance
 $attendance_data = [];
-if(!empty($students) && !empty($teachers)) {
-    foreach($students as $student) {
-        $sid = $student['id'];
-        foreach($eth_month_days as $day) {
-            $att_check = mysqli_query($conn, "SELECT status FROM attendance_records 
-                                             WHERE student_id = $sid AND class_id = {$selected_class['class_id']}
-                                             AND attendance_date = '{$day['greg_date']}' LIMIT 1");
-            if($att_check && mysqli_num_rows($att_check) > 0) {
-                $att = mysqli_fetch_assoc($att_check);
-                $attendance_data[$sid][$day['greg_date']] = $att['status'];
-            }
-        }
+if (!empty($students) && !empty($teachers) && !empty($eth_month_days)) {
+    $first_date = $eth_month_days[0]['greg_date'];
+    $last_date = $eth_month_days[count($eth_month_days)-1]['greg_date'];
+    
+    $records = dbFetchAll(
+        $conn,
+        "SELECT student_id, attendance_date, status FROM attendance_records 
+         WHERE class_id = ? AND attendance_date BETWEEN ? AND ?",
+        "iss",
+        [$selected_class_id, $first_date, $last_date]
+    );
+    foreach ($records as $r) {
+        $attendance_data[$r['student_id']][$r['attendance_date']] = $r['status'];
     }
 }
 
 // AJAX save attendance
-if(isset($_POST['ajax_save_attendance'])) {
+if (isset($_POST['ajax_save_attendance'])) {
     header('Content-Type: application/json');
-    $student_id = intval($_POST['student_id']);
-    $class_id = intval($_POST['class_id']);
-    $date = mysqli_real_escape_string($conn, $_POST['attendance_date']);
-    $status = mysqli_real_escape_string($conn, $_POST['status']);
-    $marked_by = $_SESSION['user_id'];
-    
-    $day_check = mysqli_query($conn, "SELECT id FROM attendance_days WHERE date_gregorian = '$date' AND is_school_day = 0 AND (class_id IS NULL OR class_id = $class_id) LIMIT 1");
-    if($day_check && mysqli_num_rows($day_check) > 0) {
-        echo json_encode(['success' => false, 'message' => 'closed']); exit();
+    $student_id = intval($_POST['student_id'] ?? 0);
+    $class_id = intval($_POST['class_id'] ?? 0);
+    $date = trim($_POST['attendance_date'] ?? '');
+    $status = trim($_POST['status'] ?? '');
+    $marked_by = intval($_SESSION['user_id'] ?? 0);
+
+    // IDOR Protection: verify user is assigned to mark attendance for this class
+    if (!isAdmin()) {
+        if (!canTeacherMarkClassAttendance($conn, $marked_by, $class_id, $semester_id)) {
+            echo json_encode(['success' => false, 'message' => 'unauthorized_class']);
+            exit();
+        }
+    }
+
+    // IDOR Protection: verify student belongs to this class
+    $student_check = dbFetchOne(
+        $conn,
+        "SELECT id FROM students WHERE id = ? AND class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)",
+        "ii",
+        [$student_id, $class_id]
+    );
+    if (!$student_check) {
+        echo json_encode(['success' => false, 'message' => 'invalid_student']);
+        exit();
+    }
+
+    // Validate status
+    if (!in_array($status, ['present', 'absent', 'permission'])) {
+        echo json_encode(['success' => false, 'message' => 'invalid_status']);
+        exit();
     }
     
-    if(strtotime($date) > strtotime(date('Y-m-d'))) {
-        echo json_encode(['success' => false, 'message' => 'future']); exit();
-    }
-    
-    $success = true;
-    foreach($teachers as $teacher) {
-        if(!saveAttendance($conn, $student_id, $class_id, $teacher['id'], $date, $status, $marked_by)) {
-            $success = false;
+    // Check if semester is closed or attendance_locked for the class
+    if (!isAdmin()) {
+        $sem_check = dbFetchOne($conn, "SELECT status FROM semesters WHERE id = ?", "i", [$semester_id]);
+        if (!$sem_check || $sem_check['status'] === 'closed') {
+            echo json_encode(['success' => false, 'message' => 'semester_closed']);
+            exit();
+        }
+
+        $lock_check = dbFetchOne(
+            $conn,
+            "SELECT attendance_locked FROM teacher_class WHERE class_id = ? AND semester_id = ? LIMIT 1",
+            "ii",
+            [$class_id, $semester_id]
+        );
+        if ($lock_check && intval($lock_check['attendance_locked']) === 1) {
+            echo json_encode(['success' => false, 'message' => 'locked']);
+            exit();
         }
     }
     
-    echo json_encode(['success' => $success, 'status' => $status]); exit();
+    $day_check = dbFetchOne(
+        $conn,
+        "SELECT id FROM attendance_days WHERE date_gregorian = ? AND is_school_day = 0 AND (class_id IS NULL OR class_id = ?) LIMIT 1",
+        "si",
+        [$date, $class_id]
+    );
+    if ($day_check) {
+        echo json_encode(['success' => false, 'message' => 'closed']);
+        exit();
+    }
+    
+    if (strtotime($date) > strtotime(date('Y-m-d'))) {
+        echo json_encode(['success' => false, 'message' => 'future']);
+        exit();
+    }
+    
+    $success = true;
+    if (empty($teachers)) {
+        $teachers = dbFetchAll(
+            $conn,
+            "SELECT u.id, u.name FROM teacher_class tc
+             JOIN users u ON tc.teacher_id = u.id
+             WHERE tc.class_id = ? AND tc.semester_id = ?",
+            "ii",
+            [$class_id, $semester_id]
+        );
+    }
+    
+    if (empty($teachers)) {
+        // Direct save with teacher_id = 0 if no teacher assigned
+        if (!saveAttendance($conn, $student_id, $class_id, 0, $date, $status, $marked_by)) {
+            $success = false;
+        }
+    } else {
+        foreach ($teachers as $teacher) {
+            if (!saveAttendance($conn, $student_id, $class_id, intval($teacher['id']), $date, $status, $marked_by)) {
+                $success = false;
+            }
+        }
+    }
+    
+    echo json_encode(['success' => $success, 'status' => $status]);
+    exit();
 }
 
 // FIXED: Navigation with short parameter names
 $prev_m = $selected_eth_month - 1;
 $prev_y = $selected_eth_year;
 if($prev_m < 1) { $prev_m = 13; $prev_y--; }
+
+$next_m = $selected_eth_month + 1;
+$next_y = $selected_eth_year;
+if($next_m > 13) { $next_m = 1; $next_y++; }
 
 $today_month = $today_eth['month'];
 $today_year = $today_eth['year'];
@@ -231,14 +329,15 @@ $today_year = $today_eth['year'];
 function buildUrl($m, $y, $c) {
     return "?m={$m}&y={$y}&c={$c}";
 }
+$nav_active = 'dashboard_attendance';
 ?>
 <!DOCTYPE html>
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="icon" type="image/png" href="images/icon.png">
-    <title>የመገኘት ምዝገባ | አጸደ ትጉሃን</title>
+    <meta name="theme-color" content="#8B4513">
+    <title>የአቴንዳንስ ምዝገባ | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --primary: #8B4513; --gold: #FFD700; --gold-dark: #DAA520;
@@ -368,6 +467,10 @@ function buildUrl($m, $y, $c) {
         .att-dot.absent.active { background: var(--danger); }
         .att-dot.permission { background: #FEF3C7; border-color: var(--warning); }
         .att-dot.permission.active { background: var(--warning); }
+        .att-dot.late { background: #DBEAFE; border-color: #3B82F6; }
+        .att-dot.late.active { background: #3B82F6; }
+        .att-dot.excused { background: #E9D5FF; border-color: #8B5CF6; }
+        .att-dot.excused.active { background: #8B5CF6; }
         .att-dot.empty { background: #F3F4F6; border-color: #D1D5DB; }
         .no-click { cursor: not-allowed; opacity: 0.3; pointer-events: none; }
         .closed-cell { background: #E5E7EB; text-align:center; padding:5px; font-size:9px; color:#6B7280; }
@@ -394,24 +497,9 @@ function buildUrl($m, $y, $c) {
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-top">
-            <div class="logo">
-                <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','⛪');">
-                <div>
-                    <h2>አጸደ ትጉሃን</h2>
-                    <span>የመገኘት ምዝገባ</span>
-                </div>
-            </div>
-            <div class="user-badge">
-                <span>📋</span>
-                <strong><?php echo htmlspecialchars(mb_substr($user_name, 0, 15)); ?></strong>
-                <a href="logout.php" class="btn-logout">⏻ ውጣ</a>
-            </div>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="container">
+    <div class="main-container">
         <?php if($error_message): ?>
             <div class="alert alert-error">⚠️ <?php echo $error_message; ?></div>
         <?php else: ?>
@@ -435,7 +523,10 @@ function buildUrl($m, $y, $c) {
                         <?php echo $ethiopian_months[$selected_eth_month] . ' ' . $selected_eth_year; ?> ዓ.ም
                         <span class="greg">(ቅዳሜ & እሁድ)</span>
                     </div>
-                    <a href="<?php echo buildUrl($today_month, $today_year, $selected_class_id); ?>" class="btn-today">📅 ዛሬ</a>
+                    <div style="display:inline-flex; gap:6px; align-items:center;">
+                        <a href="<?php echo buildUrl($next_m, $next_y, $selected_class_id); ?>">ቀጣይ →</a>
+                        <a href="<?php echo buildUrl($today_month, $today_year, $selected_class_id); ?>" class="btn-today">📅 ዛሬ</a>
+                    </div>
                 </div>
 
                 <div class="legend">
@@ -459,7 +550,7 @@ function buildUrl($m, $y, $c) {
 
             <div class="table-wrapper">
                 <div class="table-header-bar">
-                    <span>📋 ወርሃዊ የመገኘት ሰንጠረዥ (ቅዳሜ & እሁድ)</span>
+                    <span>📋 ወርሃዊ የአቴንዳንስ ሰንጠረዥ (ቅዳሜ & እሁድ)</span>
                     <span style="font-size:11px;">ለሁሉም መምህራን ይመዘገባል</span>
                 </div>
                 <div class="table-scroll">
@@ -468,7 +559,7 @@ function buildUrl($m, $y, $c) {
                             <tr>
                                 <th>#</th>
                                 <th>የተማሪ ስም</th>
-                                <?php foreach($eth_month_days as $day): 
+                                <?php foreach($eth_month_days as $day):
                                     $colClass = 'weekend';
                                     if($day['is_today']) $colClass .= ' today';
                                     if($day['is_future']) $colClass .= ' future';
@@ -488,7 +579,7 @@ function buildUrl($m, $y, $c) {
                             <tr data-student-id="<?php echo $sid; ?>">
                                 <td><?php echo $index + 1; ?></td>
                                 <td class="student-name"><?php echo htmlspecialchars($student['name']); ?></td>
-                                <?php foreach($eth_month_days as $day): 
+                                <?php foreach($eth_month_days as $day):
                                     $stat = $attendance_data[$sid][$day['greg_date']] ?? null;
                                     $colClass = 'weekend';
                                     if($day['is_today']) $colClass .= ' today';
@@ -527,10 +618,18 @@ function buildUrl($m, $y, $c) {
 
     <div id="toast" class="toast"></div>
 
+    <script src="exam-main/assets/js/offline-db.js"></script>
+    <script src="exam-main/assets/js/sync-manager.js"></script>
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/exam/sw.js').catch(() => {});
+            });
+        }
+
         const classId = <?php echo $selected_class_id ?: 0; ?>;
         
-        function saveAtt(studentId, date, status, el) {
+        async function saveAtt(studentId, date, status, el) {
             const cell = el.closest('td');
             cell.querySelectorAll('.att-dot').forEach(d => d.classList.remove('active'));
             el.classList.add('active');
@@ -539,6 +638,20 @@ function buildUrl($m, $y, $c) {
             toast.textContent = '⏳ በማስቀመጥ ላይ...';
             toast.style.background = '#F59E0B';
             toast.classList.add('show');
+
+            const localUuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'att_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const attRecord = {
+                local_uuid: localUuid,
+                student_id: parseInt(studentId),
+                class_id: classId,
+                attendance_date: date,
+                status: status
+            };
+
+            // Always store to IndexedDB for seamless offline resilience
+            await OfflineDB.saveAttendanceLocal(attRecord);
+            
+            
             
             const fd = new FormData();
             fd.append('ajax_save_attendance', '1');
@@ -551,8 +664,9 @@ function buildUrl($m, $y, $c) {
             .then(r => r.json())
             .then(d => {
                 if(d.success) {
-                    toast.textContent = '✅ ተቀምጧል!';
+                    toast.textContent = '✅ ተቀምጧል & ተመሳስሏል!';
                     toast.style.background = '#10B981';
+                    SyncManager.pushChanges();
                 } else {
                     toast.textContent = '❌ ስህተት!';
                     toast.style.background = '#EF4444';
@@ -561,9 +675,8 @@ function buildUrl($m, $y, $c) {
                 setTimeout(() => toast.classList.remove('show'), 2000);
             })
             .catch(() => {
-                toast.textContent = '❌ ኔትወርክ ስህተት!';
-                toast.style.background = '#EF4444';
-                cell.querySelectorAll('.att-dot').forEach(d => d.classList.remove('active'));
+                toast.textContent = '💾 ከመስመር ውጭ ተቀምጧል!';
+                toast.style.background = '#3B82F6';
                 setTimeout(() => toast.classList.remove('show'), 2000);
             });
         }

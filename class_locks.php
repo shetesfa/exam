@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -7,107 +6,142 @@ $message = '';
 $error = '';
 
 // Get admin contact info
-$admin1_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_1'");
-$admin1 = $admin1_query ? mysqli_fetch_assoc($admin1_query)['setting_value'] : 'ዲ/ን ኪብረአብ ዘለለም';
-$phone1_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_1'");
-$phone1 = $phone1_query ? mysqli_fetch_assoc($phone1_query)['setting_value'] : '0939883508';
-$admin2_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_2'");
-$admin2 = $admin2_query ? mysqli_fetch_assoc($admin2_query)['setting_value'] : 'ተስፋሁን ባዬ';
-$phone2_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_2'");
-$phone2 = $phone2_query ? mysqli_fetch_assoc($phone2_query)['setting_value'] : '0943854325';
-$title_query = mysqli_query($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_title'");
-$title = $title_query ? mysqli_fetch_assoc($title_query)['setting_value'] : 'የአጸደ ትጉሃን ትምህርት ክፍል ኃላፊ';
+$admin1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_1'");
+$admin1 = $admin1_row ? $admin1_row['setting_value'] : 'ዲ/ን ኪብረአብ ዘለለም';
+$phone1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_1'");
+$phone1 = $phone1_row ? $phone1_row['setting_value'] : '0939883508';
+$admin2_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_2'");
+$admin2 = $admin2_row ? $admin2_row['setting_value'] : 'ተስፋሁን ባዬ';
+$phone2_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_2'");
+$phone2 = $phone2_row ? $phone2_row['setting_value'] : '0943854325';
+$title_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_title'");
+$title = $title_row ? $title_row['setting_value'] : 'የአጸደ ትጉሃን ትምህርት ክፍል ኃላፊ';
 
 // Get current academic year and semester
-$current_year_query = "SELECT * FROM academic_years WHERE status = 'active' LIMIT 1";
-$current_year_result = mysqli_query($conn, $current_year_query);
-$current_year = mysqli_fetch_assoc($current_year_result);
-$current_ethiopian_year = $current_year ? $current_year['ethiopian_year'] : 2018;
+$current_year = dbFetchOne($conn, "SELECT * FROM academic_years WHERE status = 'active' LIMIT 1");
+$current_ethiopian_year = $current_year ? intval($current_year['ethiopian_year']) : 2018;
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 // Handle different locking methods
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    
-    // METHOD 1: Lock by Class (affects all teachers of that class)
-    if(isset($_POST['lock_by_class'])) {
-        $class_id = mysqli_real_escape_string($conn, $_POST['class_id']);
-        $action = mysqli_real_escape_string($conn, $_POST['action']); // 'lock' or 'unlock'
-        
-        $lock_value = ($action == 'lock') ? 1 : 0;
-        $action_text = ($action == 'lock') ? 'ተቆልፈዋል' : 'ተከፍተዋል';
-        
-        $query = "UPDATE teacher_class SET locked = $lock_value 
-                  WHERE class_id = $class_id AND semester_id = $semester_id";
-        
-        if(mysqli_query($conn, $query)) {
-            $affected = mysqli_affected_rows($conn);
-            $message = "ክፍሉ ውስጥ ያሉ $affected መምህራን $action_text!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
-        }
-    }
-    
-    // METHOD 2: Lock by Teacher (affects all classes of that teacher)
-    if(isset($_POST['lock_by_teacher'])) {
-        $teacher_id = mysqli_real_escape_string($conn, $_POST['teacher_id']);
-        $action = mysqli_real_escape_string($conn, $_POST['action']); // 'lock' or 'unlock'
-        
-        $lock_value = ($action == 'lock') ? 1 : 0;
-        $action_text = ($action == 'lock') ? 'ተቆልፈዋል' : 'ተከፍተዋል';
-        
-        $query = "UPDATE teacher_class SET locked = $lock_value 
-                  WHERE teacher_id = $teacher_id AND semester_id = $semester_id";
-        
-        if(mysqli_query($conn, $query)) {
-            $affected = mysqli_affected_rows($conn);
-            $message = "መምህሩ የሚያስተምራቸው $affected ክፍሎች $action_text!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
-        }
-    }
-    
-    // METHOD 3: Lock by Specific Combination (1 teacher + 1 class)
-    if(isset($_POST['lock_specific'])) {
-        $assignment_id = mysqli_real_escape_string($conn, $_POST['assignment_id']);
-        $current_lock = mysqli_real_escape_string($conn, $_POST['current_lock']);
-        
-        $new_lock = $current_lock ? 0 : 1;
-        $action_text = $new_lock ? 'ተቆልፏል' : 'ተከፍቷል';
-        
-        $query = "UPDATE teacher_class SET locked = $new_lock WHERE id = $assignment_id";
-        
-        if(mysqli_query($conn, $query)) {
-            // Get teacher and class names for message
-            $info_query = "SELECT u.name as teacher_name, c.name as class_name 
-                          FROM teacher_class tc
-                          JOIN users u ON tc.teacher_id = u.id
-                          JOIN classes c ON tc.class_id = c.id
-                          WHERE tc.id = $assignment_id";
-            $info_result = mysqli_query($conn, $info_query);
-            $info = mysqli_fetch_assoc($info_result);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        // METHOD 1: Lock by Class (affects all teachers of that class)
+        if (isset($_POST['lock_by_class'])) {
+            $class_id = intval($_POST['class_id'] ?? 0);
+            $action = ($_POST['lock_by_class'] === 'unlock' || ($_POST['action'] ?? '') === 'unlock') ? 'unlock' : 'lock';
             
-            $message = "መምህር {$info['teacher_name']} በ{$info['class_name']} ክፍል $action_text!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+            $lock_value = ($action === 'lock') ? 1 : 0;
+            $action_text = ($action === 'lock') ? 'ተቆልፈዋል' : 'ተከፍተዋል';
+            
+            if ($class_id > 0 && $semester_id > 0) {
+                $updated = dbExecute(
+                    $conn,
+                    "UPDATE teacher_class SET locked = ? WHERE class_id = ? AND semester_id = ?",
+                    "iii",
+                    [$lock_value, $class_id, $semester_id]
+                );
+                
+                if ($updated) {
+                    $message = "በተመረጠው ክፍል ውስጥ ያሉ መምህራን $action_text!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
         }
-    }
-    
-    // METHOD 4: Lock All (all teachers, all classes)
-    if(isset($_POST['lock_all'])) {
-        $action = mysqli_real_escape_string($conn, $_POST['action']); // 'lock' or 'unlock'
         
-        $lock_value = ($action == 'lock') ? 1 : 0;
-        $action_text = ($action == 'lock') ? 'ተቆልፈዋል' : 'ተከፍተዋል';
+        // METHOD 2: Lock by Teacher (affects all classes of that teacher)
+        if (isset($_POST['lock_by_teacher'])) {
+            $teacher_id = intval($_POST['teacher_id'] ?? 0);
+            $action = ($_POST['lock_by_teacher'] === 'unlock' || ($_POST['action'] ?? '') === 'unlock') ? 'unlock' : 'lock';
+            
+            $lock_value = ($action === 'lock') ? 1 : 0;
+            $action_text = ($action === 'lock') ? 'ተቆልፈዋል' : 'ተከፍተዋል';
+            
+            if ($teacher_id > 0 && $semester_id > 0) {
+                $updated = dbExecute(
+                    $conn,
+                    "UPDATE teacher_class SET locked = ? WHERE teacher_id = ? AND semester_id = ?",
+                    "iii",
+                    [$lock_value, $teacher_id, $semester_id]
+                );
+                
+                if ($updated) {
+                    $message = "የመምህሩ ክፍሎች $action_text!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
+        }
         
-        $query = "UPDATE teacher_class SET locked = $lock_value WHERE semester_id = $semester_id";
+        // METHOD 3: Lock by Specific Combination (1 teacher + 1 class)
+        if (isset($_POST['lock_specific'])) {
+            $assignment_id = intval($_POST['assignment_id'] ?? 0);
+            $current_lock = intval($_POST['current_lock'] ?? 0);
+            
+            $new_lock = $current_lock ? 0 : 1;
+            $action_text = $new_lock ? 'ተቆልፏል' : 'ተከፍቷል';
+            
+            if ($assignment_id > 0) {
+                $updated = dbExecute($conn, "UPDATE teacher_class SET locked = ? WHERE id = ?", "ii", [$new_lock, $assignment_id]);
+                
+                if ($updated) {
+                    $info = dbFetchOne(
+                        $conn,
+                        "SELECT u.name as teacher_name, c.name as class_name 
+                         FROM teacher_class tc
+                         JOIN users u ON tc.teacher_id = u.id
+                         JOIN classes c ON tc.class_id = c.id
+                         WHERE tc.id = ?",
+                        "i",
+                        [$assignment_id]
+                    );
+                    $tName = $info ? $info['teacher_name'] : 'መምህር';
+                    $cName = $info ? $info['class_name'] : 'ክፍል';
+                    $message = "መምህር $tName በ$cName ክፍል $action_text!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
+        }
         
-        if(mysqli_query($conn, $query)) {
-            $affected = mysqli_affected_rows($conn);
-            $message = "ሁሉም $affected ምደባዎች $action_text!";
-        } else {
-            $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+        // METHOD 4: Lock All (all teachers, all classes)
+        if (isset($_POST['lock_all'])) {
+            $action = ($_POST['lock_all'] === 'unlock' || ($_POST['action'] ?? '') === 'unlock') ? 'unlock' : 'lock';
+            $lock_value = ($action === 'lock') ? 1 : 0;
+            $action_text = ($action === 'lock') ? 'ተቆልፈዋል' : 'ተከፍተዋል';
+            
+            if ($semester_id > 0) {
+                $updated = dbExecute($conn, "UPDATE teacher_class SET locked = ? WHERE semester_id = ?", "ii", [$lock_value, $semester_id]);
+                if ($updated) {
+                    $message = "ሁሉም ክፍሎች $action_text!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
+        }
+        // METHOD 5: Toggle a single lock type (marks / attendance / plan)
+        // for one assignment - added so attendance and lesson-plan locking
+        // can be controlled independently of the marks lock, per-class.
+        if (isset($_POST['toggle_lock_type'])) {
+            $assignment_id = intval($_POST['assignment_id'] ?? 0);
+            $lock_type = $_POST['lock_type'] ?? '';
+            $column = ['marks' => 'locked', 'attendance' => 'attendance_locked', 'plan' => 'plan_locked'][$lock_type] ?? null;
+
+            if ($assignment_id > 0 && $column) {
+                $current = dbFetchOne($conn, "SELECT `$column` AS val FROM teacher_class WHERE id = ?", "i", [$assignment_id]);
+                $new_val = ($current && $current['val']) ? 0 : 1;
+                $updated = dbExecute($conn, "UPDATE teacher_class SET `$column` = ? WHERE id = ?", "ii", [$new_val, $assignment_id]);
+                if ($updated) {
+                    auditLog($conn, $new_val ? "{$lock_type}_locked" : "{$lock_type}_unlocked", 'teacher_class', $assignment_id);
+                    $message = "ሁኔታ ተቀይሯል!";
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
+            }
         }
     }
 }
@@ -147,14 +181,14 @@ $stats = mysqli_fetch_assoc($stats_result);
 $locked_count = $stats['locked_assignments'] ?? 0;
 $total_count = $stats['total_assignments'] ?? 0;
 $unlocked_count = $total_count - $locked_count;
+$nav_active = 'class_locks';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images\icon.png">
     <title>ክፍል መቆለፊያ አስተዳደር | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -364,7 +398,7 @@ $unlocked_count = $total_count - $locked_count;
         /* Lock Method Cards */
         .methods-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 25px;
             margin-bottom: 30px;
         }
@@ -536,11 +570,16 @@ $unlocked_count = $total_count - $locked_count;
 
         .table-responsive {
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+        }
+
+        .table-responsive table {
+            min-width: 650px;
         }
 
         th {
@@ -633,14 +672,26 @@ $unlocked_count = $total_count - $locked_count;
         }
 
         @media (max-width: 768px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+            .stat-card { padding: 12px 10px; border-radius: 10px; }
+            .stat-value { font-size: 22px; margin: 6px 0; }
+            .stat-label { font-size: 12px; }
             .methods-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
             }
-            
+            .method-card { padding: 16px 12px; border-radius: 12px; }
+            .method-title { font-size: 16px; }
+            .method-badge { display: inline-block; margin-top: 5px; margin-left: 0; }
             .btn-group {
                 flex-direction: column;
+                gap: 8px;
             }
-            
+            .btn { width: 100%; min-height: 44px; }
+            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
+            .section-header h2 { font-size: 17px; }
+            .info-box { flex-direction: column; align-items: flex-start; padding: 14px; gap: 10px; }
             .header-content {
                 flex-direction: column;
                 text-align: center;
@@ -649,53 +700,23 @@ $unlocked_count = $total_count - $locked_count;
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">⛪</div>
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>ክፍል መቆለፊያ አስተዳደር | Class Lock Management</p>
-                </div>
-            </div>
-            <div class="admin-contact">
-                <strong><?php echo $title; ?></strong><br>
-                <span><?php echo $admin1; ?> (<?php echo $phone1; ?>)</span> | 
-                <span><?php echo $admin2; ?> (<?php echo $phone2; ?>)</span>
-            </div>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
         <div class="message success">
             <span>✅</span>
-            <?php echo $message; ?>
+            <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
 
         <?php if($error): ?>
         <div class="message error">
             <span>⚠️</span>
-            <?php echo $error; ?>
+            <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
+
 
         <!-- Statistics -->
         <div class="stats-grid">
@@ -729,6 +750,7 @@ $unlocked_count = $total_count - $locked_count;
                     አንድ ክፍል ይምረጡ እና በዚያ ክፍል ውስጥ ያሉ ሁሉም መምህራን ይቆለፋሉ።
                 </div>
                 <form method="POST" class="method-form">
+                    <?php echo csrfField(); ?>
                     <div class="form-group">
                         <label>ክፍል ምረጥ</label>
                         <select name="class_id" class="form-control" required>
@@ -763,6 +785,7 @@ $unlocked_count = $total_count - $locked_count;
                     አንድ መምህር ይምረጡ እና ያ መምህር የሚያስተምራቸው ሁሉም ክፍሎች ይቆለፋሉ።
                 </div>
                 <form method="POST" class="method-form">
+                    <?php echo csrfField(); ?>
                     <div class="form-group">
                         <label>መምህር ምረጥ</label>
                         <select name="teacher_id" class="form-control" required>
@@ -812,6 +835,7 @@ $unlocked_count = $total_count - $locked_count;
                     በአንድ ጊዜ ሁሉንም መምህራን እና ክፍሎች ይቍለፉ ወይም ይክፈቱ።
                 </div>
                 <form method="POST" class="method-form" onsubmit="return confirm('እርግጠኛ ነዎት? ይህ ሁሉንም ምደባዎች ይቀይራል!')">
+                    <?php echo csrfField(); ?>
                     <div class="btn-group">
                         <button type="submit" name="lock_all" value="lock" class="btn btn-lock">
                             🔒 ሁሉንም ቍልፍ
@@ -839,8 +863,9 @@ $unlocked_count = $total_count - $locked_count;
                             <th>ክፍል</th>
                             <th>መምህር</th>
                             <th>ሴሚስተር</th>
-                            <th>ሁኔታ</th>
-                            <th>ድርጊት</th>
+                            <th>የውጤት መቆለፊያ</th>
+                            <th>የአቴንዳንስ መቆለፊያ</th>
+                            <th>የዕቅድ መቆለፊያ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -850,34 +875,24 @@ $unlocked_count = $total_count - $locked_count;
                                 <td><strong><?php echo htmlspecialchars($row['class_name']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($row['teacher_name']); ?></td>
                                 <td><?php echo htmlspecialchars($row['semester_name']); ?></td>
+                                <?php foreach (['marks' => 'locked', 'attendance' => 'attendance_locked', 'plan' => 'plan_locked'] as $type => $col): ?>
                                 <td>
-                                    <?php if($row['locked']): ?>
-                                    <span class="lock-badge badge-locked">
-                                        🔒 ተቆልፏል
-                                    </span>
-                                    <?php else: ?>
-                                    <span class="lock-badge badge-unlocked">
-                                        🔓 ክፍት ነው
-                                    </span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <form method="POST" style="display: inline;">
+                                    <form method="POST" style="display:inline;">
+                                        <?php echo csrfField(); ?>
                                         <input type="hidden" name="assignment_id" value="<?php echo $row['id']; ?>">
-                                        <input type="hidden" name="current_lock" value="<?php echo $row['locked']; ?>">
-                                        <input type="hidden" name="teacher_name" value="<?php echo htmlspecialchars($row['teacher_name']); ?>">
-                                        <input type="hidden" name="class_name" value="<?php echo htmlspecialchars($row['class_name']); ?>">
-                                        <button type="submit" name="lock_specific" 
-                                                class="toggle-btn <?php echo $row['locked'] ? 'locked' : 'unlocked'; ?>">
-                                            <?php echo $row['locked'] ? '🔓 ክፈት' : '🔒 ቍልፍ'; ?>
+                                        <input type="hidden" name="lock_type" value="<?php echo $type; ?>">
+                                        <button type="submit" name="toggle_lock_type"
+                                                class="toggle-btn <?php echo !empty($row[$col]) ? 'locked' : 'unlocked'; ?>">
+                                            <?php echo !empty($row[$col]) ? '🔒' : '🔓'; ?>
                                         </button>
                                     </form>
                                 </td>
+                                <?php endforeach; ?>
                             </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 50px;">
+                                <td colspan="6" style="text-align: center; padding: 50px;">
                                     <span style="font-size: 40px;">📭</span>
                                     <p>ምንም ምደባዎች አልተገኙም</p>
                                 </td>

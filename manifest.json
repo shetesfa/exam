@@ -1,0 +1,49 @@
+{
+  "name": "አጸደ ትጉሃን ሰንበት ትምህርት ቤት",
+  "short_name": "አጸደ ትምህርት",
+  "description": "የውጤት መመዝገብያ እና መረጃ አስተዳደር - Atsede Teguhan Sunday School",
+  "start_url": "/exam/index.php",
+  "scope": "/exam/",
+  "display": "standalone",
+  "background_color": "#FAF9F6",
+  "theme_color": "#8B4513",
+  "orientation": "any",
+  "lang": "am",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "/exam/images/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/exam/images/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/exam/images/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ተማሪ ግባ",
+      "short_name": "ተማሪ",
+      "description": "የተማሪ ፖርታል",
+      "url": "/exam/student_login.php",
+      "icons": [{"src": "/exam/images/icon.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "አስተዳዳሪ ግባ",
+      "short_name": "Admin",
+      "description": "Admin Login",
+      "url": "/exam/index.php",
+      "icons": [{"src": "/exam/images/icon.png", "sizes": "96x96"}]
+    }
+  ]
+}

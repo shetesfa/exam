@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ከመስመር ውጭ መሥሪያ | አጸደ ትጉሃን</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="images/icon.png" type="image/png">
+<link rel="stylesheet" href="assets/css/mobile.css">
+<link rel="stylesheet" href="assets/css/dark-mode.css">
+<script>
+(function() {
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('atsede_dark_') && localStorage.getItem(k) === '1') {
+                document.documentElement.classList.add('dark-mode');
+                document.documentElement.setAttribute('data-theme', 'dark');
+                break;
+            }
+        }
+    } catch(e) {}
+})();
+</script>
+<style>
+:root {
+    --brown-dark: #8B4513;
+    --gold-primary: #FFD700;
+    --gold-pale: #FFF8DC;
+    --bg-page: #FAF9F6;
+    --text-primary: #2C3E50;
+    --success: #10B981;
+    --error: #EF4444;
+    --warn: #F59E0B;
+    --blue: #3B82F6;
+}
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh; padding-bottom: 70px; }
+
+/* Header */
+.offline-header {
+    background: linear-gradient(135deg, var(--brown-dark), #6B3410);
+    color: white;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.brand-title { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.conn-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.2);
+}
+.conn-online { background: #059669; color: white; }
+.conn-offline { background: #DC2626; color: white; }
+.conn-syncing { background: #D97706; color: white; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+/* Main Container */
+.container { max-width: 900px; margin: 16px auto; padding: 0 14px; }
+
+.card {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+/* Auth view */
+.auth-box { max-width: 400px; margin: 40px auto; text-align: center; }
+.auth-logo { width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--gold-primary); margin-bottom: 12px; }
+.input-group { margin-bottom: 14px; text-align: right; }
+.input-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #555; }
+.input-group input { width: 100%; padding: 11px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }
+
+/* Buttons */
+.btn {
+    background: var(--gold-primary);
+    color: var(--brown-dark);
+    border: none;
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.btn-block { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-sync { background: var(--blue); color: white; }
+.btn-outline { background: white; border: 1px solid #ddd; color: #555; }
+
+/* Tabs */
+.tab-bar { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+.tab-btn {
+    padding: 9px 16px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tab-btn.active { background: var(--brown-dark); color: var(--gold-primary); border-color: var(--brown-dark); }
+.badge { background: #EF4444; color: white; border-radius: 10px; padding: 2px 7px; font-size: 11px; }
+
+/* Attendance Grid */
+.att-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 6px;
+    border-bottom: 1px solid #F1F5F9;
+}
+.att-row:last-child { border-bottom: none; }
+.att-name { font-weight: 600; font-size: 15px; }
+.att-dots { display: flex; gap: 6px; }
+.dot-btn {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #CBD5E1;
+    background: #F8FAFC;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.dot-btn.active-p { background: #10B981; color: white; border-color: #10B981; }
+.dot-btn.active-a { background: #EF4444; color: white; border-color: #EF4444; }
+.dot-btn.active-per { background: #F59E0B; color: white; border-color: #F59E0B; }
+.dot-btn.active-l { background: #6366F1; color: white; border-color: #6366F1; }
+.dot-btn.active-e { background: #64748B; color: white; border-color: #64748B; }
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1E293B;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 1000;
+    display: none;
+}
+</style>
+</head>
+<body>
+
+<header class="offline-header">
+    <div class="brand-title">
+        <span>⛪</span>
+        <span>አጸደ ትጉሃን (ከመስመር ውጭ)</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+        <button type="button" id="offlineDarkToggle" class="btn btn-sm" onclick="toggleOfflineDarkMode()" style="padding:4px 10px; font-size:12px; background:rgba(255,255,255,0.2); color:white; border:none; border-radius:20px; cursor:pointer;" title="የገጽ ገጽታ ቀይር">
+            <span id="offlineDarkIcon">🌙</span>
+        </button>
+        <div id="connBadge" class="conn-badge conn-offline">
+            <span id="connDot">●</span>
+            <span id="connText">ከመስመር ውጭ</span>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <!-- AUTHENTICATION CARD (Shown when not logged in) -->
+    <div id="authView" class="card auth-box" style="display:none;">
+        <img src="images/icon.png" class="auth-logo" alt="Logo">
+        <h2 style="color:var(--brown-dark); margin-bottom:4px; font-size:20px;">ከመስመር ውጭ መግቢያ</h2>
+        <p style="color:#666; font-size:13px; margin-bottom:20px;">በዚህ መሳሪያ ላይ ቀደም ሲል የገቡበትን የተጠቃሚ ስም ያስገቡ</p>
+        
+        <div id="authError" style="color:var(--error); font-size:13px; margin-bottom:12px; display:none;"></div>
+
+        <form id="offlineLoginForm" onsubmit="handleOfflineLogin(event)">
+            <div class="input-group">
+                <label>የተጠቃሚ ስም</label>
+                <input type="text" id="loginUsername" required placeholder="የተጠቃሚ ስም ያስገቡ">
+            </div>
+            <button type="submit" class="btn btn-block">🔓 ከመስመር ውጭ ግባ</button>
+        </form>
+    </div>
+
+    <!-- MAIN OFFLINE WORKSPACE (Shown when authenticated) -->
+    <div id="workspaceView" style="display:none;">
+        <!-- User Bar -->
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px;">
+            <div>
+                <span id="userNameText" style="font-weight:700; font-size:16px;">መምህር</span>
+                <span id="userRoleBadge" style="font-size:11px; padding:3px 8px; border-radius:10px; background:var(--gold-pale); color:var(--brown-dark); margin-right:6px;">መምህር</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="btn btn-sm btn-sync" onclick="triggerSync()">
+                    🔄 አመሳስል <span id="syncPendingBadge" class="badge" style="display:none;">0</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="handleLogout()">ውጣ</button>
+            </div>
+        </div>
+
+        <!-- Tab Controls -->
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('attTab', this)">📋 አቴንዳንስ</button>
+            <button class="tab-btn" onclick="switchTab('marksTab', this)">📊 ውጤት</button>
+            <button class="tab-btn" onclick="switchTab('queueTab', this)">
+                🔄 ያልተላኩ ለውጦች <span id="tabQueueBadge" class="badge" style="display:none;">0</span>
+            </button>
+        </div>
+
+        <!-- Class & Date Selector Bar -->
+        <div class="card" style="padding:14px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label style="font-size:13px; font-weight:600; color:#555; display:block; margin-bottom:4px;">ክፍል</label>
+                    <select id="classSelector" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;" onchange="onClassChanged()">
+                        <option value="">ክፍል በመጫን ላይ...</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:13px; font-weight:600; color:#555; display:block; margin-bottom:4px;">ቀን</label>
+                    <input type="date" id="datePicker" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;" onchange="loadAttendanceForCurrentSelection()">
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. ATTENDANCE TAB -->
+        <div id="attTab" class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="font-size:16px; color:var(--brown-dark);">የተማሪዎች አቴንዳንስ ምዝገባ</h3>
+                <span id="attCountBadge" style="font-size:12px; color:#666;">0 ተማሪዎች</span>
+            </div>
+
+            <div id="studentsList">
+                <div style="text-align:center; padding:30px; color:#999;">ተማሪዎች በመጫን ላይ...</div>
+            </div>
+        </div>
+
+        <!-- 2. MARKS TAB -->
+        <div id="marksTab" class="card" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="font-size:16px; color:var(--brown-dark);">የውጤት መመዝገቢያ</h3>
+                <span id="marksCountBadge" style="font-size:12px; color:#666;">0 ተማሪዎች</span>
+            </div>
+            <div id="marksList">
+                <div style="text-align:center; padding:30px; color:#999;">ተማሪዎች በመጫን ላይ...</div>
+            </div>
+        </div>
+
+        <!-- 3. PENDING SYNC QUEUE TAB -->
+        <div id="queueTab" class="card" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="font-size:16px; color:var(--brown-dark);">ወደ ሰርቨር ያልተላኩ ለውጦች</h3>
+                <button type="button" class="btn btn-sm btn-sync" onclick="triggerSync()">📤 አሁን ላክ</button>
+            </div>
+            <div id="queueItemsList">
+                <div style="text-align:center; padding:30px; color:#999;">ምንም ያልተላከ ለውጥ የለም፤ ሁሉም መረጃዎች ተልከዋል።</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast">💾 ከመስመር ውጭ ተቀምጧል!</div>
+
+<script src="assets/js/offline-db.js"></script>
+<script src="assets/js/sync-manager.js"></script>
+<script>
+let currentUser = null;
+let currentClasses = [];
+let currentStudents = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Set default date to today
+    document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
+
+    // Sync dark mode toggle icon
+    if (document.documentElement.classList.contains('dark-mode')) {
+        const icon = document.getElementById('offlineDarkIcon');
+        if (icon) icon.textContent = '☀️';
+    }
+
+    // Setup connectivity listeners
+    updateConnBadge();
+    SyncManager.onStatusChange((status, details) => {
+        updateConnBadge(status, details);
+    });
+
+    // Check if user is logged in offline
+    const auth = await OfflineDB.getAuth();
+    if (auth && auth.user) {
+        currentUser = auth.user;
+        showWorkspace();
+    } else {
+        showAuth();
+    }
+});
+
+function updateConnBadge(status = null, details = null) {
+    const badge = document.getElementById('connBadge');
+    const text = document.getElementById('connText');
+
+    if (status === 'syncing') {
+        badge.className = 'conn-badge conn-syncing';
+        text.textContent = details?.text || 'በማመሳሰል ላይ...';
+        return;
+    }
+
+    SyncManager.isReallyOnline().then(online => {
+        if (online) {
+            badge.className = 'conn-badge conn-online';
+            text.textContent = 'መስመር ላይ';
+        } else {
+            badge.className = 'conn-badge conn-offline';
+            text.textContent = 'ከመስመር ውጭ';
+        }
+    });
+
+    updatePendingCounts();
+}
+
+async function updatePendingCounts() {
+    const p = await OfflineDB.getPendingCounts();
+    const badge = document.getElementById('syncPendingBadge');
+    const tabBadge = document.getElementById('tabQueueBadge');
+
+    if (p.total > 0) {
+        badge.style.display = 'inline-block';
+        badge.textContent = p.total;
+        tabBadge.style.display = 'inline-block';
+        tabBadge.textContent = p.total;
+    } else {
+        badge.style.display = 'none';
+        tabBadge.style.display = 'none';
+    }
+}
+
+function showAuth() {
+    document.getElementById('authView').style.display = 'block';
+    document.getElementById('workspaceView').style.display = 'none';
+}
+
+async function showWorkspace() {
+    document.getElementById('authView').style.display = 'none';
+    document.getElementById('workspaceView').style.display = 'block';
+
+    document.getElementById('userNameText').textContent = currentUser.name || currentUser.username;
+    document.getElementById('userRoleBadge').textContent = currentUser.role === 'teacher' ? 'መምህር' : (currentUser.role === 'attendance_submitter' ? 'ጸሐፊ' : currentUser.role);
+
+    await loadClasses();
+    await updatePendingCounts();
+}
+
+async function handleOfflineLogin(e) {
+    e.preventDefault();
+    const errDiv = document.getElementById('authError');
+    errDiv.style.display = 'none';
+    const username = document.getElementById('loginUsername').value.trim();
+
+    const res = await OfflineDB.offlineLogin(username, '');
+    if (res.success) {
+        currentUser = res.user;
+        showWorkspace();
+    } else {
+        errDiv.style.display = 'block';
+        errDiv.textContent = res.message;
+    }
+}
+
+async function handleLogout() {
+    if (confirm('ከአካውንትዎ መውጣት ይፈልጋሉ?')) {
+        await OfflineDB.clearAuth();
+        currentUser = null;
+        showAuth();
+    }
+}
+
+function switchTab(tabId, el) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+
+    document.getElementById('attTab').style.display = (tabId === 'attTab') ? 'block' : 'none';
+    document.getElementById('marksTab').style.display = (tabId === 'marksTab') ? 'block' : 'none';
+    document.getElementById('queueTab').style.display = (tabId === 'queueTab') ? 'block' : 'none';
+
+    if (tabId === 'queueTab') {
+        renderQueue();
+    }
+}
+
+async function loadClasses() {
+    currentClasses = await OfflineDB.getAllClasses();
+    const sel = document.getElementById('classSelector');
+    sel.innerHTML = '';
+
+    if (currentClasses.length === 0) {
+        sel.innerHTML = '<option value="">ምንም ክፍል አልተገኘም (እባክዎ መጀመሪያ ኢንተርኔት ባለበት ያመሳስሉ)</option>';
+        return;
+    }
+
+    currentClasses.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name;
+        sel.appendChild(opt);
+    });
+
+    await onClassChanged();
+}
+
+async function onClassChanged() {
+    const classId = parseInt(document.getElementById('classSelector').value);
+    if (!classId) return;
+
+    currentStudents = await OfflineDB.getStudentsByClass(classId);
+    document.getElementById('attCountBadge').textContent = currentStudents.length + ' ተማሪዎች';
+    document.getElementById('marksCountBadge').textContent = currentStudents.length + ' ተማሪዎች';
+
+    await loadAttendanceForCurrentSelection();
+    await loadMarksForCurrentSelection();
+}
+
+async function loadAttendanceForCurrentSelection() {
+    const classId = parseInt(document.getElementById('classSelector').value);
+    const dateStr = document.getElementById('datePicker').value;
+    const container = document.getElementById('studentsList');
+
+    if (!classId || currentStudents.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">ምንም ተማሪዎች የሉም።</div>';
+        return;
+    }
+
+    const savedRecords = await OfflineDB.getAttendanceByClassAndDate(classId, dateStr);
+    const recordMap = {};
+    savedRecords.forEach(r => { recordMap[r.student_id] = r.status; });
+
+    let html = '';
+    currentStudents.forEach(s => {
+        const status = recordMap[s.id] || '';
+        html += `
+        <div class="att-row" data-student="${s.id}">
+            <div class="att-name">${escapeHtml(s.name)}</div>
+            <div class="att-dots">
+                <button type="button" class="dot-btn ${status === 'present' ? 'active-p' : ''}" onclick="recordAtt(${s.id}, 'present', this)">ተገኝቷል</button>
+                <button type="button" class="dot-btn ${status === 'absent' ? 'active-a' : ''}" onclick="recordAtt(${s.id}, 'absent', this)">ቀረ</button>
+                <button type="button" class="dot-btn ${status === 'permission' ? 'active-per' : ''}" onclick="recordAtt(${s.id}, 'permission', this)">ፈቃድ</button>
+                <button type="button" class="dot-btn ${status === 'late' ? 'active-l' : ''}" onclick="recordAtt(${s.id}, 'late', this)">ዘግይቷል</button>
+                <button type="button" class="dot-btn ${status === 'excused' ? 'active-e' : ''}" onclick="recordAtt(${s.id}, 'excused', this)">ይቅርታ</button>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+async function recordAtt(studentId, status, btn) {
+    const classId = parseInt(document.getElementById('classSelector').value);
+    const dateStr = document.getElementById('datePicker').value;
+
+    const row = btn.closest('.att-row');
+    row.querySelectorAll('.dot-btn').forEach(b => {
+        b.className = 'dot-btn';
+    });
+
+    const classMap = {
+        'present': 'active-p',
+        'absent': 'active-a',
+        'permission': 'active-per',
+        'late': 'active-l',
+        'excused': 'active-e'
+    };
+    btn.classList.add(classMap[status]);
+
+    const uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'att_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+
+    await OfflineDB.saveAttendanceLocal({
+        local_uuid: uuid,
+        student_id: studentId,
+        class_id: classId,
+        attendance_date: dateStr,
+        status: status,
+        marked_by: currentUser.id
+    });
+
+    showToast('💾 አቴንዳንስ ከመስመር ውጭ ተቀምጧል!');
+    await updatePendingCounts();
+
+    // Auto push in background (SyncManager verifies server reachability)
+    SyncManager.pushChanges();
+}
+
+async function loadMarksForCurrentSelection() {
+    const classId = parseInt(document.getElementById('classSelector').value);
+    const container = document.getElementById('marksList');
+
+    if (!classId || currentStudents.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">ምንም ተማሪዎች የሉም።</div>';
+        return;
+    }
+
+    const marksRecords = await OfflineDB.getMarksByClass(classId);
+    const marksMap = {};
+    marksRecords.forEach(m => { marksMap[m.student_id] = m; });
+
+    let html = '';
+    currentStudents.forEach(s => {
+        const m = marksMap[s.id] || {};
+        const total = (parseFloat(m.assignment || 0) + parseFloat(m.participation || 0) + parseFloat(m.attendance || 0) + parseFloat(m.mid || 0) + parseFloat(m.final || 0)).toFixed(1);
+
+        html += `
+        <div class="card" style="padding:12px; margin-bottom:10px; border:1px solid #E2E8F0;" id="markCard_${s.id}">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong>${escapeHtml(s.name)}</strong>
+                <span id="total_${s.id}" style="font-weight:700; color:var(--brown-dark);">ድምር: ${total}%</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(65px,1fr)); gap:6px;">
+                <div><label style="font-size:11px;">አሳይመንት</label><input type="number" id="as_${s.id}" max="20" min="0" value="${m.assignment || ''}" oninput="calcTotal(${s.id})" style="padding:6px; font-size:13px;"></div>
+                <div><label style="font-size:11px;">ተሳትፎ</label><input type="number" id="pa_${s.id}" max="20" min="0" value="${m.participation || ''}" oninput="calcTotal(${s.id})" style="padding:6px; font-size:13px;"></div>
+                <div><label style="font-size:11px;">አቴንዳንስ</label><input type="number" id="at_${s.id}" max="10" min="0" value="${m.attendance || ''}" oninput="calcTotal(${s.id})" style="padding:6px; font-size:13px;"></div>
+                <div><label style="font-size:11px;">ሚድ ፈተና</label><input type="number" id="mi_${s.id}" max="25" min="0" value="${m.mid || ''}" oninput="calcTotal(${s.id})" style="padding:6px; font-size:13px;"></div>
+                <div><label style="font-size:11px;">የመጨረሻ</label><input type="number" id="fi_${s.id}" max="25" min="0" value="${m.final || ''}" oninput="calcTotal(${s.id})" style="padding:6px; font-size:13px;"></div>
+            </div>
+            <div style="text-align:right; margin-top:8px;">
+                <button type="button" class="btn btn-sm" onclick="saveStudentMark(${s.id})">💾 አስቀምጥ</button>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function calcTotal(studentId) {
+    const as = parseFloat(document.getElementById(`as_${studentId}`).value || 0);
+    const pa = parseFloat(document.getElementById(`pa_${studentId}`).value || 0);
+    const at = parseFloat(document.getElementById(`at_${studentId}`).value || 0);
+    const mi = parseFloat(document.getElementById(`mi_${studentId}`).value || 0);
+    const fi = parseFloat(document.getElementById(`fi_${studentId}`).value || 0);
+    const tot = (as + pa + at + mi + fi).toFixed(1);
+    document.getElementById(`total_${studentId}`).textContent = `ድምር: ${tot}%`;
+}
+
+async function saveStudentMark(studentId) {
+    const classId = parseInt(document.getElementById('classSelector').value);
+    const as = parseFloat(document.getElementById(`as_${studentId}`).value || 0);
+    const pa = parseFloat(document.getElementById(`pa_${studentId}`).value || 0);
+    const at = parseFloat(document.getElementById(`at_${studentId}`).value || 0);
+    const mi = parseFloat(document.getElementById(`mi_${studentId}`).value || 0);
+    const fi = parseFloat(document.getElementById(`fi_${studentId}`).value || 0);
+    const tot = as + pa + at + mi + fi;
+
+    const uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'mrk_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+
+    await OfflineDB.saveMarksLocal({
+        local_uuid: uuid,
+        student_id: studentId,
+        class_id: classId,
+        semester_id: 1,
+        assignment: as,
+        participation: pa,
+        attendance: at,
+        mid: mi,
+        final: fi,
+        total: tot,
+        teacher_id: currentUser.id
+    });
+
+    showToast('💾 ውጤት ከመስመር ውጭ ተቀምጧል!');
+    await updatePendingCounts();
+
+    SyncManager.pushChanges();
+}
+
+async function renderQueue() {
+    const [dirtyAtt, dirtyMarks] = await Promise.all([
+        OfflineDB.getDirtyAttendance(),
+        OfflineDB.getDirtyMarks()
+    ]);
+    const container = document.getElementById('queueItemsList');
+
+    if (dirtyAtt.length === 0 && dirtyMarks.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">ምንም ያልተላከ ለውጥ የለም፤ ሁሉም መረጃዎች ተልከዋል።</div>';
+        return;
+    }
+
+    let html = '<div style="font-size:13px; margin-bottom:12px; color:#555;">የሚከተሉት ለውጦች ወደ ሰርቨር ለመላክ ተዘጋጅተዋል:</div>';
+    dirtyAtt.forEach(a => {
+        html += `
+        <div style="padding:8px 10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; font-size:13px;">
+            <div>📋 አቴንዳንስ · ተማሪ #${a.student_id} · ${a.attendance_date}</div>
+            <span style="color:var(--warn); font-weight:700;">${a.status} (በመጠባበቅ ላይ)</span>
+        </div>`;
+    });
+    dirtyMarks.forEach(m => {
+        html += `
+        <div style="padding:8px 10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; font-size:13px;">
+            <div>📊 ውጤት · ተማሪ #${m.student_id} · ድምር: ${m.total}</div>
+            <span style="color:var(--warn); font-weight:700;">በመጠባበቅ ላይ</span>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+async function triggerSync() {
+    showToast('🔄 ውሂብ በማመሳሰል ላይ...');
+    const res = await SyncManager.fullSync();
+    if (res && res.success) {
+        showToast('✅ ተመሳስሏል!');
+        await updatePendingCounts();
+        if (document.getElementById('queueTab').style.display === 'block') {
+            await renderQueue();
+        }
+    } else if (res && res.offline) {
+        showToast('ℹ️ ኢንተርኔት የለም። ለውጦቹ በመሳሪያዎ ላይ ተይዘዋል።');
+    } else {
+        showToast('⚠️ ማመሳሰል አልተሳካም: ' + (res?.message || 'ስህተት ተከስቷል'));
+    }
+}
+
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 2500);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function toggleOfflineDarkMode() {
+    const isDark = document.documentElement.classList.toggle('dark-mode');
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    const icon = document.getElementById('offlineDarkIcon');
+    if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+    if (currentUser && currentUser.id) {
+        const userKey = (currentUser.role === 'student' ? 'student_' : 'user_') + currentUser.id;
+        localStorage.setItem('atsede_dark_' + userKey, isDark ? '1' : '0');
+    } else {
+        localStorage.setItem('atsede_dark_guest', isDark ? '1' : '0');
+    }
+}
+</script>
+</body>
+</html>

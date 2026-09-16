@@ -1,103 +1,106 @@
 <?php
-// ===== Dynamic session name based on role (for multi-tab login) =====
-if (isset($_GET['role'])) {
-    session_name($_GET['role'] . '_session');
-}
-session_start();
-
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
 require_once 'db.php';
 
 // Redirect if already logged in
-if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
-    if ($_SESSION['role'] == 'admin') {
-        header("Location: dashboard_admin.php?role=admin");
+if (isLoggedIn()) {
+    if (isAdmin()) {
+        header("Location: dashboard_admin.php");
         exit();
-    } elseif ($_SESSION['role'] == 'teacher') {
-        header("Location: dashboard_teacher.php?role=teacher");
+    } elseif (isTeacher()) {
+        header("Location: dashboard_teacher.php");
         exit();
-    } elseif ($_SESSION['role'] == 'attendance_submitter') {
-        header("Location: dashboard_attendance.php?role=attendance_submitter");
+    } elseif (isAttendanceSubmitter()) {
+        header("Location: dashboard_attendance.php");
         exit();
     }
 }
 
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = $_POST['password'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $submitted_token = $_POST['csrf_token'] ?? '';
+    $csrf_valid = verifyCsrfToken($submitted_token);
 
-    // Login with username OR name (backward compatible)
-    $query = "SELECT * FROM users WHERE username = '$username' OR name = '$username'";
-    $result = mysqli_query($conn, $query);
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    if (!$result) {
-        $error = "የውሂብ ጎታ ስህተት! (Database error!)";
-    } elseif (mysqli_num_rows($result) == 1) {
-        $user = mysqli_fetch_assoc($result);
+    // If CSRF token check failed (e.g. stale tab, bfcache, or browser session cookie timing),
+    // verify whether valid credentials were submitted. If credentials are correct, allow login!
+    if (!$csrf_valid && !empty($username) && !empty($password)) {
+        $candidate = dbFetchOne($conn, "SELECT id, password FROM users WHERE username = ? OR name = ?", "ss", [$username, $username]);
+        if ($candidate && password_verify($password, $candidate['password'])) {
+            $csrf_valid = true;
+        }
+    }
 
-        if (password_verify($password, $user['password'])) {
-            // Regenerate session ID for security
-            session_regenerate_id(true);
+    if (!$csrf_valid) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (!empty($username) && !empty($password)) {
+            // Find user by username or name
+            $users = dbFetchAll(
+                $conn, 
+                "SELECT * FROM users WHERE username = ? OR name = ?", 
+                "ss", 
+                [$username, $username]
+            );
 
-            // Set session values
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['name'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['first_login'] = $user['first_login'];
+            $matched_user = null;
 
-            // Redirect based on role
-            if ($user['first_login'] == 1 && $user['role'] == 'teacher') {
-                header("Location: change_password.php?role=teacher");
-                exit();
-            } elseif ($user['role'] == 'admin') {
-                header("Location: dashboard_admin.php?role=admin");
-                exit();
-            } elseif ($user['role'] == 'attendance_submitter') {
-                header("Location: dashboard_attendance.php?role=attendance_submitter");
-                exit();
+            if (count($users) === 1) {
+                $matched_user = $users[0];
+            } elseif (count($users) > 1) {
+                // Exact username match priority
+                foreach ($users as $u) {
+                    if ($u['username'] === $username) {
+                        $matched_user = $u;
+                        break;
+                    }
+                }
+            }
+
+            if ($matched_user && password_verify($password, $matched_user['password'])) {
+                session_regenerate_id(true);
+
+                $_SESSION['user_id'] = $matched_user['id'];
+                $_SESSION['user_name'] = $matched_user['name'];
+                $_SESSION['role'] = $matched_user['role'];
+                $_SESSION['first_login'] = $matched_user['first_login'];
+                $_SESSION['dark_mode'] = intval($matched_user['dark_mode'] ?? 0);
+
+                if ($matched_user['first_login'] == 1 && $matched_user['role'] === 'teacher') {
+                    header("Location: change_password.php");
+                    exit();
+                } elseif ($matched_user['role'] === 'admin') {
+                    header("Location: dashboard_admin.php");
+                    exit();
+                } elseif ($matched_user['role'] === 'attendance_submitter') {
+                    header("Location: dashboard_attendance.php");
+                    exit();
+                } else {
+                    header("Location: dashboard_teacher.php");
+                    exit();
+                }
             } else {
-                header("Location: dashboard_teacher.php?role=teacher");
-                exit();
+                // Check if user entered a student's name
+                $student_check = dbFetchOne($conn, "SELECT id FROM students WHERE name = ? AND (is_deleted = 0 OR is_deleted IS NULL)", "s", [$username]);
+                if ($student_check) {
+                    $error = "ይህ የተማሪ ስም ነው። እባክዎ <a href='student_login.php' style='color:#8B4513;font-weight:bold;text-decoration:underline;'>በተማሪዎች መግቢያ</a> ይግቡ!";
+                } else {
+                    $error = "የተሳሳተ የተጠቃሚ ስም ወይም የይለፍ ቃል!";
+                }
             }
         } else {
-            $error = "የተሳሳተ የይለፍ ቃል! (Incorrect password!)";
+            $error = "እባክዎ የተጠቃሚ ስም እና የይለፍ ቃል ያስገቡ!";
         }
-    } elseif (mysqli_num_rows($result) > 1) {
-        // Multiple users with same name, try exact username match
-        $query = "SELECT * FROM users WHERE username = '$username'";
-        $result = mysqli_query($conn, $query);
-        
-        if (mysqli_num_rows($result) == 1) {
-            $user = mysqli_fetch_assoc($result);
-            if (password_verify($password, $user['password'])) {
-                session_regenerate_id(true);
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['user_name'] = $user['name'];
-                $_SESSION['role'] = $user['role'];
-                $_SESSION['first_login'] = $user['first_login'];
-
-                if ($user['first_login'] == 1 && $user['role'] == 'teacher') {
-                    header("Location: change_password.php?role=teacher");
-                } elseif ($user['role'] == 'admin') {
-                    header("Location: dashboard_admin.php?role=admin");
-                } elseif ($user['role'] == 'attendance_submitter') {
-                    header("Location: dashboard_attendance.php?role=attendance_submitter");
-                } else {
-                    header("Location: dashboard_teacher.php?role=teacher");
-                }
-                exit();
-            }
-        }
-        $error = "እባክዎ የተጠቃሚ ስም ይጠቀሙ! (Please use username!)";
-    } else {
-        $error = "የተጠቃሚ ስም ወይም ስም አልተገኘም! (Username or name not found!)";
     }
 }
 
 // Check if redirected from student portal logout
 $student_msg = '';
-if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
+if (isset($_GET['msg']) && $_GET['msg'] === 'student_logout') {
     $student_msg = '✅ ከተማሪ ገፅ ወጥተዋል!';
 }
 ?>
@@ -105,16 +108,15 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
-            --brown-dark: #8B4513;
-            --brown-medium: #A52A2A;
+            --brown-dark: #5C2607;
+            --brown-medium: #78350F;
             --gold-primary: #FFD700;
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
@@ -131,64 +133,66 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
 
         body {
             min-height: 100vh;
-            background: linear-gradient(135deg, #8B4513 0%, #A52A2A 50%, #DAA520 100%);
+            background: linear-gradient(135deg, #3D1603 0%, #6E2D08 45%, #92400E 80%, #B45309 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 14px 10px;
+            color: #1F2937;
         }
 
         .container {
             width: 100%;
-            max-width: 450px;
+            max-width: 440px;
+            margin: 0 auto;
         }
 
         .welcome-card {
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 20px;
-            padding: 40px 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border: 3px solid var(--gold-primary);
-            animation: slideUp 0.8s ease;
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 26px 20px;
+            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
+            border: 2.5px solid var(--gold-primary);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
+            from { opacity: 0; transform: translateY(24px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .logo-section {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .logo {
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 20px;
-            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 14px;
+            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 4px solid var(--brown-dark);
-            box-shadow: 0 10px 20px rgba(139, 69, 19, 0.3);
+            border: 3.5px solid var(--brown-dark);
+            box-shadow: 0 8px 20px rgba(92, 38, 7, 0.28);
         }
 
         .logo img {
-            width: 90px;
-            height: 90px;
+            width: 76px;
+            height: 76px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid white;
         }
 
         .logo-icon {
-            font-size: 50px;
+            font-size: 42px;
             color: var(--brown-dark);
             background: white;
-            width: 100px;
-            height: 100px;
+            width: 78px;
+            height: 78px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -197,119 +201,172 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
 
         .welcome-title {
             color: var(--brown-dark);
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 10px;
+            font-size: 21px;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 3px;
+            letter-spacing: -0.2px;
         }
 
         .welcome-subtitle {
             color: var(--brown-medium);
-            font-size: 18px;
-            margin-bottom: 5px;
+            font-size: 13.5px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            opacity: 0.9;
         }
 
         .amharic {
-            font-size: 20px;
+            font-size: 13px;
             color: var(--brown-medium);
-            margin-top: 10px;
-            border-top: 2px solid var(--gold-primary);
-            padding-top: 15px;
+            display: inline-block;
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-weight: 600;
         }
 
         .login-form {
-            margin-top: 30px;
+            margin-top: 24px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 7px;
             color: var(--brown-dark);
-            font-weight: 600;
-            font-size: 14px;
+            font-weight: 700;
+            font-size: 13.5px;
         }
 
+        /* High specificity to prevent global mobile.css from overriding input padding */
         .input-group {
             position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
         }
 
         .input-icon {
             position: absolute;
-            left: 15px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--gold-dark);
+            color: #78350F;
             font-size: 18px;
+            z-index: 5;
+            pointer-events: none;
+            line-height: 1;
         }
 
-        .form-control {
-            width: 100%;
-            padding: 15px 15px 15px 45px;
+        .input-group input.form-control,
+        .input-group input[type="text"],
+        .input-group input[type="password"] {
+            width: 100% !important;
+            height: 48px !important;
+            padding: 12px 42px 12px 46px !important;
             border: 2px solid #E2E8F0;
-            border-radius: 12px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: white;
+            border-radius: 12px !important;
+            font-size: 15px !important;
+            transition: all 0.25s ease !important;
+            background: #FFFFFF;
+            color: #1F2937;
+            box-sizing: border-box !important;
+            appearance: none !important;
         }
 
-        .form-control:focus {
-            outline: none;
-            border-color: var(--gold-primary);
-            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+        .input-group input.form-control:focus,
+        .input-group input[type="text"]:focus,
+        .input-group input[type="password"]:focus {
+            outline: none !important;
+            border-color: #DAA520 !important;
+            box-shadow: 0 0 0 3.5px rgba(255, 215, 0, 0.28) !important;
+            background: #FFFDF9;
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #9CA3AF;
+            padding: 4px;
+            z-index: 5;
+            line-height: 1;
+            transition: transform 0.2s;
+        }
+
+        .toggle-password-btn:hover {
+            color: var(--brown-dark);
+            transform: translateY(-50%) scale(1.1);
         }
 
         .btn-login {
             width: 100%;
-            padding: 16px;
+            height: 48px;
+            padding: 0 20px;
             background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            color: #8B4513;
-            border: 2px solid #FFD700;
+            color: #4A1A05;
+            border: none;
             border-radius: 12px;
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.2);
+            transition: all 0.25s ease;
+            box-shadow: 0 5px 16px rgba(139, 69, 19, 0.25);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         .btn-login:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(139, 69, 19, 0.3);
-            border-color: var(--brown-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(139, 69, 19, 0.35);
+            background: linear-gradient(135deg, #FFE033 0%, #E5B229 100%);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 8px rgba(139, 69, 19, 0.2);
         }
 
         .error-message {
-            background: #FEE2E2;
-            color: var(--error-red);
-            padding: 15px;
+            background: #FEF2F2;
+            color: #991B1B;
+            padding: 12px 16px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             border-left: 4px solid var(--error-red);
-            font-size: 14px;
+            font-size: 13.5px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            animation: shake 0.5s ease;
+            gap: 8px;
+            animation: shake 0.4s ease;
+            line-height: 1.4;
         }
 
         .success-message {
-            background: #D1FAE5;
-            color: var(--success-green);
-            padding: 15px;
+            background: #ECFDF5;
+            color: #065F46;
+            padding: 12px 16px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             border-left: 4px solid var(--success-green);
-            font-size: 14px;
+            font-size: 13.5px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            line-height: 1.4;
         }
 
         @keyframes shake {
@@ -320,33 +377,37 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
 
         .student-portal-link {
             text-align: center;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid var(--gold-pale);
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid #E5E7EB;
         }
 
         .student-portal-link a {
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 15px 30px;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 20px;
             background: linear-gradient(135deg, #10B981, #059669);
             color: white;
             border-radius: 12px;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 16px;
-            transition: all 0.3s;
+            font-weight: 700;
+            font-size: 14.5px;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
         }
 
         .student-portal-link a:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+            color: white;
         }
 
         .student-portal-link .small-text {
             font-size: 12px;
-            opacity: 0.8;
+            color: #6B7280;
             display: block;
             margin-top: 8px;
         }
@@ -354,44 +415,38 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
         /* Developer Footer */
         .developer-footer {
             text-align: center;
-            padding: 15px 20px;
-            margin-top: 20px;
-            background: rgba(255, 255, 255, 0.15);
+            padding: 11px 16px;
+            margin-top: 16px;
+            background: rgba(0, 0, 0, 0.25);
             border-radius: 12px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        .developer-footer .dev-text {
-            color: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 215, 0, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 6px;
             font-size: 12px;
-            letter-spacing: 0.5px;
         }
-        .developer-footer .dev-name {
-            color: #FFD700;
-            font-weight: 700;
-            font-size: 13px;
-        }
-        .developer-footer .dev-phone {
-            color: #E2E8F0;
-            font-weight: 600;
-        }
-        .developer-footer .dev-telegram {
-            color: #93C5FD;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .developer-footer .dev-telegram:hover {
-            color: #FFD700;
-            text-decoration: underline;
-        }
-        .developer-footer .dev-divider {
-            color: rgba(255, 255, 255, 0.3);
-            margin: 0 10px;
-        }
-        .developer-footer .dev-icon {
-            font-size: 14px;
+        .developer-footer .dev-text { color: rgba(255, 255, 255, 0.85); }
+        .developer-footer .dev-name { color: #FFD700; font-weight: 700; }
+        .developer-footer .dev-divider { color: rgba(255, 255, 255, 0.3); margin: 0 2px; }
+        .developer-footer .dev-phone { color: #F3F4F6; font-weight: 600; }
+        .developer-footer .dev-telegram { color: #93C5FD; text-decoration: none; font-weight: 600; transition: color 0.2s; }
+        .developer-footer .dev-telegram:hover { color: #FFD700; text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            body { padding: 14px 10px; }
+            .welcome-card { padding: 26px 20px; border-radius: 20px; }
+            .logo { width: 80px; height: 80px; margin-bottom: 12px; }
+            .logo img { width: 64px; height: 64px; }
+            .welcome-title { font-size: 18px; }
+            .welcome-subtitle { font-size: 12.5px; }
+            .amharic { font-size: 12px; padding: 3px 10px; }
+            .btn-login { height: 46px; font-size: 15px; }
+            .student-portal-link a { padding: 11px 16px; font-size: 13.5px; }
+            .developer-footer { font-size: 11px; padding: 8px 12px; }
         }
     </style>
 </head>
@@ -429,34 +484,38 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
             <?php if($error): ?>
             <div class="error-message">
                 <span>⚠️</span>
-                <?php echo $error; ?>
+                <?php echo strip_tags($error, '<a><b><strong>'); ?>
             </div>
             <?php endif; ?>
 
             <form method="POST" action="" class="login-form" autocomplete="off">
+                <?php echo csrfField(); ?>
                 <div class="form-group">
-                    <label>የተጠቃሚ ስም (Username)</label>
+                    <label>የተጠቃሚ ስም</label>
                     <div class="input-group">
                         <span class="input-icon">👤</span>
                         <input type="text" name="username" class="form-control" 
-                               placeholder="Username ወይም ሙሉ ስም" required 
+                               placeholder="የተጠቃሚ ስም ወይም ሙሉ ስም" required 
                                autocomplete="off">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>የይለፍ ቃል (Password)</label>
+                    <label>የይለፍ ቃል</label>
                     <div class="input-group">
                         <span class="input-icon">🔒</span>
-                        <input type="password" name="password" class="form-control" 
+                        <input type="password" name="password" id="passwordInput" class="form-control" 
                                placeholder="••••••••" required 
                                autocomplete="off">
+                        <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
+                            <span id="eyeIcon">👁️</span>
+                        </button>
                     </div>
                 </div>
 
                 <button type="submit" class="btn-login">
                     <span>🔑</span>
-                    ግባ / Login
+                    ወደ ሲስተሙ ግባ
                 </button>
             </form>
 
@@ -474,17 +533,100 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'student_logout') {
             <span class="dev-text">Developed by</span>
             <span class="dev-name"> Tesfa</span>
             <span class="dev-divider">|</span>
-            <span class="dev-icon">📞</span>
-            <span class="dev-phone">0943854325</span>
+            <span class="dev-phone">📞 0943854325</span>
             <span class="dev-divider">|</span>
-            <span class="dev-icon">📩</span>
-            <a href="https://t.me/shetesfa" target="_blank" class="dev-telegram">Telegram @shetesfa</a>
+            <a href="https://t.me/shetesfa" target="_blank" class="dev-telegram">📩 Telegram @shetesfa</a>
         </div>
     </div>
-
     <script>
         if (window.history.replaceState) {
             window.history.replaceState(null, null, window.location.href);
+        }
+
+        function togglePasswordVisibility() {
+            const pwd = document.getElementById('passwordInput');
+            const icon = document.getElementById('eyeIcon');
+            if (!pwd) return;
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                if (icon) icon.textContent = '🙈';
+            } else {
+                pwd.type = 'password';
+                if (icon) icon.textContent = '👁️';
+            }
+        }
+
+        // Login and token caching handler (works on local XAMPP and offline PWA)
+        const loginForm = document.querySelector('.login-form');
+        if (loginForm) {
+            let isSubmitting = false;
+            loginForm.addEventListener('submit', async function(e) {
+                if (isSubmitting) return; // Allow programmatic submit to proceed
+                e.preventDefault();
+
+                const usernameInput = loginForm.querySelector('input[name="username"]');
+                const passwordInput = loginForm.querySelector('input[name="password"]');
+                const username = usernameInput ? usernameInput.value.trim() : '';
+                const password = passwordInput ? passwordInput.value : '';
+
+                // Check if local XAMPP or remote server is reachable
+                let isServerUp = false;
+                try {
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), 1200);
+                    const ping = await fetch('api/ping.php?t=' + Date.now(), { method: 'GET', cache: 'no-store', signal: controller.signal });
+                    clearTimeout(timer);
+                    isServerUp = ping.ok;
+                } catch (_) {
+                    isServerUp = false;
+                }
+
+                if (isServerUp) {
+                    // Server is alive (e.g. XAMPP localhost or online server)
+                    // Cache credentials in background for future PWA offline usage
+                    try {
+                        const authRes = await fetch('api/auth.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, password })
+                        });
+                        const authData = await authRes.json();
+                        if (authData.success && authData.token) {
+                            await OfflineDB.saveAuth(authData.user, authData.token, authData.expires_at);
+                        }
+                    } catch (_) {}
+
+                    // Submit form normally to PHP to start session & log in
+                    isSubmitting = true;
+                    loginForm.submit();
+                } else {
+                    // Server is truly unreachable (Apache is stopped or device is completely disconnected)
+                    const result = await OfflineDB.offlineLogin(username, password);
+                    if (result.success) {
+                        sessionStorage.setItem('offline_user', JSON.stringify(result.user));
+                        sessionStorage.setItem('offline_token', result.token);
+                        
+                        // Redirect to appropriate dashboard based on role
+                        if (result.user.role === 'teacher') {
+                            window.location.href = 'teacher_attendance_view.php';
+                        } else if (result.user.role === 'attendance_submitter') {
+                            window.location.href = 'dashboard_attendance.php';
+                        } else if (result.user.role === 'student') {
+                            window.location.href = 'dashboard_student.php';
+                        } else {
+                            window.location.href = 'dashboard_admin.php';
+                        }
+                    } else {
+                        let errDiv = document.querySelector('.error-message');
+                        if (!errDiv) {
+                            errDiv = document.createElement('div');
+                            errDiv.className = 'error-message';
+                            loginForm.parentNode.insertBefore(errDiv, loginForm);
+                        }
+                        errDiv.innerHTML = `<span>⚠️</span> ${result.message || 'ከመስመር ውጭ መግባት አልተቻለም!'}`;
+                    }
+                }
+            });
         }
     </script>
 </body>

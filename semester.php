@@ -1,26 +1,15 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
 $message = '';
 $error = '';
 
-// Ethiopian months in Amharic (for reference only - keeping for month names if needed)
+// Ethiopian months in Amharic
 $ethiopian_months = [
-    1 => 'መስከረም',  // September
-    2 => 'ጥቅምት',    // October
-    3 => 'ኅዳር',      // November
-    4 => 'ታኅሣሥ',    // December
-    5 => 'ጥር',       // January
-    6 => 'የካቲት',    // February 
-    7 => 'መጋቢት',    // March
-    8 => 'ሚያዝያ',    // April
-    9 => 'ግንቦት',    // May
-    10 => 'ሰኔ',      // June
-    11 => 'ሐምሌ',     // July
-    12 => 'ነሐሴ',     // August
-    13 => 'ጳጉሜን'    // September (5-6 days)
+    1 => 'መስከረም', 2 => 'ጥቅምት', 3 => 'ኅዳር', 4 => 'ታኅሣሥ',
+    5 => 'ጥር', 6 => 'የካቲት', 7 => 'መጋቢት', 8 => 'ሚያዝያ',
+    9 => 'ግንቦት', 10 => 'ሰኔ', 11 => 'ሐምሌ', 12 => 'ነሐሴ', 13 => 'ጳጉሜን'
 ];
 
 // Function to format time in 12-hour Gregorian format
@@ -34,73 +23,68 @@ $current_date_gregorian = date('l, F j, Y');
 $current_time_12hr = date('h:i A');
 $current_datetime_gregorian = date('l, F j, Y - h:i A');
 
-// FORCE 2018 as the current academic year
-$current_ethiopian_year = 2018;
+// Current academic year
+$active_year = getCurrentAcademicYear($conn);
+$current_ethiopian_year = $active_year ? intval($active_year['ethiopian_year']) : 2018;
 
-// First, ensure academic year 2018 exists
-$check_year = mysqli_query($conn, "SELECT * FROM academic_years WHERE ethiopian_year = 2018");
-if(mysqli_num_rows($check_year) == 0) {
-    mysqli_query($conn, "INSERT INTO academic_years (ethiopian_year, status, start_date) VALUES (2018, 'active', CURDATE())");
-} else {
-    // Make sure it's active
-    mysqli_query($conn, "UPDATE academic_years SET status = 'active' WHERE ethiopian_year = 2018");
+// First, ensure academic year exists
+$check_year = dbFetchOne($conn, "SELECT * FROM academic_years WHERE ethiopian_year = ?", "i", [$current_ethiopian_year]);
+if (!$check_year) {
+    dbExecute($conn, "INSERT INTO academic_years (ethiopian_year, status, start_date) VALUES (?, 'active', CURDATE())", "i", [$current_ethiopian_year]);
 }
 
-// Get the active academic year record
-$current_year_query = "SELECT * FROM academic_years WHERE ethiopian_year = 2018 LIMIT 1";
-$current_year_result = mysqli_query($conn, $current_year_query);
-$current_year = mysqli_fetch_assoc($current_year_result);
+$current_year = dbFetchOne($conn, "SELECT * FROM academic_years WHERE ethiopian_year = ? LIMIT 1", "i", [$current_ethiopian_year]);
 
-// Handle semester actions - IMPORTANT: This runs BEFORE any data fetching
-if($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if(isset($_POST['close_semester'])) {
-        $semester_id = mysqli_real_escape_string($conn, $_POST['semester_id']);
-        
-        // IMMEDIATELY close the semester
-        $query = "UPDATE semesters SET status = 'closed', end_date = NOW() WHERE id = $semester_id";
-        if(mysqli_query($conn, $query)) {
-            $message = "ሴሚስተር በተሳካ ሁኔታ ተዘግቷል!";
+// Handle semester actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } else {
+        if (isset($_POST['close_semester'])) {
+            $semester_id = intval($_POST['semester_id'] ?? 0);
             
-            // Force refresh by redirecting to avoid any auto-opening logic
-            header("Location: semester.php?closed=1");
-            exit();
-        } else {
-            $error = "ስህተት ተከስቷል: " . mysqli_error($conn);
-        }
-    }
-    
-    if(isset($_POST['open_semester'])) {
-        $semester_number = mysqli_real_escape_string($conn, $_POST['semester_number']);
-        
-        // Check if semester already exists for 2018
-        $check_query = "SELECT id FROM semesters 
-                       WHERE ethiopian_year = $current_ethiopian_year 
-                       AND semester_number = $semester_number";
-        $check = mysqli_query($conn, $check_query);
-        
-        if(mysqli_num_rows($check) > 0) {
-            $row = mysqli_fetch_assoc($check);
-            // Update existing semester to active
-            $update = "UPDATE semesters SET status = 'active', start_date = NOW() WHERE id = {$row['id']}";
-            mysqli_query($conn, $update);
-            $message = "ሴሚስተር ተከፍቷል!";
-        } else {
-            $semester_name = ($semester_number == 1) ? "መጀመሪያ" : "ሁለተኛ";
-            $full_name = "$current_ethiopian_year ዓ.ም $semester_name ሴሚስተር";
-            
-            $query = "INSERT INTO semesters (name, status, ethiopian_year, semester_number, start_date) 
-                      VALUES ('$full_name', 'active', $current_ethiopian_year, $semester_number, NOW())";
-            
-            if(mysqli_query($conn, $query)) {
-                $message = "$semester_name ሴሚስተር ተከፍቷል!";
-            } else {
-                $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+            if ($semester_id > 0) {
+                $closed = dbExecute($conn, "UPDATE semesters SET status = 'closed', end_date = NOW() WHERE id = ?", "i", [$semester_id]);
+                if ($closed) {
+                    header("Location: semester.php?closed=1");
+                    exit();
+                } else {
+                    $error = "ስህተት ተከስቷል!";
+                }
             }
         }
         
-        // Redirect to avoid form resubmission
-        header("Location: semester.php?opened=1");
-        exit();
+        if (isset($_POST['open_semester'])) {
+            $semester_number = intval($_POST['semester_number'] ?? 1);
+            
+            // Close any currently active semester to ensure only ONE semester is active at a time
+            dbExecute($conn, "UPDATE semesters SET status = 'closed', end_date = NOW() WHERE status = 'active'");
+
+            // Check if semester already exists for current year
+            $check = dbFetchOne(
+                $conn,
+                "SELECT id FROM semesters WHERE ethiopian_year = ? AND semester_number = ?",
+                "ii",
+                [$current_ethiopian_year, $semester_number]
+            );
+            
+            if ($check) {
+                dbExecute($conn, "UPDATE semesters SET status = 'active', start_date = NOW(), end_date = NULL WHERE id = ?", "i", [intval($check['id'])]);
+            } else {
+                $semester_name = ($semester_number === 1) ? "መጀመሪያ" : "ሁለተኛ";
+                $full_name = "$current_ethiopian_year ዓ.ም $semester_name ሴሚስተር";
+                
+                dbExecute(
+                    $conn,
+                    "INSERT INTO semesters (name, status, ethiopian_year, semester_number, start_date) VALUES (?, 'active', ?, ?, NOW())",
+                    "sii",
+                    [$full_name, $current_ethiopian_year, $semester_number]
+                );
+            }
+            
+            header("Location: semester.php?opened=1");
+            exit();
+        }
     }
 }
 
@@ -112,21 +96,24 @@ if(isset($_GET['opened']) && $_GET['opened'] == 1) {
     $message = "ሴሚስተር በተሳካ ሁኔታ ተከፍቷል!";
 }
 
-// Get ALL semesters for 2018 - DON'T force any to be active automatically
-$sem1_query = "SELECT * FROM semesters WHERE ethiopian_year = 2018 AND semester_number = 1";
+// Get ALL semesters for current Ethiopian year - DON'T force any to be active automatically
+$sem1_query = "SELECT * FROM semesters WHERE ethiopian_year = $current_ethiopian_year AND semester_number = 1";
 $sem1_result = mysqli_query($conn, $sem1_query);
 $sem1 = mysqli_fetch_assoc($sem1_result);
 
-$sem2_query = "SELECT * FROM semesters WHERE ethiopian_year = 2018 AND semester_number = 2";
+$sem2_query = "SELECT * FROM semesters WHERE ethiopian_year = $current_ethiopian_year AND semester_number = 2";
 $sem2_result = mysqli_query($conn, $sem2_query);
 $sem2 = mysqli_fetch_assoc($sem2_result);
 
-// If no semesters exist at all, create Semester 1 as active (only for initial setup)
+// If no semesters exist at all for this year, create Semester 1 as active (only for initial setup)
 if(!$sem1 && !$sem2) {
-    $full_name = "2018 ዓ.ም መጀመሪያ ሴሚስተር";
-    $query = "INSERT INTO semesters (name, status, ethiopian_year, semester_number, start_date) 
-              VALUES ('$full_name', 'active', 2018, 1, NOW())";
-    mysqli_query($conn, $query);
+    $full_name = "$current_ethiopian_year ዓ.ም መጀመሪያ ሴሚስተር";
+    dbExecute(
+        $conn,
+        "INSERT INTO semesters (name, status, ethiopian_year, semester_number, start_date) VALUES (?, 'active', ?, 1, NOW())",
+        "si",
+        [$full_name, $current_ethiopian_year]
+    );
     
     // Refresh the query
     $sem1_result = mysqli_query($conn, $sem1_query);
@@ -154,14 +141,14 @@ if($history_result) {
         }
     }
 }
+$nav_active = 'semester';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images\icon.png">
     <title>ሴሚስተር አስተዳደር | አጸደ ትጉሃን </title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -376,7 +363,7 @@ if($history_result) {
 
         .semester-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 25px;
             margin: 30px 0;
         }
@@ -581,65 +568,158 @@ if($history_result) {
         }
 
         @media (max-width: 768px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .current-year-card {
                 flex-direction: column;
                 text-align: center;
+                padding: 18px 14px;
+                border-radius: 12px;
             }
+            .year-info h2 { font-size: 24px; }
+            .year-info p { justify-content: center; gap: 10px; }
             
             .semester-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
+                margin: 20px 0;
             }
+            .semester-card { padding: 18px 14px; border-radius: 12px; }
+            .btn { width: 100%; justify-content: center; min-height: 44px; }
             
+            .history-section { padding: 16px 12px; border-radius: 12px; margin-top: 20px; }
+            .history-header h2 { font-size: 17px; }
             .history-row {
                 flex-direction: column;
-                gap: 10px;
+                gap: 8px;
                 align-items: flex-start;
+                padding: 10px;
             }
+            .history-value { width: 100%; }
+            .history-value .btn { width: 100%; }
+            .year-group { padding-left: 12px; margin-bottom: 18px; }
+            .info-box { flex-direction: column; align-items: flex-start; padding: 14px; gap: 10px; }
+        }
+
+        /* Direct dark-mode overrides for semester page */
+        html.dark-mode body {
+            background-color: #0B1120 !important;
+        }
+        html.dark-mode .current-year-card {
+            background: linear-gradient(135deg, #1E293B, #0F172A) !important;
+            border-color: #F59E0B !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+        }
+        html.dark-mode .year-info h2 {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .year-info p {
+            color: #CBD5E1 !important;
+        }
+        html.dark-mode .semester-card {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3) !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .semester-card:hover {
+            border-color: #F59E0B !important;
+        }
+        html.dark-mode .semester-number {
+            color: #FCD34D !important;
+            border-bottom-color: #334155 !important;
+        }
+        html.dark-mode .semester-card p {
+            color: #CBD5E1 !important;
+        }
+        html.dark-mode .semester-card p strong {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .semester-card p small {
+            color: #94A3B8 !important;
+        }
+        html.dark-mode .semester-status.badge-active {
+            background-color: #064E3B !important;
+            color: #A7F3D0 !important;
+            border: 1px solid #059669 !important;
+        }
+        html.dark-mode .semester-status.badge-closed {
+            background-color: #7F1D1D !important;
+            color: #FECACA !important;
+            border: 1px solid #DC2626 !important;
+        }
+        html.dark-mode .semester-status.badge-warning {
+            background-color: #78350F !important;
+            color: #FDE68A !important;
+            border: 1px solid #D97706 !important;
+        }
+        html.dark-mode .warning-box {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            border-left: 4px solid #F59E0B !important;
+            color: #FDE68A !important;
+        }
+        html.dark-mode .warning-box strong {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .history-section {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .history-header {
+            border-bottom-color: #334155 !important;
+        }
+        html.dark-mode .history-header h2 {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .year-group {
+            border-left-color: #F59E0B !important;
+        }
+        html.dark-mode .year-title {
+            color: #F8FAFC !important;
+        }
+        html.dark-mode .year-badge {
+            background: #D97706 !important;
+            color: #FFFFFF !important;
+        }
+        html.dark-mode .history-row {
+            background-color: #0F172A !important;
+            border: 1px solid #334155 !important;
+            color: #E2E8F0 !important;
+        }
+        html.dark-mode .history-label {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .history-value {
+            color: #CBD5E1 !important;
+        }
+        html.dark-mode .info-box {
+            background-color: #1E293B !important;
+            border: 1px solid #334155 !important;
+            border-left: 4px solid #3B82F6 !important;
+            color: #BFDBFE !important;
+        }
+        html.dark-mode .info-box strong {
+            color: #FCD34D !important;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">⛪</div>
-                <div class="title">
-                    <h1>አጸደ ተጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>ሴሚስተር አስተዳደር | Semester Management</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="btn btn-primary">← ወደ ዳሽቦርድ</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if($message): ?>
         <div class="message success">
             <span>✅</span>
-            <?php echo $message; ?>
+            <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
 
         <?php if($error): ?>
         <div class="message error">
             <span>⚠️</span>
-            <?php echo $error; ?>
+            <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <?php endif; ?>
 
@@ -681,6 +761,7 @@ if($history_result) {
                     </p>
                     <?php if($sem1['status'] == 'active'): ?>
                     <form method="POST" onsubmit="return confirm('እርግጠኛ ነህ ሴሚስተሩን መዝጋት ትፈልጋለህ?');">
+                        <?php echo csrfField(); ?>
                         <input type="hidden" name="semester_id" value="<?php echo $sem1['id']; ?>">
                         <button type="submit" name="close_semester" class="btn btn-danger" style="width: 100%;">
                             🔒 ሴሚስተር ዝጋ
@@ -688,6 +769,7 @@ if($history_result) {
                     </form>
                     <?php else: ?>
                     <form method="POST">
+                        <?php echo csrfField(); ?>
                         <input type="hidden" name="semester_number" value="1">
                         <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
                             ➕ ሴሚስተር ክፈት
@@ -697,6 +779,7 @@ if($history_result) {
                 <?php else: ?>
                     <div class="semester-status badge-warning">⏳ አልተከፈተም</div>
                     <form method="POST">
+                        <?php echo csrfField(); ?>
                         <input type="hidden" name="semester_number" value="1">
                         <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
                             ➕ ሴሚስተር ክፈት
@@ -721,6 +804,7 @@ if($history_result) {
                     </p>
                     <?php if($sem2['status'] == 'active'): ?>
                     <form method="POST" onsubmit="return confirm('እርግጠኛ ነህ ሴሚስተሩን መዝጋት ትፈልጋለህ?');">
+                        <?php echo csrfField(); ?>
                         <input type="hidden" name="semester_id" value="<?php echo $sem2['id']; ?>">
                         <button type="submit" name="close_semester" class="btn btn-danger" style="width: 100%;">
                             🔒 ሴሚስተር ዝጋ
@@ -728,6 +812,7 @@ if($history_result) {
                     </form>
                     <?php else: ?>
                     <form method="POST">
+                        <?php echo csrfField(); ?>
                         <input type="hidden" name="semester_number" value="2">
                         <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
                             ➕ ሴሚስተር ክፈት
@@ -737,6 +822,7 @@ if($history_result) {
                 <?php else: ?>
                     <div class="semester-status badge-warning">⏳ አልተከፈተም</div>
                     <form method="POST">
+                        <?php echo csrfField(); ?>
                         <input type="hidden" name="semester_number" value="2">
                         <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
                             ➕ ሴሚስተር ክፈት

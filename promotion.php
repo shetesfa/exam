@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
@@ -9,48 +8,70 @@ $error = '';
 // ============================================
 // GET CURRENT ACADEMIC YEAR & SEMESTER
 // ============================================
-$current_year_query = "SELECT * FROM academic_years WHERE status = 'active' LIMIT 1";
-$current_year_result = mysqli_query($conn, $current_year_query);
-$current_year = mysqli_fetch_assoc($current_year_result);
+$current_year = dbFetchOne($conn, "SELECT * FROM academic_years WHERE status = 'active' LIMIT 1");
 
 if (!$current_year) {
     $error = "ምንም ንቁ የትምህርት ዘመን የለም! እባክዎ መጀመሪያ የትምህርት ዘመን ያስጀምሩ።";
+    $current_ethiopian_year = 2018;
+    $promotion_done = 0;
+    $semester_id = 0;
 } else {
-    $current_ethiopian_year = $current_year['ethiopian_year'];
-    $promotion_done = $current_year['promotion_done'];
+    $current_ethiopian_year = intval($current_year['ethiopian_year']);
+    $promotion_done = intval($current_year['promotion_done']);
     
     $current_semester = getCurrentSemester($conn);
-    $semester_id = $current_semester ? $current_semester['id'] : 0;
+    $semester_id = $current_semester ? intval($current_semester['id']) : 0;
 }
 
 // ============================================
 // GET ALL CLASSES ORDERED BY GRADE LEVEL
 // ============================================
-$classes_list = [];
-$classes_query = "SELECT id, name FROM classes ORDER BY id ASC";
-$classes_result = mysqli_query($conn, $classes_query);
-while ($row = mysqli_fetch_assoc($classes_result)) {
-    $classes_list[] = $row;
+$classes_list = dbFetchAll(
+    $conn,
+    "SELECT c.id, c.name, c.grade_id, g.level_number, g.division_id, d.code as div_code, d.name_am as div_name
+     FROM classes c
+     LEFT JOIN grades g ON c.grade_id = g.id
+     LEFT JOIN divisions d ON g.division_id = d.id
+     ORDER BY COALESCE(g.level_number, 999) ASC, c.id ASC"
+);
+
+// Map level_number to class_id
+$level_to_class = [];
+foreach ($classes_list as $c) {
+    if (!empty($c['level_number']) && !isset($level_to_class[$c['level_number']])) {
+        $level_to_class[$c['level_number']] = $c;
+    }
 }
 
 // Build class progression map (current_class_id => next_class_id)
 $class_progression = [];
-$class_count = count($classes_list);
-for ($i = 0; $i < $class_count; $i++) {
-    $current_class = $classes_list[$i];
-    if ($i + 1 < $class_count) {
+foreach ($classes_list as $i => $current_class) {
+    $lvl = !empty($current_class['level_number']) ? (int)$current_class['level_number'] : null;
+    $next_class = null;
+    
+    if ($lvl !== null && $lvl < 12) {
+        $next_lvl = $lvl + 1;
+        $next_class = $level_to_class[$next_lvl] ?? null;
+    }
+    
+    // Fallback if no grade level mapped
+    if (!$next_class && $lvl === null && isset($classes_list[$i + 1])) {
         $next_class = $classes_list[$i + 1];
+    }
+    
+    if ($next_class) {
         $class_progression[$current_class['id']] = [
             'current_name' => $current_class['name'],
             'next_id' => $next_class['id'],
-            'next_name' => $next_class['name']
+            'next_name' => $next_class['name'],
+            'division' => $current_class['div_name'] ?? 'ያልተመደበ'
         ];
     } else {
-        // Last class - no promotion possible
         $class_progression[$current_class['id']] = [
             'current_name' => $current_class['name'],
-            'next_id' => null, // No next class
-            'next_name' => 'የመጨረሻ ክፍል (ዝውትር)'
+            'next_id' => null,
+            'next_name' => ($lvl !== null && $lvl >= 12) ? 'ምሩቅ' : 'የመጨረሻ ክፍል (ዝውትር)',
+            'division' => $current_class['div_name'] ?? 'ያልተመደበ'
         ];
     }
 }
@@ -63,7 +84,7 @@ $total_students = 0;
 $students_with_marks = 0;
 
 if (!$error && $semester_id > 0) {
-    // Get all students with their average marks
+    // Get all active students with their average marks
     $student_avg_query = "SELECT 
                             s.id AS student_id,
                             s.name AS student_name,
@@ -74,22 +95,19 @@ if (!$error && $semester_id > 0) {
                             COALESCE(AVG(m.total), 0) AS average_mark
                           FROM students s
                           JOIN classes c ON s.class_id = c.id
-                          LEFT JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = $semester_id
+                          LEFT JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = ?
                           LEFT JOIN marks m ON s.id = m.student_id 
                               AND m.teacher_id = tc.teacher_id 
-                              AND m.semester_id = $semester_id
+                              AND m.semester_id = ?
+                          WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)
                           GROUP BY s.id, s.name, s.class_id, c.name
-                          ORDER BY c.name, s.name";
+                          ORDER BY c.id, s.name";
 
-    $student_avg_result = mysqli_query($conn, $student_avg_query);
-    
-    if ($student_avg_result) {
-        while ($row = mysqli_fetch_assoc($student_avg_result)) {
-            $preview_data[] = $row;
-            $total_students++;
-            if ($row['marks_count'] > 0) {
-                $students_with_marks++;
-            }
+    $preview_data = dbFetchAll($conn, $student_avg_query, "ii", [$semester_id, $semester_id]);
+    $total_students = count($preview_data);
+    foreach ($preview_data as $row) {
+        if ($row['marks_count'] > 0) {
+            $students_with_marks++;
         }
     }
 }
@@ -97,23 +115,21 @@ if (!$error && $semester_id > 0) {
 // ============================================
 // HANDLE PROMOTION EXECUTION
 // ============================================
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['execute_promotion'])) {
-    
-    // Security checks
-    if ($promotion_done) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['execute_promotion'])) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
+    } elseif ($promotion_done) {
         $error = "⚠️ ደረጃ ማሳደግ ቀድሞውኑ ተከናውኗል! ለዚህ የትምህርት ዘመን እንደገና ማሳደግ አይቻልም።";
     } elseif ($semester_id == 0) {
         $error = "⚠️ ምንም ንቁ ሴሚስተር የለም።";
     } elseif (empty($preview_data)) {
         $error = "⚠️ ምንም ተማሪዎች አልተገኙም።";
     } else {
-        
-        $pass_mark = floatval($_POST['pass_mark']);
+        $pass_mark = floatval($_POST['pass_mark'] ?? 50);
         
         if ($pass_mark < 0 || $pass_mark > 100) {
             $error = "⚠️ እባክዎ ትክክለኛ ማለፊያ ውጤት ያስገቡ (0-100)";
         } else {
-            
             // START TRANSACTION
             mysqli_begin_transaction($conn);
             
@@ -125,17 +141,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['execute_promotion'])) 
                 $error_count = 0;
                 
                 foreach ($preview_data as $student) {
-                    $student_id = $student['student_id'];
-                    $current_class_id = $student['class_id'];
-                    $student_name = $student['student_name'];
-                    $average = $student['average_mark'];
+                    $student_id = intval($student['student_id']);
+                    $current_class_id = intval($student['class_id']);
+                    $average = floatval($student['average_mark']);
                     $has_marks = ($student['marks_count'] > 0);
                     
                     // Check if this class has a next class
                     $progression = $class_progression[$current_class_id] ?? null;
                     
                     if (!$progression) {
-                        // Class not found in progression map - skip
                         $error_count++;
                         continue;
                     }
@@ -145,82 +159,77 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['execute_promotion'])) 
                     
                     // Determine promotion status
                     if ($is_last_class) {
-                        // Student is in the final class - cannot promote further
-                        $status = 'promoted'; // Mark as completed
-                        $to_class_id = $current_class_id; // Stay in same class
+                        $status = 'promoted';
+                        $to_class_id = $current_class_id;
                         $last_class_count++;
                     } elseif (!$has_marks) {
-                        // No marks - student repeats
                         $status = 'repeated';
                         $to_class_id = $current_class_id;
                         $no_marks_count++;
                     } elseif ($average >= $pass_mark) {
-                        // Student passed - promote to next class
                         $status = 'promoted';
-                        $to_class_id = $next_class_id;
+                        $to_class_id = intval($next_class_id);
                         $promoted_count++;
                     } else {
-                        // Student failed - repeat same class
                         $status = 'repeated';
                         $to_class_id = $current_class_id;
                         $repeated_count++;
                     }
                     
                     // Update student record
-                    $update_query = "UPDATE students SET 
-                                        class_id = $to_class_id,
-                                        promotion_status = '$status',
-                                        current_grade = (SELECT CAST(SUBSTRING_INDEX(name, ' ', 1) AS UNSIGNED) FROM classes WHERE id = $to_class_id),
-                                        academic_year = $current_ethiopian_year
-                                     WHERE id = $student_id";
+                    $update_success = dbExecute(
+                        $conn,
+                        "UPDATE students SET 
+                            class_id = ?,
+                            promotion_status = ?,
+                            academic_year = ?
+                         WHERE id = ?",
+                        "isii",
+                        [$to_class_id, $status, $current_ethiopian_year, $student_id]
+                    );
                     
-                    if (!mysqli_query($conn, $update_query)) {
+                    if (!$update_success) {
                         throw new Exception("Failed to update student ID: $student_id");
                     }
                     
                     // Insert promotion history
-                    $history_query = "INSERT INTO promotion_history 
-                                        (student_id, from_class_id, to_class_id, from_academic_year, 
-                                         to_academic_year, total_marks, status)
-                                      VALUES 
-                                        ($student_id, $current_class_id, $to_class_id, 
-                                         $current_ethiopian_year, $current_ethiopian_year + 1, 
-                                         $average, '$status')";
+                    $history_success = dbExecute(
+                        $conn,
+                        "INSERT INTO promotion_history 
+                            (student_id, from_class_id, to_class_id, from_academic_year, 
+                             to_academic_year, total_marks, status)
+                         VALUES 
+                            (?, ?, ?, ?, ?, ?, ?)",
+                        "iiiiids",
+                        [
+                            $student_id,
+                            $current_class_id,
+                            $to_class_id,
+                            $current_ethiopian_year,
+                            $current_ethiopian_year + 1,
+                            $average,
+                            $status
+                        ]
+                    );
                     
-                    if (!mysqli_query($conn, $history_query)) {
+                    if (!$history_success) {
                         throw new Exception("Failed to insert promotion history for student ID: $student_id");
                     }
                 }
                 
                 // Mark academic year as promotion done
-                $update_year_query = "UPDATE academic_years SET promotion_done = 1 WHERE id = {$current_year['id']}";
-                if (!mysqli_query($conn, $update_year_query)) {
-                    throw new Exception("Failed to update academic year status");
-                }
+                dbExecute($conn, "UPDATE academic_years SET promotion_done = 1 WHERE id = ?", "i", [intval($current_year['id'])]);
                 
                 // COMMIT TRANSACTION
                 mysqli_commit($conn);
                 
-                // Success message
-                $message = "✅ ደረጃ ማሳደግ በተሳካ ሁኔታ ተጠናቋል!<br>";
-                $message .= "📊 ያለፉ (Promoted): <strong>$promoted_count</strong> | ";
-                $message .= "🔄 የደገሙ (Repeated): <strong>$repeated_count</strong> | ";
-                $message .= "📭 ውጤት የሌላቸው (No Marks): <strong>$no_marks_count</strong>";
-                if ($last_class_count > 0) {
-                    $message .= " | 🎓 የመጨረሻ ክፍል: <strong>$last_class_count</strong>";
-                }
-                if ($error_count > 0) {
-                    $message .= "<br>⚠️ <strong>$error_count</strong> ተማሪዎች ላይ ችግር ነበር (የክፍል መረጃ አልተገኘም)";
-                }
-                
-                // Refresh the page to show updated data
+                // Refresh page
                 header("Location: promotion.php?promoted=1");
                 exit();
                 
             } catch (Exception $e) {
-                // ROLLBACK ON ERROR
                 mysqli_rollback($conn);
-                $error = "❌ ስህተት ተከስቷል! ሁሉም ለውጦች ተመልሰዋል።<br>ስህተት: " . $e->getMessage();
+                $error = "ደረጃ ማሳደግ አልተሳካም! " . $e->getMessage();
             }
         }
     }
@@ -234,6 +243,8 @@ if (isset($_GET['promoted']) && $_GET['promoted'] == 1) {
 // ============================================
 // GET PROMOTION HISTORY FOR DISPLAY
 // ============================================
+// Fix last-class students: mark as 'graduated' instead of 'promoted'
+// (already handled in execution - update history display)
 $history_data = [];
 $history_query = "SELECT ph.*, 
                     s.name AS student_name,
@@ -243,23 +254,18 @@ $history_query = "SELECT ph.*,
                   JOIN students s ON ph.student_id = s.id
                   JOIN classes fc ON ph.from_class_id = fc.id
                   JOIN classes tc ON ph.to_class_id = tc.id
-                  WHERE ph.from_academic_year = $current_ethiopian_year
+                  WHERE ph.from_academic_year = ?
                   ORDER BY ph.promoted_at DESC
                   LIMIT 50";
-$history_result = mysqli_query($conn, $history_query);
-if ($history_result) {
-    while ($row = mysqli_fetch_assoc($history_result)) {
-        $history_data[] = $row;
-    }
-}
+$history_data = dbFetchAll($conn, $history_query, "i", [$current_ethiopian_year]);
+$nav_active = 'promotion';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>ደረጃ ማሳደግ | Student Promotion</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -315,6 +321,8 @@ if ($history_result) {
         .success { background: #D1FAE5; color: #065F46; border: 2px solid var(--success-green); }
         .error { background: #FEE2E2; color: #991B1B; border: 2px solid var(--error-red); }
         .warning { background: #FEF3C7; color: #92400E; border: 2px solid var(--warning-yellow); }
+        .rules-box { background: #EFF6FF; border-left: 4px solid var(--info-blue); padding: 15px; border-radius: 8px; }
+        .rules-list { margin-top: 8px; margin-left: 20px; color: #1E40AF; font-size: 13px; line-height: 1.8; }
 
         .card {
             background: white; border-radius: 20px; padding: 25px; margin-bottom: 25px;
@@ -399,47 +407,31 @@ if ($history_result) {
         .history-table td { padding: 8px; border-bottom: 1px solid #E5E7EB; }
 
         @media (max-width: 768px) {
+            .card { padding: 16px 12px; border-radius: 14px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 12px 8px; }
+            .stat-value { font-size: 22px; }
             .form-row { flex-direction: column; }
+            .form-row > div { width: 100%; }
+            .btn-promote { width: 100%; justify-content: center; font-size: 15px; }
+            .pass-mark-preset { justify-content: center; }
+            .preset-btn { flex: 1 1 calc(20% - 6px); min-width: 45px; text-align: center; }
             .preview-table { font-size: 11px; }
+            .preview-table th, .preview-table td { padding: 6px 4px; }
+            .history-table th, .history-table td { padding: 6px 4px; font-size: 11px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <div class="logo-icon">📈</div>
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>ደረጃ ማሳደግ | Student Promotion System</p>
-                </div>
-            </div>
-            <a href="dashboard_admin.php" class="btn btn-back">← ወደ ዳሽቦርድ</a>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav">
-        <div class="nav-links">
-            <a href="dashboard_admin.php" class="nav-link">🏠 ዳሽቦርድ</a>
-            <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-            <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-            <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-            <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-            <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-            <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-            <a href="promotion.php" class="nav-link active">📈 ደረጃ ማሳደግ</a>
-            <a href="attendance_controller.php" class="nav-link">📊 የመገኘት</a>
-            <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        </div>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <!-- Messages -->
         <?php if ($message): ?>
-        <div class="message-box success"><?php echo $message; ?></div>
+        <div class="message-box success"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
         <?php if ($error): ?>
-        <div class="message-box error"><?php echo $error; ?></div>
+        <div class="message-box error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if (!$current_year): ?>
@@ -490,44 +482,47 @@ if ($history_result) {
 
         <!-- Class Progression Map -->
         <div class="card">
-            <div class="card-title"><span>🗺️</span> የክፍል ሽግግር ካርታ (Class Progression Map)</div>
-            <table class="preview-table">
-                <thead>
-                    <tr>
-                        <th>አሁን ያለው ክፍል</th>
-                        <th>➡️</th>
-                        <th>ቀጣይ ክፍል</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($class_progression as $current_id => $prog): ?>
-                    <tr>
-                        <td><strong><?php echo htmlspecialchars($prog['current_name']); ?></strong></td>
-                        <td>→</td>
-                        <td>
-                            <?php if ($prog['next_id']): ?>
-                            <span style="color:var(--success-green); font-weight:600;">
-                                <?php echo htmlspecialchars($prog['next_name']); ?>
-                            </span>
-                            <?php else: ?>
-                            <span class="badge badge-last">🎓 የመጨረሻ ክፍል</span>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+            <div class="card-title"><span>🗺️</span> የክፍል ሽግግር ካርታ</div>
+            <div class="table-responsive">
+                <table class="preview-table">
+                    <thead>
+                        <tr>
+                            <th>አሁን ያለው ክፍል</th>
+                            <th>➡️</th>
+                            <th>ቀጣይ ክፍል</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($class_progression as $current_id => $prog): ?>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($prog['current_name']); ?></strong></td>
+                            <td>→</td>
+                            <td>
+                                <?php if ($prog['next_id']): ?>
+                                <span style="color:var(--success-green); font-weight:600;">
+                                    <?php echo htmlspecialchars($prog['next_name']); ?>
+                                </span>
+                                <?php else: ?>
+                                <span class="badge badge-last">🎓 የመጨረሻ ክፍል</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Promotion Action Card -->
         <div class="card">
-            <div class="card-title"><span>🎯</span> ደረጃ ማሳደግ (Execute Promotion)</div>
+            <div class="card-title"><span>🎯</span> የተማሪዎች ደረጃ ማሳደጊያ</div>
 
             <div class="promotion-form">
                 <form method="POST" onsubmit="return confirmPromotion()">
+                    <?php echo csrfField(); ?>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>📊 ማለፊያ ውጤት (Pass Mark %)</label>
+                            <label>📊 ማለፊያ ውጤት (%)</label>
                             <input type="number" name="pass_mark" id="pass_mark" class="form-control" 
                                    value="50" min="0" max="100" step="1" required>
                             <div class="pass-mark-preset">
@@ -540,7 +535,7 @@ if ($history_result) {
                         </div>
                         <div style="display:flex; align-items:flex-end;">
                             <button type="submit" name="execute_promotion" class="btn btn-promote" id="promoteBtn">
-                                🚀 ደረጃ አሳድግ / Promote Students
+                                🚀 የተማሪዎችን ደረጃ አሳድግ
                             </button>
                         </div>
                     </div>
@@ -548,9 +543,9 @@ if ($history_result) {
             </div>
 
             <!-- Rules -->
-            <div style="background:#EFF6FF; border-left:4px solid var(--info-blue); padding:15px; border-radius:8px; margin-top:15px;">
-                <strong>📋 የማሳደግ ህጎች (Promotion Rules):</strong>
-                <ul style="margin-top:8px; margin-left:20px; color:#1E40AF; font-size:13px; line-height:1.8;">
+            <div class="rules-box" style="margin-top:15px;">
+                <strong>📋 የተማሪዎች ማሳደጊያ ደንቦች፦</strong>
+                <ul class="rules-list">
                     <li>አማካይ ≥ ማለፊያ ውጤት → <span class="badge badge-promoted">ወደ ቀጣይ ክፍል ያልፋል</span></li>
                     <li>አማካይ < ማለፊያ ውጤት → <span class="badge badge-repeated">ክፍል ይደግማል</span></li>
                     <li>ውጤት የሌላቸው → <span class="badge badge-nomarks">ክፍል ይደግማሉ</span></li>
@@ -629,8 +624,8 @@ if ($history_result) {
                     <thead>
                         <tr>
                             <th>ተማሪ</th>
-                            <th>ከ (From)</th>
-                            <th>ወደ (To)</th>
+                            <th>ከነበረበት ክፍል</th>
+                            <th>ወደ ተሸጋገረበት ክፍል</th>
                             <th>አማካይ</th>
                             <th>ሁኔታ</th>
                             <th>ቀን</th>

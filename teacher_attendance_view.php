@@ -1,20 +1,34 @@
 <?php
-session_start();
 require_once 'db.php';
 requireLogin();
 
-if(!isTeacher()) {
+if (!isTeacher()) {
     header("Location: index.php");
     exit();
 }
 
-$teacher_id = $_SESSION['user_id'];
-$user_name = $_SESSION['user_name'];
+$teacher_id = intval($_SESSION['user_id'] ?? 0);
+$user_name = $_SESSION['user_name'] ?? '';
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 $classes = getTeacherClasses($conn, $teacher_id, $semester_id);
+
+// If teacher only teaches children classes (Grades 1-6), seamlessly redirect to children attendance page
+$hasYouthClasses = false;
+foreach ($classes as $c) {
+    $cid = intval($c['class_id'] ?? 0);
+    if ($cid >= 1 && $cid <= 6) {
+        $hasYouthClasses = true;
+        break;
+    }
+}
+if (!$hasYouthClasses && !empty($classes) && !isAdmin()) {
+    $firstCid = intval($classes[0]['class_id'] ?? 0);
+    header("Location: dashboard_attendance.php" . ($firstCid ? "?c={$firstCid}" : ""));
+    exit();
+}
 
 // Ethiopian months
 $ethiopian_months = [
@@ -29,72 +43,77 @@ $amharic_days = [
 ];
 
 $today_eth = getCurrentEthiopianDate();
-// FIXED: Use 'm' and 'y' as parameter names
-$selected_eth_month = isset($_GET['m']) ? intval($_GET['m']) : $today_eth['month'];
-$selected_eth_year = isset($_GET['y']) ? intval($_GET['y']) : $today_eth['year'];
-$selected_class_id = isset($_GET['c']) ? intval($_GET['c']) : (!empty($classes) ? $classes[0]['class_id'] : 0);
+$selected_eth_month = isset($_GET['m']) ? intval($_GET['m']) : intval($today_eth['month']);
+$selected_eth_year = isset($_GET['y']) ? intval($_GET['y']) : intval($today_eth['year']);
+$selected_class_id = isset($_GET['c']) ? intval($_GET['c']) : (!empty($classes) ? intval($classes[0]['class_id']) : 0);
+
+// IDOR Protection: ensure selected class is assigned to this teacher
+$class_valid = false;
+foreach ($classes as $c) {
+    if (intval($c['class_id']) === $selected_class_id) {
+        $class_valid = true;
+        break;
+    }
+}
+if (!$class_valid && !isAdmin()) {
+    $selected_class_id = !empty($classes) ? intval($classes[0]['class_id']) : 0;
+}
+
+$can_record = function_exists('canTeacherMarkClassAttendance') ? canTeacherMarkClassAttendance($conn, $teacher_id, $selected_class_id, $semester_id) : false;
 
 // Validate
-if($selected_eth_month < 1 || $selected_eth_month > 13) {
-    $selected_eth_month = $today_eth['month'];
+if ($selected_eth_month < 1 || $selected_eth_month > 13) {
+    $selected_eth_month = intval($today_eth['month']);
 }
-if($selected_eth_year < 2000 || $selected_eth_year > 2100) {
-    $selected_eth_year = $today_eth['year'];
+if ($selected_eth_year < 2000 || $selected_eth_year > 2100) {
+    $selected_eth_year = intval($today_eth['year']);
 }
 
 // Build Ethiopian month calendar
 $days_in_month = getEthiopianDaysInMonth($selected_eth_year, $selected_eth_month);
 $month_days = [];
-
-$greg_year = $selected_eth_year + 7;
-$eth_new_year = new DateTime("$greg_year-09-11");
-if($greg_year % 4 == 3) {
-    $eth_new_year = new DateTime("$greg_year-09-12");
-}
-
-$month_offset = ($selected_eth_month - 1) * 30;
 $month_start_greg = '';
 
-for($d = 1; $d <= $days_in_month; $d++) {
-    $day_offset = $month_offset + ($d - 1);
-    $greg_date = clone $eth_new_year;
-    $greg_date->modify("+$day_offset days");
-    $ds = $greg_date->format('Y-m-d');
-    $dow = $greg_date->format('l');
+for ($d = 1; $d <= $days_in_month; $d++) {
+    $greg_str = ethiopianToGregorian($selected_eth_year, $selected_eth_month, $d);
+    if (!$greg_str) continue;
     
-    if($d == 1) $month_start_greg = $ds;
+    $dow = date('l', strtotime($greg_str));
+    if (empty($month_start_greg)) $month_start_greg = $greg_str;
     
-    if($dow != 'Saturday' && $dow != 'Sunday') {
+    if ($dow !== 'Saturday' && $dow !== 'Sunday') {
         continue;
     }
     
     $month_days[] = [
         'eth_day' => $d,
-        'greg_date' => $ds,
+        'greg_date' => $greg_str,
         'day_name' => $dow,
         'day_am' => $amharic_days[$dow] ?? substr($dow, 0, 3),
         'is_weekend' => true,
-        'is_today' => $ds == date('Y-m-d'),
-        'is_future' => $ds > date('Y-m-d')
+        'is_today' => ($greg_str === date('Y-m-d')),
+        'is_future' => ($greg_str > date('Y-m-d'))
     ];
 }
 
 // Get closed days
 $closed_days = [];
-if($selected_class_id && !empty($month_days)) {
+if ($selected_class_id > 0 && !empty($month_days)) {
     $first_date = $month_days[0]['greg_date'];
     $last_date = $month_days[count($month_days)-1]['greg_date'];
     
-    $cd_query = "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN '$first_date' AND '$last_date' AND is_school_day = 0 AND (class_id IS NULL OR class_id = $selected_class_id)";
-    $cd_result = mysqli_query($conn, $cd_query);
-    if($cd_result) {
-        while($row = mysqli_fetch_assoc($cd_result)) {
-            $closed_days[$row['date_gregorian']] = true;
-        }
+    $cd_rows = dbFetchAll(
+        $conn,
+        "SELECT date_gregorian FROM attendance_days WHERE date_gregorian BETWEEN ? AND ? AND is_school_day = 0 AND (class_id IS NULL OR class_id = ?)",
+        "ssi",
+        [$first_date, $last_date, $selected_class_id]
+    );
+    foreach ($cd_rows as $row) {
+        $closed_days[$row['date_gregorian']] = true;
     }
 }
 
-foreach($month_days as &$day) {
+foreach ($month_days as &$day) {
     $day['is_closed'] = isset($closed_days[$day['greg_date']]);
 }
 unset($day);
@@ -102,24 +121,25 @@ unset($day);
 // Get students and attendance - ALL past days
 $students = [];
 $attendance_data = [];
-if($selected_class_id) {
-    $sq = "SELECT * FROM students WHERE class_id = $selected_class_id ORDER BY name";
-    $sr = mysqli_query($conn, $sq);
-    while($s = mysqli_fetch_assoc($sr)) { $students[] = $s; }
+if ($selected_class_id > 0 && !empty($month_days)) {
+    $students = dbFetchAll(
+        $conn,
+        "SELECT * FROM students WHERE class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL) ORDER BY name",
+        "i",
+        [$selected_class_id]
+    );
     
-    foreach($students as $st) {
-        foreach($month_days as $day) {
-            if(!$day['is_future']) {
-                $aq = "SELECT ar.status, u.name as submitter FROM attendance_records ar
-                       LEFT JOIN users u ON ar.marked_by = u.id
-                       WHERE ar.student_id = {$st['id']} AND ar.class_id = $selected_class_id
-                       AND ar.attendance_date = '{$day['greg_date']}' LIMIT 1";
-                $ar = mysqli_query($conn, $aq);
-                if($ar && mysqli_num_rows($ar) > 0) {
-                    $att = mysqli_fetch_assoc($ar);
-                    $attendance_data[$st['id']][$day['greg_date']] = $att;
-                }
-            }
+    if (!empty($students)) {
+        $first_date = $month_days[0]['greg_date'];
+        $last_date = $month_days[count($month_days)-1]['greg_date'];
+        
+        $rec_query = "SELECT ar.student_id, ar.attendance_date, ar.status, u.name as submitter 
+                      FROM attendance_records ar
+                      LEFT JOIN users u ON ar.marked_by = u.id
+                      WHERE ar.class_id = ? AND ar.attendance_date BETWEEN ? AND ?";
+        $records = dbFetchAll($conn, $rec_query, "iss", [$selected_class_id, $first_date, $last_date]);
+        foreach ($records as $r) {
+            $attendance_data[$r['student_id']][$r['attendance_date']] = $r;
         }
     }
 }
@@ -127,24 +147,29 @@ if($selected_class_id) {
 // Navigation with short params
 $prev_m = $selected_eth_month - 1; 
 $prev_y = $selected_eth_year;
-if($prev_m < 1) { $prev_m = 13; $prev_y--; }
+if ($prev_m < 1) { $prev_m = 13; $prev_y--; }
 
-$today_month = $today_eth['month'];
-$today_year = $today_eth['year'];
+$next_m = $selected_eth_month + 1;
+$next_y = $selected_eth_year;
+if ($next_m > 13) { $next_m = 1; $next_y++; }
+
+$today_month = intval($today_eth['month']);
+$today_year = intval($today_eth['year']);
 
 function buildTUrl($m, $y, $c) {
     return "teacher_attendance_view.php?m={$m}&y={$y}&c={$c}";
 }
 
 $display_greg_date = !empty($month_days) ? $month_days[0]['greg_date'] : $month_start_greg;
+$nav_active = 'teacher_attendance_view';
 ?>
 <!DOCTYPE html>
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="icon" type="image/png" href="images/icon.png">
-    <title>የመገኘት እይታ | አጸደ ትጉሃን</title>
+    <meta name="theme-color" content="#8B4513">
+    <title>የአቴንዳንስ እይታ | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root { --primary: #8B4513; --gold: #FFD700; --gold-dark: #DAA520; --pale: #FFF8DC; --success: #10B981; --danger: #EF4444; --warning: #F59E0B; --bg: #FAF9F6; --white: #FFFFFF; --gray-100: #F3F4F6; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Nyala', sans-serif; }
@@ -227,20 +252,9 @@ $display_greg_date = !empty($month_days) ? $month_days[0]['greg_date'] : $month_
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-top">
-            <div class="logo">
-                <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','⛪');">
-                <div><h2>አጸደ ትጉሃን</h2><span>የመገኘት እይታ (Read Only)</span></div>
-            </div>
-            <div class="user-badge">
-                <span>👨‍🏫</span><strong><?php echo htmlspecialchars(mb_substr($user_name, 0, 15)); ?></strong>
-                <a href="dashboard_teacher.php" class="btn-back">← ዳሽቦርድ</a>
-            </div>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="container">
+    <div class="main-container">
         <?php if(!empty($classes)): ?>
         <div class="class-bar">
             <?php foreach($classes as $class): ?>
@@ -259,7 +273,10 @@ $display_greg_date = !empty($month_days) ? $month_days[0]['greg_date'] : $month_
                     <?php echo $ethiopian_months[$selected_eth_month] . ' ' . $selected_eth_year; ?> ዓ.ም
                     <span class="greg">(ቅዳሜ & እሁድ<?php echo $display_greg_date ? ' - ' . date('F Y', strtotime($display_greg_date)) : ''; ?>)</span>
                 </div>
-                <a href="<?php echo buildTUrl($today_month, $today_year, $selected_class_id); ?>" class="btn-today">📅 ዛሬ</a>
+                <div style="display:inline-flex; gap:6px; align-items:center;">
+                    <a href="<?php echo buildTUrl($next_m, $next_y, $selected_class_id); ?>">ቀጣይ →</a>
+                    <a href="<?php echo buildTUrl($today_month, $today_year, $selected_class_id); ?>" class="btn-today">📅 ዛሬ</a>
+                </div>
             </div>
             <div class="legend">
                 <div class="legend-item"><span class="legend-dot ld-present"></span> ✅ ተገኝቷል</div>
@@ -271,22 +288,35 @@ $display_greg_date = !empty($month_days) ? $month_days[0]['greg_date'] : $month_
         </div>
 
         <?php if($selected_class_id && !empty($students)): ?>
-        <div class="info-bar">
-            <span>📖 <strong><?php 
-                $className = '';
-                foreach($classes as $c) {
-                    if($c['class_id'] == $selected_class_id) { $className = $c['class_name']; break; }
-                }
-                echo htmlspecialchars($className);
-            ?></strong></span>
-            <span>👥 <?php echo count($students); ?> ተማሪዎች</span>
-            <span>📅 <?php echo count($month_days); ?> ቀናት</span>
+        <div class="info-bar" style="align-items: center;">
+            <div>
+                <span>📖 <strong><?php 
+                    $className = '';
+                    foreach($classes as $c) {
+                        if($c['class_id'] == $selected_class_id) { $className = $c['class_name']; break; }
+                    }
+                    echo htmlspecialchars($className);
+                ?></strong></span> &bull;
+                <span>👥 <?php echo count($students); ?> ተማሪዎች</span> &bull;
+                <span>📅 <?php echo count($month_days); ?> ቀናት</span>
+            </div>
+            <?php if ($can_record): ?>
+                <a href="dashboard_attendance.php?c=<?php echo $selected_class_id; ?>" class="btn-action" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 7px 16px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 3px 8px rgba(16,185,129,0.3); border: none;">
+                    ✍️ አቴንዳንስ መዝግብ
+                </a>
+            <?php endif; ?>
         </div>
 
         <div class="table-wrapper">
-            <div class="table-header-bar">
-                <span>📋 ወርሃዊ የመገኘት ሪፖርት (ቅዳሜ & እሁድ)</span>
-                <span style="font-size:11px;">👁️ ተመልካች ብቻ</span>
+            <div class="table-header-bar" style="align-items: center;">
+                <span>📋 ወርሃዊ የአቴንዳንስ ሪፖርት (ቅዳሜ & እሁድ)</span>
+                <?php if ($can_record): ?>
+                    <a href="dashboard_attendance.php?c=<?php echo $selected_class_id; ?>" style="color: #065F46; background: #D1FAE5; padding: 4px 12px; border-radius: 15px; text-decoration: none; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #10B981;">
+                        ✍️ አቴንዳንስ መመዝገቢያ ገጽ ክፈት
+                    </a>
+                <?php else: ?>
+                    <span style="font-size:11px;">👁️ ተመልካች ብቻ</span>
+                <?php endif; ?>
             </div>
             <div class="table-scroll">
                 <table>
@@ -346,6 +376,17 @@ $display_greg_date = !empty($month_days) ? $month_days[0]['greg_date'] : $month_
         <div class="empty-state"><span class="icon">📚</span><h3>ምንም የተመደቡ ክፍሎች የሉም</h3></div>
         <?php endif; ?>
     </div>
+    <script src="exam-main/assets/js/offline-db.js"></script>
+    <script src="exam-main/assets/js/sync-manager.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/exam/sw.js').catch(() => {});
+            });
+        }
+        // Auto sync and background check
+        SyncManager.fullSync();
+    </script>
 </body>
 </html>
 <?php mysqli_close($conn); ?>

@@ -1,59 +1,65 @@
 <?php
-session_start();
 require_once 'db.php';
-
-// Allow any logged-in student to change PIN
-if (!isset($_SESSION['student_id']) || empty($_SESSION['student_id'])) {
-    header("Location: student_login.php");
-    exit();
-}
+requireStudent();
 
 $error = '';
 $success = '';
-$student_id = $_SESSION['student_id'];
+$student_id = intval($_SESSION['student_id']);
 
 // Check if this is first login
-$check_query = "SELECT pin, first_login FROM student_logins WHERE student_id = $student_id";
-$check_result = mysqli_query($conn, $check_query);
-$student_data = mysqli_fetch_assoc($check_result);
+$student_data = dbFetchOne(
+    $conn,
+    "SELECT pin, first_login FROM student_logins WHERE student_id = ?",
+    "i",
+    [$student_id]
+);
 
-$is_first_login = ($student_data && $student_data['first_login'] == 1) ? true : false;
+$is_first_login = ($student_data && $student_data['first_login'] == 1);
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $current_pin = $_POST['current_pin'] ?? '';
-    $new_pin = $_POST['new_pin'];
-    $confirm_pin = $_POST['confirm_pin'];
-    
-    // Basic validation
-    if (strlen($new_pin) < 4) {
-        $error = "ፒን ቢያንስ 4 አሃዝ መሆን አለበት! (PIN must be at least 4 digits!)";
-    } elseif ($new_pin != $confirm_pin) {
-        $error = "ፒኖቹ አይዛመዱም! (PINs do not match!)";
-    } elseif (!preg_match('/^[0-9]+$/', $new_pin)) {
-        $error = "ፒን ቁጥር ብቻ መሆን አለበት! (PIN must contain only numbers!)";
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
     } else {
-        // ONLY verify current PIN if this is NOT first login
-        if (!$is_first_login) {
-            if (empty($current_pin)) {
-                $error = "እባክዎ የአሁኑን ፒን ያስገቡ! (Please enter your current PIN!)";
-            } elseif (!password_verify($current_pin, $student_data['pin'])) {
-                $error = "የአሁኑ ፒን ትክክል አይደለም! (Current PIN is incorrect!)";
-            }
-        }
+        $current_pin = trim($_POST['current_pin'] ?? '');
+        $new_pin = trim($_POST['new_pin'] ?? '');
+        $confirm_pin = trim($_POST['confirm_pin'] ?? '');
         
-        // If no error, save the new PIN
-        if (empty($error)) {
-            $hashed_pin = password_hash($new_pin, PASSWORD_DEFAULT);
+        // Basic validation
+        if (strlen($new_pin) < 4) {
+            $error = "ፒን ቢያንስ 4 አሃዝ መሆን አለበት! (PIN must be at least 4 digits!)";
+        } elseif ($new_pin !== $confirm_pin) {
+            $error = "ፒኖቹ አይዛመዱም! (PINs do not match!)";
+        } elseif (!preg_match('/^[0-9]+$/', $new_pin)) {
+            $error = "ፒን ቁጥር ብቻ መሆን አለበት! (PIN must contain only numbers!)";
+        } else {
+            // ONLY verify current PIN if this is NOT first login
+            if (!$is_first_login) {
+                if (empty($current_pin)) {
+                    $error = "እባክዎ የአሁኑን ፒን ያስገቡ! (Please enter your current PIN!)";
+                } elseif (!$student_data || !password_verify($current_pin, $student_data['pin'])) {
+                    $error = "የአሁኑ ፒን ትክክል አይደለም! (Current PIN is incorrect!)";
+                }
+            }
             
-            $update_query = "UPDATE student_logins SET pin = '$hashed_pin', first_login = 0, login_attempts = 0, locked_until = NULL WHERE student_id = $student_id";
-            
-            if (mysqli_query($conn, $update_query)) {
-                $_SESSION['student_first_login'] = 0;
-                $is_first_login = false;
-                $success = "ፒንዎ በተሳካ ሁኔታ ተቀይሯል! (PIN changed successfully!)";
-                header("refresh:2;url=dashboard_student.php");
-            } else {
-                $error = "ስህተት ተከስቷል! " . mysqli_error($conn);
+            // If no error, save the new PIN
+            if (empty($error)) {
+                $hashed_pin = password_hash($new_pin, PASSWORD_DEFAULT);
+                
+                $updated = dbExecute(
+                    $conn,
+                    "UPDATE student_logins SET pin = ?, first_login = 0, login_attempts = 0, locked_until = NULL WHERE student_id = ?",
+                    "si",
+                    [$hashed_pin, $student_id]
+                );
+                
+                if ($updated) {
+                    $_SESSION['student_first_login'] = 0;
+                    $is_first_login = false;
+                    $success = "ፒንዎ በተሳካ ሁኔታ ተቀይሯል!";
+                    header("refresh:2;url=dashboard_student.php");
+                } else {
+                    $error = "ስህተት ተከስቷል! እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።";
+                }
             }
         }
     }
@@ -66,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="images/icon.png">
     <title><?php echo $is_first_login ? 'አዲስ ፒን ይምረጡ' : 'ፒን ይቀይሩ'; ?> | Change PIN</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root { --brown-dark: #8B4513; --brown-medium: #A52A2A; --gold-primary: #FFD700; --gold-dark: #DAA520; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
@@ -106,6 +113,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             background: #EFF6FF; padding: 12px; border-radius: 8px; margin-bottom: 20px;
             border-left: 4px solid #3B82F6; font-size: 13px; color: #1E40AF; text-align: left;
         }
+
+        /* Dark Mode Overrides */
+        html.dark-mode body,
+        body.dark-mode,
+        [data-theme="dark"] body {
+            background: #0B1120 !important;
+            color: #F1F5F9 !important;
+        }
+        .dark-mode .card,
+        [data-theme="dark"] .card {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6) !important;
+        }
+        .dark-mode h1,
+        [data-theme="dark"] h1 {
+            color: #FCD34D !important;
+        }
+        .dark-mode .welcome-text,
+        [data-theme="dark"] .welcome-text {
+            background: #0F172A !important;
+            color: #CBD5E1 !important;
+            border: 1px solid #334155 !important;
+        }
+        .dark-mode .form-group label,
+        [data-theme="dark"] .form-group label {
+            color: #FCD34D !important;
+        }
+        .dark-mode .form-control,
+        [data-theme="dark"] .form-control {
+            background: #0F172A !important;
+            background-color: #0F172A !important;
+            border: 1.5px solid #334155 !important;
+            color: #F8FAFC !important;
+        }
+        .dark-mode .form-control:focus,
+        [data-theme="dark"] .form-control:focus {
+            border-color: #F59E0B !important;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+            color: #FFFFFF !important;
+        }
+        .dark-mode .info-box,
+        [data-theme="dark"] .info-box {
+            background: #1E3A8A !important;
+            color: #BFDBFE !important;
+            border-left-color: #3B82F6 !important;
+        }
+        .dark-mode .btn-back,
+        [data-theme="dark"] .btn-back {
+            color: #FCD34D !important;
+        }
     </style>
 </head>
 <body>
@@ -114,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <h1><?php echo $is_first_login ? 'አዲስ ፒን ይምረጡ' : 'ፒን ይቀይሩ'; ?></h1>
         
         <div class="welcome-text">
-            <strong>እንኳን ደህና መጡ <?php echo htmlspecialchars($_SESSION['student_name']); ?>!</strong><br>
+            <strong>እንኳን ደህና መጡ <?php echo htmlspecialchars($_SESSION['student_name'] ?? 'ተማሪ'); ?>!</strong><br>
             <?php if($is_first_login): ?>
             ለመጀመሪያ ጊዜ መግቢያዎ ስለሆነ አዲስ የግል ፒን መምረጥ አለብዎት።
             <?php else: ?>
@@ -122,13 +180,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php endif; ?>
         </div>
 
-        <?php if ($error): ?><div class="error">⚠️ <?php echo $error; ?></div><?php endif; ?>
-        <?php if ($success): ?><div class="success">✅ <?php echo $success; ?></div><?php endif; ?>
+        <?php if ($error): ?><div class="error">⚠️ <?php echo htmlspecialchars($error); ?></div><?php endif; ?>
+        <?php if ($success): ?><div class="success">✅ <?php echo htmlspecialchars($success); ?></div><?php endif; ?>
 
         <form method="POST">
+            <?php echo csrfField(); ?>
             <?php if(!$is_first_login): ?>
             <div class="form-group">
-                <label>የአሁኑ ፒን (Current PIN)</label>
+                <label>የአሁኑ ፒን</label>
                 <input type="password" name="current_pin" class="form-control" 
                        placeholder="••••" maxlength="6" pattern="[0-9]+" required>
             </div>
@@ -139,18 +198,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php endif; ?>
             
             <div class="form-group">
-                <label>አዲስ ፒን (New PIN)</label>
+                <label>አዲስ ፒን</label>
                 <input type="password" name="new_pin" class="form-control" 
                        placeholder="••••" maxlength="6" pattern="[0-9]+" required>
             </div>
 
             <div class="form-group">
-                <label>ፒን ያረጋግጡ (Confirm PIN)</label>
+                <label>አዲሱን ፒን በድጋሚ ያረጋግጡ</label>
                 <input type="password" name="confirm_pin" class="form-control" 
                        placeholder="••••" maxlength="6" pattern="[0-9]+" required>
             </div>
 
-            <button type="submit" class="btn-save">💾 አስቀምጥ / Save PIN</button>
+            <button type="submit" class="btn-save">💾 አዲሱን ፒን አስቀምጥ</button>
         </form>
         
         <a href="dashboard_student.php" class="btn-back">← ወደ ዳሽቦርድ ተመለስ</a>

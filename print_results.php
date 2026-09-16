@@ -1,40 +1,35 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
-$semester_id = isset($_GET['semester_id']) ? mysqli_real_escape_string($conn, $_GET['semester_id']) : null;
-$class_id = isset($_GET['class_id']) ? mysqli_real_escape_string($conn, $_GET['class_id']) : null;
-$student_id = isset($_GET['student_id']) ? mysqli_real_escape_string($conn, $_GET['student_id']) : null;
-$student_search = isset($_GET['student_search']) ? mysqli_real_escape_string($conn, $_GET['student_search']) : '';
+$semester_id = isset($_GET['semester_id']) ? intval($_GET['semester_id']) : 0;
+$class_id = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
+$student_id = isset($_GET['student_id']) ? intval($_GET['student_id']) : 0;
+$student_search = isset($_GET['student_search']) ? trim($_GET['student_search']) : '';
 
 // If no semester specified, get current active semester
-if(!$semester_id) {
+if ($semester_id <= 0) {
     $current_semester = getCurrentSemester($conn);
-    $semester_id = $current_semester ? $current_semester['id'] : 0;
+    $semester_id = $current_semester ? intval($current_semester['id']) : 0;
 } else {
-    $semester_query = "SELECT * FROM semesters WHERE id = $semester_id";
-    $semester_result = mysqli_query($conn, $semester_query);
-    $current_semester = mysqli_fetch_assoc($semester_result);
+    $current_semester = dbFetchOne($conn, "SELECT * FROM semesters WHERE id = ?", "i", [$semester_id]);
 }
 
 // Get all semesters for dropdown
-$all_semesters_query = "SELECT * FROM semesters ORDER BY id DESC";
-$all_semesters = mysqli_query($conn, $all_semesters_query);
+$all_semesters = dbQuery($conn, "SELECT * FROM semesters ORDER BY id DESC");
 
 // Get all classes for dropdown
-$classes_query = "SELECT * FROM classes ORDER BY name";
-$classes = mysqli_query($conn, $classes_query);
+$classes = dbQuery($conn, "SELECT * FROM classes ORDER BY name");
 
 // Get students for selected class (with search filter)
 $students = null;
-if($class_id) {
-    $students_query = "SELECT id, name FROM students WHERE class_id = $class_id";
-    if(!empty($student_search)) {
-        $students_query .= " AND name LIKE '%$student_search%'";
+if ($class_id > 0) {
+    if (!empty($student_search)) {
+        $searchParam = '%' . $student_search . '%';
+        $students = dbQuery($conn, "SELECT id, name FROM students WHERE class_id = ? AND name LIKE ? AND (is_deleted = 0 OR is_deleted IS NULL) ORDER BY name", "is", [$class_id, $searchParam]);
+    } else {
+        $students = dbQuery($conn, "SELECT id, name FROM students WHERE class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL) ORDER BY name", "i", [$class_id]);
     }
-    $students_query .= " ORDER BY name";
-    $students = mysqli_query($conn, $students_query);
 }
 
 // Get results with teacher information
@@ -54,30 +49,32 @@ $results_query = "SELECT
                   m.total
                   FROM students s
                   JOIN classes c ON s.class_id = c.id
-                  CROSS JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = $semester_id
+                  JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = " . intval($semester_id) . "
                   JOIN users u ON tc.teacher_id = u.id
                   LEFT JOIN marks m ON s.id = m.student_id 
-                      AND m.semester_id = $semester_id
+                      AND m.semester_id = " . intval($semester_id) . "
                       AND m.teacher_id = u.id
-                  WHERE 1=1";
+                  WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)";
                   
-if($class_id) {
-    $results_query .= " AND s.class_id = $class_id";
+if ($class_id > 0) {
+    $results_query .= " AND s.class_id = " . intval($class_id);
 }
-if($student_id) {
-    $results_query .= " AND s.id = $student_id";
+if ($student_id > 0) {
+    $results_query .= " AND s.id = " . intval($student_id);
 }
-if(!empty($student_search)) {
-    $results_query .= " AND s.name LIKE '%$student_search%'";
+if (!empty($student_search)) {
+    // Use addcslashes to neutralise LIKE wildcards in user input before escaping
+    $escaped_search = mysqli_real_escape_string($conn, addcslashes($student_search, '%_\\'));
+    $results_query .= " AND s.name LIKE '%$escaped_search%'";
 }
-$results_query .= " ORDER BY c.name, s.name, u.name";
+$results_query .= " ORDER BY c.id, s.name, u.name";
 
 $results = mysqli_query($conn, $results_query);
 
-// NEW: Calculate average per student and rank them BY CLASS
+// Calculate average per student and rank them BY CLASS
 $avg_query = "SELECT 
               s.id as student_id,
-              s.name as student_name,
+              s.name as student_name, 
               c.id as class_id,
               c.name as class_name,
               COUNT(DISTINCT u.id) as teacher_count,
@@ -86,26 +83,27 @@ $avg_query = "SELECT
               COUNT(m.id) as marks_count
               FROM students s
               JOIN classes c ON s.class_id = c.id
-              CROSS JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = $semester_id
+              JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = " . intval($semester_id) . "
               JOIN users u ON tc.teacher_id = u.id
               LEFT JOIN marks m ON s.id = m.student_id 
-                  AND m.semester_id = $semester_id
+                  AND m.semester_id = " . intval($semester_id) . "
                   AND m.teacher_id = u.id
-              WHERE 1=1";
+              WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)";
 
-if($class_id) {
-    $avg_query .= " AND s.class_id = $class_id";
+if ($class_id > 0) {
+    $avg_query .= " AND s.class_id = " . intval($class_id);
 }
-if($student_id) {
-    $avg_query .= " AND s.id = $student_id";
+if ($student_id > 0) {
+    $avg_query .= " AND s.id = " . intval($student_id);
 }
-if(!empty($student_search)) {
-    $avg_query .= " AND s.name LIKE '%$student_search%'";
+if (!empty($student_search)) {
+    $escaped_search = mysqli_real_escape_string($conn, addcslashes($student_search, '%_\\'));
+    $avg_query .= " AND s.name LIKE '%$escaped_search%'";
 }
 
 $avg_query .= " GROUP BY s.id, s.name, c.id, c.name
                 HAVING marks_count > 0
-                ORDER BY c.name, avg_total DESC";
+                ORDER BY c.id, avg_total DESC";
 
 $avg_results = mysqli_query($conn, $avg_query);
 
@@ -115,21 +113,22 @@ $stats_query = "SELECT
                 COUNT(DISTINCT u.id) as total_teachers
                 FROM students s
                 JOIN classes c ON s.class_id = c.id
-                LEFT JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = $semester_id
-                LEFT JOIN users u ON tc.teacher_id = u.id";
-if($class_id) {
-    $stats_query .= " WHERE s.class_id = $class_id";
+                LEFT JOIN teacher_class tc ON c.id = tc.class_id AND tc.semester_id = " . intval($semester_id) . "
+                LEFT JOIN users u ON tc.teacher_id = u.id
+                WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)";
+if ($class_id > 0) {
+    $stats_query .= " AND s.class_id = " . intval($class_id);
 }
 $stats_result = mysqli_query($conn, $stats_query);
 $stats = mysqli_fetch_assoc($stats_result);
+$nav_active = 'print_results';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>ውጤት ማተሚያ | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -633,22 +632,31 @@ $stats = mysqli_fetch_assoc($stats_result);
         }
 
         @media (max-width: 768px) {
+            .print-container { padding: 10px; margin: 10px auto; }
+            .header-content { flex-direction: column; text-align: center; gap: 10px; }
+            .logo-area { flex-direction: column; text-align: center; }
+            .controls { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
+            .control-group { width: 100%; min-width: 100%; }
+            .btn-group { width: 100%; }
+            .btn-group .btn { flex: 1; justify-content: center; }
+            .stats-bar { flex-direction: column; gap: 8px; }
             .compact-table {
                 font-size: 10px;
+                min-width: 750px;
             }
-            
             .compact-table th, 
             .compact-table td {
-                padding: 3px 2px;
+                padding: 4px 3px;
             }
-            
             .summary-table {
                 font-size: 11px;
+                min-width: 550px;
             }
         }
     </style>
 </head>
 <body>
+    <?php include 'mobile_nav.php'; ?>
     <div class="print-container">
         <!-- Header with Logo -->
         <div class="header">
@@ -714,7 +722,7 @@ $stats = mysqli_fetch_assoc($stats_result);
             
             <!-- NEW: Student Name Search -->
             <div class="control-group search-box">
-                <label>🔍 ተማሪ ፈልግ (Search Student)</label>
+                <label>🔍 ተማሪ ፈልግ</label>
                 <input type="text" id="studentSearch" placeholder="የተማሪ ስም ይፃፉ..." 
                        value="<?php echo htmlspecialchars($student_search); ?>"
                        onkeyup="searchStudent()">
@@ -787,6 +795,7 @@ $stats = mysqli_fetch_assoc($stats_result);
             $current_class = '';
             $current_student = '';
         ?>
+        <div class="table-responsive">
         <table class="compact-table">
             <thead>
                 <tr>
@@ -897,6 +906,7 @@ $stats = mysqli_fetch_assoc($stats_result);
                 <?php endwhile; ?>
             </tbody>
         </table>
+        </div>
         <?php else: ?>
         <div class="no-data">
             <span style="font-size: 48px;">📭</span>
@@ -912,6 +922,7 @@ $stats = mysqli_fetch_assoc($stats_result);
                 <span>📊 የተማሪዎች አማካይ ውጤት እና ደረጃ (በክፍል)</span>
             </div>
             
+            <div class="table-responsive">
             <table class="summary-table">
                 <thead>
                     <tr>
@@ -977,6 +988,7 @@ $stats = mysqli_fetch_assoc($stats_result);
                     ?>
                 </tbody>
             </table>
+            </div>
         </div>
         <?php endif; ?>
 

@@ -1,18 +1,17 @@
 <?php
-session_start();
 require_once 'db.php';
 requireAdmin();
 
 $current_semester = getCurrentSemester($conn);
-$semester_id = $current_semester ? $current_semester['id'] : 0;
+$semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 // Get statistics with proper error handling
 $stats_query = "SELECT 
     (SELECT COUNT(*) FROM users WHERE role = 'teacher') as total_teachers,
     (SELECT COUNT(*) FROM classes) as total_classes,
-    (SELECT COUNT(*) FROM students) as total_students";
+    (SELECT COUNT(*) FROM students WHERE (is_deleted = 0 OR is_deleted IS NULL)) as total_students";
     
-if($semester_id > 0) {
+if ($semester_id > 0) {
     $stats_query .= ", (SELECT COUNT(*) FROM teacher_class WHERE semester_id = $semester_id) as assigned_classes";
 } else {
     $stats_query .= ", 0 as assigned_classes";
@@ -20,6 +19,24 @@ if($semester_id > 0) {
 
 $stats_result = mysqli_query($conn, $stats_query);
 $stats = $stats_result ? mysqli_fetch_assoc($stats_result) : ['total_teachers' => 0, 'total_classes' => 0, 'total_students' => 0, 'assigned_classes' => 0];
+
+// Division split + pending-work counters (safe no-ops if migrations 002/004/005 aren't applied yet)
+$children_students = 0; $youth_students = 0; $pending_plans = 0; $next_exam = null;
+$divisionsExist = @mysqli_query($conn, "SHOW TABLES LIKE 'divisions'");
+if ($divisionsExist && mysqli_num_rows($divisionsExist) > 0) {
+    $row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id JOIN divisions d ON g.division_id = d.id WHERE d.code = 'CHILDREN' AND (s.is_deleted = 0 OR s.is_deleted IS NULL)");
+    $children_students = $row ? (int)$row['cnt'] : 0;
+    $row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id JOIN grades g ON c.grade_id = g.id JOIN divisions d ON g.division_id = d.id WHERE d.code = 'YOUTH' AND (s.is_deleted = 0 OR s.is_deleted IS NULL)");
+    $youth_students = $row ? (int)$row['cnt'] : 0;
+
+    $row = dbFetchOne($conn, "SELECT id, title, event_date FROM calendar_events WHERE event_type = 'exam' AND is_deleted = 0 AND event_date >= CURDATE() ORDER BY event_date ASC LIMIT 1");
+    $next_exam = $row;
+}
+$plansExist = @mysqli_query($conn, "SHOW TABLES LIKE 'lesson_plans'");
+if ($plansExist && mysqli_num_rows($plansExist) > 0) {
+    $row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM lesson_plans WHERE status = 'submitted' AND is_deleted = 0");
+    $pending_plans = $row ? (int)$row['cnt'] : 0;
+}
 
 // Get all teachers with their assigned classes
 $teachers_query = "SELECT u.*, 
@@ -37,7 +54,7 @@ $teachers = mysqli_query($conn, $teachers_query);
 $classes_query = "SELECT c.*, COUNT(s.id) as student_count,
                   tc.teacher_id, u.name as teacher_name
                   FROM classes c
-                  LEFT JOIN students s ON c.id = s.class_id
+                  LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                   LEFT JOIN teacher_class tc ON c.id = tc.class_id " . 
                   ($semester_id > 0 ? " AND tc.semester_id = $semester_id" : "") . "
                   LEFT JOIN users u ON tc.teacher_id = u.id
@@ -46,24 +63,25 @@ $classes = mysqli_query($conn, $classes_query);
 
 // Get recent marks
 $recent_marks = null;
-if($semester_id > 0) {
+if ($semester_id > 0) {
     $marks_query = "SELECT s.name as student_name, c.name as class_name, 
                     m.assignment, m.participation, m.attendance, m.mid, m.final, m.total
                     FROM marks m
                     JOIN students s ON m.student_id = s.id
                     JOIN classes c ON m.class_id = c.id
-                    WHERE m.semester_id = $semester_id
+                    WHERE m.semester_id = ? AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                     ORDER BY m.last_updated DESC LIMIT 10";
-    $recent_marks = mysqli_query($conn, $marks_query);
+    $recent_marks = dbQuery($conn, $marks_query, "i", [$semester_id]);
 }
+
+$nav_active = 'dashboard_admin';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="images/icon.png">
     <title>የአስተዳዳሪ ዳሽቦርድ | አጸደ ትጉሃን</title>
+    <?php include 'pwa_head.php'; ?>
     <style>
         :root {
             --brown-dark: #8B4513;
@@ -196,6 +214,11 @@ if($semester_id > 0) {
             color: var(--brown-dark); padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;
         }
 
+        .exam-notice-banner {
+            background: #FFF8DC;
+            border: 1.5px solid #FCD34D;
+        }
+
         .table-responsive { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { background: var(--gold-pale); color: var(--brown-dark); padding: 15px; text-align: left; font-weight: 600; }
@@ -218,49 +241,30 @@ if($semester_id > 0) {
             .header-content { flex-direction: column; text-align: center; }
             .user-info { flex-direction: column; }
             .nav-links { justify-content: center; }
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
+            .section-header h2 { font-size: 17px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+            .stat-card { padding: 14px 12px; border-radius: 12px; }
+            .stat-icon { font-size: 24px; margin-bottom: 8px; }
+            .stat-value { font-size: 24px; }
+            .stat-label { font-size: 12px; }
+            .table-responsive table { min-width: 560px; }
+            th, td { padding: 10px 8px; font-size: 13px; }
+            .warning-message { padding: 14px; gap: 10px; font-size: 13px; }
+        }
+        @media (max-width: 420px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .stat-card { padding: 12px 8px; }
+            .stat-value { font-size: 20px; }
+            .stat-label { font-size: 11px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-area">
-                <img src="images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<div class=logo-img style=background:gold;display:flex;align-items:center;justify-content:center;font-size:24px;color:#8B4513;>⛪</div>');">
-                <div class="title">
-                    <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
-                    <p>የአስተዳዳሪ ዳሽቦርድ | Admin Dashboard</p>
-                </div>
-            </div>
-            <div class="user-info">
-                <div class="user-name">
-                    <strong><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'አስተዳዳሪ'); ?></strong><br>
-                    <span style="font-size: 12px;">አስተዳዳሪ (Admin)</span>
-                </div>
-                <a href="admin_change_password.php" class="btn btn-password">🔒 የይለፍ ቃል ቀይር</a>
-               
-                <a href="logout.php" class="btn btn-logout">🚪 ውጣ</a>
-            </div>
-        </div>
-    </div>
+    <?php include 'mobile_nav.php'; ?>
 
-    <div class="nav-links">
-        <a href="dashboard_admin.php" class="nav-link active">🏠 ዳሽቦርድ</a>
-        <a href="manage_classes.php" class="nav-link">📚 ክፍሎች</a>
-        <a href="manage_students.php" class="nav-link">👥 ተማሪዎች</a>
-        <a href="manage_teachers.php" class="nav-link">👨‍🏫 መምህራን</a>
-        <a href="manage_assignments.php" class="nav-link">📋 ክፍል ምደባ</a>
-        <a href="semester.php" class="nav-link">📅 ሴሚስተር</a>
-        <a href="class_locks.php" class="nav-link">🔒 ክፍል መቆለፊያ</a>
-        <a href="attendance_submitter_assign.php" class="nav-link">📋 የክፍል አቴንዳንስ አባላት</a>
-        <a href="attendance_days_control.php" class="nav-link">📅 የትምህርት ቀናት</a>   
-        <a href="attendance_controller.php" class="nav-link">📊 የአቴንዳንስ መቆጣጠሪያ</a>
-        <a href="teacher_marks_viewer.php" class="nav-link">👁️ የመምህራን ውጤት</a>
-        <a href="print_results.php" class="nav-link">🖨️ ውጤት ማተሚያ</a>
-        <a href="manage_users.php" class="nav-link">👤 ተጠቃሚዎች</a>
-        <a href="admin_settings.php" class="nav-link">⚙️ ቅንብሮች</a>
-    </div>
-
-    <div class="container">
+    <div class="main-container">
         <?php if(!$current_semester): ?>
         <div class="warning-message">
             <span>⚠️</span>
@@ -277,24 +281,51 @@ if($semester_id > 0) {
             <div class="stat-card">
                 <div class="stat-icon">👨‍🏫</div>
                 <div class="stat-value"><?php echo $stats['total_teachers']; ?></div>
-                <div class="stat-label">መምህራን (Teachers)</div>
+                <div class="stat-label">መምህራን</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">📚</div>
                 <div class="stat-value"><?php echo $stats['total_classes']; ?></div>
-                <div class="stat-label">ክፍሎች (Classes)</div>
+                <div class="stat-label">ክፍሎች</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">👧👦</div>
                 <div class="stat-value"><?php echo $stats['total_students']; ?></div>
-                <div class="stat-label">ተማሪዎች (Students)</div>
+                <div class="stat-label">ተማሪዎች</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon">✓</div>
                 <div class="stat-value"><?php echo $stats['assigned_classes']; ?></div>
                 <div class="stat-label">የተመደቡ ክፍሎች</div>
             </div>
+            <?php if ($divisionsExist && mysqli_num_rows($divisionsExist) > 0): ?>
+            <div class="stat-card">
+                <div class="stat-icon">👧</div>
+                <div class="stat-value"><?php echo $children_students; ?></div>
+                <div class="stat-label">የህፃናት ተማሪዎች</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👦</div>
+                <div class="stat-value"><?php echo $youth_students; ?></div>
+                <div class="stat-label">የወጣቶች ተማሪዎች</div>
+            </div>
+            <?php endif; ?>
+            <?php if ($plansExist && mysqli_num_rows($plansExist) > 0): ?>
+            <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <div class="stat-value"><?php echo $pending_plans; ?></div>
+                <div class="stat-label">ያልታዩ የትምህርት ዕቅዶች</div>
+            </div>
+            <?php endif; ?>
         </div>
+
+        <?php if ($next_exam): ?>
+        <div class="section exam-notice-banner" style="border-radius:14px; padding:15px 20px; margin-bottom:20px;">
+            <strong>📝 ቀጣይ ፈተና:</strong> <?php echo htmlspecialchars($next_exam['title']); ?>
+            — <?php $d = (new DateTime('today'))->diff(new DateTime($next_exam['event_date']))->days; ?>
+            በ<?php echo $d; ?> ቀን ውስጥ
+        </div>
+        <?php endif; ?>
 
         <!-- Teachers Section -->
         <div class="section">
@@ -310,10 +341,10 @@ if($semester_id > 0) {
                 <table>
                     <thead>
                         <tr>
-                            <th>ስም (Name)</th>
-                            <th>ስልክ (Phone)</th>
-                            <th>የተመደበላቸው ክፍል (Assigned Class)</th>
-                            <th>ሁኔታ (Status)</th>
+                            <th>ስም</th>
+                            <th>ስልክ ቁጥር</th>
+                            <th>የተመደበላቸው ክፍል</th>
+                            <th>ሁኔታ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -356,10 +387,10 @@ if($semester_id > 0) {
                 <table>
                     <thead>
                         <tr>
-                            <th>ክፍል (Class)</th>
+                            <th>ክፍል</th>
                             <th>የተማሪዎች ቁጥር</th>
                             <th>ኃላፊ መምህር</th>
-                            <th>ድርጊት (Action)</th>
+                            <th>ተግባር</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -399,13 +430,13 @@ if($semester_id > 0) {
                 <table class="marks-table">
                     <thead>
                         <tr>
-                            <th>ተማሪ (Student)</th>
-                            <th>ክፍል (Class)</th>
-                            <th>Assignment</th>
-                            <th>Mid</th>
-                            <th>Final</th>
-                            <th>Total</th>
-                            <th>ደረጃ (Grade)</th>
+                            <th>ተማሪ</th>
+                            <th>ክፍል</th>
+                            <th>የቤት ሥራ / ተግባር</th>
+                            <th>የአጋማሽ ፈተና</th>
+                            <th>የማጠቃለያ ፈተና</th>
+                            <th>ድምር</th>
+                            <th>ደረጃ</th>
                         </tr>
                     </thead>
                     <tbody>
