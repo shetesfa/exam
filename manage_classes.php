@@ -95,10 +95,11 @@ if ($grades_res) {
 $nav_active = 'manage_classes';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>ክፍሎች አስተዳደር | አጸደ ትጉሃን </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የክፍሎች አስተዳደር | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
         :root {
@@ -107,423 +108,423 @@ $nav_active = 'manage_classes';
             --gold-primary: #FFD700;
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
-            --success-green: #10B981;
-            --error-red: #EF4444;
+            --bg-cream: #FAF9F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --info: #3B82F6;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
 
-        body {
-            background: #FAF9F6;
-        }
+        .main-container { max-width: 1200px; margin: 24px auto; padding: 0 16px 80px; }
 
-        .header {
+        /* Page Header Card */
+        .page-header-card {
             background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
+            border-radius: 16px;
+            padding: 24px 28px;
             color: white;
-            padding: 20px 30px;
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(139, 69, 19, 0.18);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
         }
-
-        .logo-area {
+        .page-header-card::after {
+            content: '🏫';
+            position: absolute;
+            right: 20px;
+            bottom: -15px;
+            font-size: 100px;
+            opacity: 0.12;
+            pointer-events: none;
+        }
+        .header-info h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--gold-primary);
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .header-info p {
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, 0.9);
         }
 
-        .logo-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--gold-primary);
-            border-radius: 50%;
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--gold-pale);
+            color: var(--brown-dark);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
+            flex-shrink: 0;
+        }
+        .stat-data .stat-val {
+            font-size: 24px;
+            font-weight: 800;
             color: var(--brown-dark);
         }
-
-        .title h1 {
-            font-size: 20px;
-            color: var(--gold-primary);
+        .stat-data .stat-lbl {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
-        .title p {
-            font-size: 14px;
-            color: var(--gold-light);
-        }
-
-        .nav {
-    background: white;
-    padding: 12px 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.nav-links {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.nav-link {
-    padding: 8px 14px;
-    color: var(--brown-dark);
-    text-decoration: none;
-    border-radius: 25px;
-    transition: all 0.3s;
-    font-weight: 600;
-    font-size: 12px;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
-
-.nav-link:hover {
-    background: var(--gold-pale);
-    border-color: var(--gold-primary);
-}
-
-.nav-link.active {
-    background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-    color: var(--brown-dark);
-    border-color: var(--brown-dark);
-    font-weight: 700;
-}
-
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 30px;
-        }
-
+        /* Alerts */
         .message {
-            padding: 15px;
-            border-radius: 8px;
+            padding: 14px 18px;
+            border-radius: 12px;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
+        .message.success { background: #DCFCE7; color: #166534; border-left: 4px solid var(--success); }
+        .message.error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--error); }
 
-        .success {
-            background: #D1FAE5;
-            color: var(--success-green);
-            border-left: 4px solid var(--success-green);
+        /* Card Container */
+        .content-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
         }
-
-        .error {
-            background: #FEE2E2;
-            color: var(--error-red);
-            border-left: 4px solid var(--error-red);
-        }
-
-        .section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .section-header {
+        .content-card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
+            padding-bottom: 12px;
             border-bottom: 2px solid var(--gold-pale);
             flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .section-header h2 {
-            color: var(--brown-dark);
-            font-size: 20px;
-            display: flex;
-            align-items: center;
             gap: 10px;
         }
+        .content-card-header h2 {
+            font-size: 17px;
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+        .header-badge {
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
 
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        .form-group label {
+            font-size: 13px;
             font-weight: 600;
-            transition: all 0.3s;
-            text-decoration: none;
+            color: var(--brown-dark);
+        }
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+        .form-control:focus {
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.15);
+        }
+        textarea.form-control {
+            min-height: 70px;
+            resize: vertical;
+        }
+        .btn-primary-action {
+            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+            color: var(--brown-dark);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(218, 165, 32, 0.25);
         }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            color: #8B4513;
-        }
-
-        .btn-primary:hover {
+        .btn-primary-action:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(218,165,32,0.3);
+            box-shadow: 0 6px 16px rgba(218, 165, 32, 0.35);
         }
 
-        .btn-edit {
-            background: #3B82F6;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-delete {
-            background: #EF4444;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-view {
-            background: var(--gold-primary);
-            color: var(--brown-dark);
-            padding: 6px 12px;
-            font-size: 12px;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--brown-dark);
-            font-weight: 600;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #E2E8F0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--gold-primary);
-            box-shadow: 0 0 0 3px rgba(255,215,0,0.2);
-        }
-
-        textarea.form-control {
-            min-height: 100px;
-            resize: vertical;
-        }
-
+        /* Class Cards Grid */
         .classes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            margin-top: 20px;
-        }
-
-        .class-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border: 2px solid var(--gold-pale);
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .class-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            border-color: var(--gold-primary);
-        }
-
-        .class-card::before {
-            content: '📚';
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 40px;
-            opacity: 0.1;
-        }
-
-        .class-name {
-            color: var(--brown-dark);
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            padding-right: 50px;
-        }
-
-        .class-description {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-
-        .class-stats {
-            display: flex;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
-            margin: 15px 0;
-            padding: 10px 0;
-            border-top: 1px solid var(--gold-pale);
-            border-bottom: 1px solid var(--gold-pale);
+        }
+        .class-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1.5px solid var(--border-color);
+            padding: 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+        .class-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--gold-dark);
+            box-shadow: 0 10px 24px rgba(139, 69, 19, 0.1);
+        }
+        .class-card-top {
+            margin-bottom: 14px;
+        }
+        .grade-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+        .grade-tag.children { background: #DBEAFE; color: #1D4ED8; }
+        .grade-tag.youth { background: #FEF3C7; color: #92400E; }
+        .grade-tag.unassigned { background: #F3F4F6; color: #6B7280; }
+
+        .class-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .class-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            min-height: 36px;
         }
 
-        .stat-item {
+        /* Stats Inside Class Card */
+        .class-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: #F9FAFB;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border: 1px solid #F3F4F6;
+        }
+        .class-metric-item {
             text-align: center;
-            flex: 1;
         }
-
-        .stat-value {
-            font-size: 20px;
-            font-weight: bold;
+        .class-metric-val {
+            font-size: 18px;
+            font-weight: 800;
             color: var(--brown-dark);
         }
-
-        .stat-label {
+        .class-metric-lbl {
             font-size: 11px;
-            color: #666;
+            color: var(--text-muted);
+            font-weight: 600;
             text-transform: uppercase;
         }
 
-        .class-actions {
+        /* Class Card Action Buttons */
+        .class-actions-bar {
             display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 15px;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
         }
+        .btn-view-st {
+            flex: 1;
+            background: #EFF6FF;
+            color: #2563EB;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 12.5px;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-view-st:hover { background: #DBEAFE; }
 
-        .modal {
+        .btn-edit-cls {
+            background: #FEF3C7;
+            color: #B45309;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12.5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        .btn-edit-cls:hover { background: #FDE68A; }
+
+        .btn-del-cls {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12.5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        .btn-del-cls:hover { background: #FCA5A5; }
+
+        /* Modal */
+        .modal-overlay {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
             z-index: 1000;
-            animation: fadeIn 0.3s;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background: white;
-            width: 90%;
+        .modal-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 26px;
+            width: 100%;
             max-width: 500px;
-            margin: 50px auto;
-            padding: 30px;
-            border-radius: 15px;
-            border: 3px solid var(--gold-primary);
-            animation: slideDown 0.3s;
-        }
-
-        @keyframes slideDown {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .close {
-            float: right;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--brown-dark);
-            transition: all 0.3s;
-        }
-
-        .close:hover {
-            color: var(--error-red);
-            transform: scale(1.1);
-        }
-
-        .stats-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, var(--gold-pale), white);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
             border: 2px solid var(--gold-primary);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalPop 0.25s ease-out;
+            position: relative;
         }
-
-        .stat-card .number {
-            font-size: 36px;
-            font-weight: bold;
+        @keyframes modalPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--gold-pale);
+        }
+        .modal-header h3 {
             color: var(--brown-dark);
+            font-size: 18px;
+            font-weight: 700;
         }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+        .modal-close:hover { color: var(--error); }
 
-        .stat-card .label {
-            color: #666;
-            font-size: 14px;
+        /* Empty State */
+        .empty-classes {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-muted);
+        }
+        .empty-classes-icon {
+            font-size: 50px;
+            margin-bottom: 12px;
+            opacity: 0.7;
         }
 
         @media (max-width: 768px) {
-            .main-container { padding: 0 12px 30px; margin: 15px auto; }
-            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
-            .section-header h2 { font-size: 17px; }
+            .main-container { padding: 0 10px 40px; margin: 12px auto; }
+            .page-header-card { padding: 18px 16px; }
+            .content-card { padding: 16px 14px; border-radius: 14px; }
             .form-grid { grid-template-columns: 1fr; }
-            .classes-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            .class-card { padding: 15px 12px; }
-            .class-actions { flex-direction: column; }
-            .class-actions .btn { width: 100%; justify-content: center; min-height: 38px; }
-            .stats-overview { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
-            .stat-card { padding: 12px 8px; }
-            .stat-card .number { font-size: 24px; }
-            .stat-card .label { font-size: 12px; }
-            .class-stats {
-                flex-direction: column;
-                gap: 10px;
-            }
-            .nav-links {
-                justify-content: center;
-            }
-            .modal-content { width: 95%; margin: 20px auto; padding: 20px 14px; border-radius: 12px; }
+            .btn-primary-action { width: 100%; justify-content: center; min-height: 44px; }
+            .classes-grid { grid-template-columns: 1fr; gap: 14px; }
+            .class-actions-bar { flex-direction: row; }
+            .btn-view-st { flex: 1.5; }
         }
     </style>
 </head>
@@ -531,6 +532,14 @@ $nav_active = 'manage_classes';
     <?php include 'mobile_nav.php'; ?>
 
     <div class="main-container">
+        <!-- Page Header -->
+        <div class="page-header-card">
+            <div class="header-info">
+                <h1>🏫 የክፍሎች አስተዳደር</h1>
+                <p>ክፍሎችን ይፍጠሩ፣ ከስርዓተ-ትምህርት ደረጃዎች ጋር ያገናኙ እና የተማሪ/መምህር ምደባዎችን ይከታተሉ።</p>
+            </div>
+        </div>
+
         <?php if($message): ?>
         <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
@@ -539,7 +548,7 @@ $nav_active = 'manage_classes';
         <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
-        <!-- Statistics Overview -->
+        <!-- Statistics -->
         <?php
         $total_classes = mysqli_num_rows($classes);
         $total_students = 0;
@@ -550,33 +559,41 @@ $nav_active = 'manage_classes';
             $total_teachers += $class['teacher_count'];
         }
         ?>
-        <div class="stats-overview">
-            <div class="stat-card">
-                <div class="number"><?php echo $total_classes; ?></div>
-                <div class="label">ጠቅላላ ክፍሎች</div>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon">🏫</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo $total_classes; ?></div>
+                    <div class="stat-lbl">ጠቅላላ ክፍሎች</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="number"><?php echo $total_students; ?></div>
-                <div class="label">ጠቅላላ ተማሪዎች</div>
+            <div class="stat-box">
+                <div class="stat-icon">👥</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo number_format($total_students); ?></div>
+                    <div class="stat-lbl">ጠቅላላ ተማሪዎች</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="number"><?php echo $total_teachers; ?></div>
-                <div class="label">የተመደቡ መምህራን</div>
+            <div class="stat-box">
+                <div class="stat-icon">👨‍🏫</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo $total_teachers; ?></div>
+                    <div class="stat-lbl">የተመደቡ መምህራን</div>
+                </div>
             </div>
         </div>
 
         <!-- Add Class Form -->
-        <div class="section">
-            <div class="section-header">
+        <div class="content-card">
+            <div class="content-card-header">
                 <h2><span>➕</span> አዲስ ክፍል መፍጠሪያ</h2>
             </div>
             <form method="POST">
                 <?php echo csrfField(); ?>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>የክፍል ስም <span style="color: var(--error-red);">*</span></label>
-                        <input type="text" name="name" class="form-control" required 
-                               placeholder="ለምሳሌ: 7ኛ ክፍል">
+                        <label>የክፍል ስም <span style="color: var(--error);">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="ለምሳሌ: 7ኛ ክፍል 'ሀ'">
                     </div>
                     <div class="form-group">
                         <label>የትምህርት ደረጃ / ክፍል</label>
@@ -591,23 +608,22 @@ $nav_active = 'manage_classes';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>መግለጫ</label>
-                        <textarea name="description" class="form-control" 
-                                  placeholder="ስለ ክፍሉ አጭር መግለጫ..."></textarea>
+                    <div class="form-group full-width">
+                        <label>መግለጫ (አማራጭ)</label>
+                        <textarea name="description" class="form-control" placeholder="ስለ ክፍሉ አጭር መግለጫ ካለ ያስገቡ..."></textarea>
                     </div>
                 </div>
-                <button type="submit" name="add_class" class="btn btn-primary">
-                    <span>➕</span> ክፍል ፍጠር
+                <button type="submit" name="add_class" class="btn-primary-action">
+                    ➕ አዲስ ክፍል ፍጠር
                 </button>
             </form>
         </div>
 
         <!-- Classes List -->
-        <div class="section">
-            <div class="section-header">
-                <h2><span>📚</span> የክፍሎች ዝርዝር</h2>
-                <span><?php echo $total_classes; ?> ክፍሎች</span>
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><span>📚</span> የነባር ክፍሎች ዝርዝር</h2>
+                <span class="header-badge"><?php echo $total_classes; ?> ክፍሎች</span>
             </div>
 
             <?php if($classes && mysqli_num_rows($classes) > 0): ?>
@@ -615,78 +631,86 @@ $nav_active = 'manage_classes';
                 <?php 
                 mysqli_data_seek($classes, 0);
                 while($class = mysqli_fetch_assoc($classes)): 
+                    $divClass = ($class['division_code'] === 'CHILDREN') ? 'children' : (($class['division_code'] === 'YOUTH') ? 'youth' : 'unassigned');
                 ?>
                 <div class="class-card">
-                    <div class="class-name"><?php echo htmlspecialchars($class['name']); ?></div>
-                    <?php if($class['grade_name']): ?>
-                    <div style="display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:8px;
-                        background:<?php echo $class['division_code']==='CHILDREN' ? '#DBEAFE' : '#FEF3C7'; ?>;
-                        color:<?php echo $class['division_code']==='CHILDREN' ? '#1D4ED8' : '#92400E'; ?>;">
-                        <?php echo htmlspecialchars($class['division_name'] . ' · ' . $class['grade_name']); ?>
-                    </div>
-                    <?php else: ?>
-                    <div style="display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:8px;background:#F3F4F6;color:#6B7280;">
-                        ⚠️ ደረጃ ያልተመደበ
-                    </div>
-                    <?php endif; ?>
-                    <?php if($class['description']): ?>
-                    <div class="class-description"><?php echo htmlspecialchars($class['description']); ?></div>
-                    <?php endif; ?>
-                    
-                    <div class="class-stats">
-                        <div class="stat-item">
-                            <div class="stat-value"><?php echo $class['student_count']; ?></div>
-                            <div class="stat-label">ተማሪዎች</div>
+                    <div class="class-card-top">
+                        <?php if($class['grade_name']): ?>
+                        <div class="grade-tag <?php echo $divClass; ?>">
+                            🏷️ <?php echo htmlspecialchars($class['division_name'] . ' · ' . $class['grade_name']); ?>
                         </div>
-                        <div class="stat-item">
-                            <div class="stat-value"><?php echo $class['teacher_count']; ?></div>
-                            <div class="stat-label">መምህራን</div>
+                        <?php else: ?>
+                        <div class="grade-tag unassigned">
+                            ⚠️ ደረጃ ያልተመደበ
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="class-title">
+                            🏫 <?php echo htmlspecialchars($class['name']); ?>
+                        </div>
+                        <div class="class-desc">
+                            <?php echo htmlspecialchars($class['description'] ?: 'ምንም መግለጫ አልተሰጠም።'); ?>
                         </div>
                     </div>
 
-                    <div class="class-actions">
-                        <a href="manage_students.php?class_id=<?php echo $class['id']; ?>" class="btn-view">
-                            👥 ተማሪዎች
-                        </a>
-                        <button onclick="editClass(<?php echo $class['id']; ?>, '<?php echo htmlspecialchars($class['name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($class['description'], ENT_QUOTES); ?>', <?php echo $class['grade_id'] ? (int)$class['grade_id'] : 'null'; ?>)" 
-                                class="btn-edit">
-                            ✏️ አስተካክል
-                        </button>
-                        <form method="POST" style="display: inline;" 
-                              onsubmit="return confirm('ክፍሉን መሰረዝ እርግጠኛ ነዎት? ይህ ክዋኔ ሊቀለበስ አይችልም!')">
-                            <?php echo csrfField(); ?>
-                            <input type="hidden" name="class_id" value="<?php echo $class['id']; ?>">
-                            <button type="submit" name="delete_class" class="btn-delete">
-                                🗑️ ሰርዝ
+                    <div>
+                        <div class="class-metrics">
+                            <div class="class-metric-item">
+                                <div class="class-metric-val"><?php echo $class['student_count']; ?></div>
+                                <div class="class-metric-lbl">ተማሪዎች</div>
+                            </div>
+                            <div class="class-metric-item">
+                                <div class="class-metric-val"><?php echo $class['teacher_count']; ?></div>
+                                <div class="class-metric-lbl">መምህራን</div>
+                            </div>
+                        </div>
+
+                        <div class="class-actions-bar">
+                            <a href="manage_students.php?class_id=<?php echo $class['id']; ?>" class="btn-view-st">
+                                👥 ተማሪዎች
+                            </a>
+                            <button onclick="editClass(<?php echo $class['id']; ?>, '<?php echo htmlspecialchars(addslashes($class['name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($class['description'] ?? ''), ENT_QUOTES); ?>', <?php echo $class['grade_id'] ? (int)$class['grade_id'] : 'null'; ?>)" 
+                                    class="btn-edit-cls">
+                                ✏️ አርትዕ
                             </button>
-                        </form>
+                            <form method="POST" style="display: inline;" 
+                                  onsubmit="return confirm('እርግጠኛ ነዎት ክፍል [<?php echo htmlspecialchars(addslashes($class['name']), ENT_QUOTES); ?>] መሰረዝ ይፈልጋሉ? ይህ ክዋኔ ሊቀለበስ አይችልም!')">
+                                <?php echo csrfField(); ?>
+                                <input type="hidden" name="class_id" value="<?php echo $class['id']; ?>">
+                                <button type="submit" name="delete_class" class="btn-del-cls" title="ሰርዝ">
+                                    🗑️
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 <?php endwhile; ?>
             </div>
             <?php else: ?>
-            <div style="text-align: center; padding: 50px;">
-                <span style="font-size: 50px; display: block; margin-bottom: 20px;">📚</span>
-                <h3 style="color: #666; margin-bottom: 10px;">ምንም ክፍሎች የሉም</h3>
-                <p style="color: #999;">እባክዎ ከላይ ባለው ቅጽ አዲስ ክፍል ይፍጠሩ</p>
+            <div class="empty-classes">
+                <div class="empty-classes-icon">🏫</div>
+                <h3 style="color: var(--brown-dark); margin-bottom: 8px;">ምንም ክፍሎች አልተገኙም</h3>
+                <p>እባክዎ ከላይ ያለውን ቅጽ በመጠቀም አዲስ ክፍል ይመዝግቡ።</p>
             </div>
             <?php endif; ?>
         </div>
     </div>
 
     <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2 style="color: var(--brown-dark); margin-bottom: 20px;">የክፍል መረጃ አስተካክል</h2>
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✏️ የክፍል መረጃ ማስተካከያ</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
             <form method="POST" id="editForm">
                 <?php echo csrfField(); ?>
                 <input type="hidden" name="class_id" id="edit_id">
-                <div class="form-group">
-                    <label>የክፍል ስም <span style="color: var(--error-red);">*</span></label>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>የክፍል ስም <span style="color: var(--error);">*</span></label>
                     <input type="text" name="name" id="edit_name" class="form-control" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 14px;">
                     <label>የትምህርት ደረጃ / ክፍል</label>
                     <select name="grade_id" id="edit_grade_id" class="form-control">
                         <option value="">-- ያልተመደበ --</option>
@@ -699,12 +723,12 @@ $nav_active = 'manage_classes';
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 18px;">
                     <label>መግለጫ</label>
                     <textarea name="description" id="edit_description" class="form-control" rows="3"></textarea>
                 </div>
-                <button type="submit" name="edit_class" class="btn btn-primary">
-                    💾 አስቀምጥ
+                <button type="submit" name="edit_class" class="btn-primary-action" style="width: 100%; justify-content: center;">
+                    💾 ለውጦችን አስቀምጥ
                 </button>
             </form>
         </div>
@@ -716,7 +740,7 @@ $nav_active = 'manage_classes';
             document.getElementById('edit_name').value = name;
             document.getElementById('edit_description').value = description || '';
             document.getElementById('edit_grade_id').value = gradeId || '';
-            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('editModal').style.display = 'flex';
         }
 
         function closeModal() {
@@ -724,7 +748,8 @@ $nav_active = 'manage_classes';
         }
 
         window.onclick = function(event) {
-            if (event.target == document.getElementById('editModal')) {
+            var modal = document.getElementById('editModal');
+            if (event.target === modal) {
                 closeModal();
             }
         }

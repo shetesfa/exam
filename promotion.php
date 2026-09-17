@@ -237,14 +237,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['execute_promotion']))
 
 // Check for success redirect
 if (isset($_GET['promoted']) && $_GET['promoted'] == 1) {
-    $message = "✅ ደረጃ ማሳደግ በተሳካ ሁኔታ ተጠናቋል! ሁሉም ተማሪዎች ተሻሽለዋል።";
+    $message = "✅ ደረጃ ማሳደግ በተሳካ ሁኔታ ተጠናቋል! ሁሉም ተማሪዎች ተሸጋግረዋል።";
 }
 
 // ============================================
 // GET PROMOTION HISTORY FOR DISPLAY
 // ============================================
-// Fix last-class students: mark as 'graduated' instead of 'promoted'
-// (already handled in execution - update history display)
 $history_data = [];
 $history_query = "SELECT ph.*, 
                     s.name AS student_name,
@@ -261,10 +259,11 @@ $history_data = dbFetchAll($conn, $history_query, "i", [$current_ethiopian_year]
 $nav_active = 'promotion';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>ደረጃ ማሳደግ | Student Promotion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ደረጃ ማሳደግ | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
         :root {
@@ -273,152 +272,442 @@ $nav_active = 'promotion';
             --gold-primary: #FFD700;
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
-            --bg-cream: #FAF9F6;
+            --bg-light: #FAF9F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
             --success-green: #10B981;
             --error-red: #EF4444;
-            --warning-yellow: #F59E0B;
+            --warning-amber: #F59E0B;
             --info-blue: #3B82F6;
-            --purple: #8B5CF6;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Nyala', sans-serif; }
-        body { background: var(--bg-cream); }
-
-        .header {
-            background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
-            color: white; padding: 20px 30px;
-        }
-        .header-content {
-            max-width: 1400px; margin: 0 auto;
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
-        }
-        .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-icon {
-            width: 55px; height: 55px; background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 28px; color: var(--brown-dark); border: 3px solid white;
-        }
-        .title h1 { font-size: 22px; color: var(--gold-primary); }
-        .title p { font-size: 14px; color: var(--gold-light); }
-
-        .nav {
-            background: white; padding: 15px 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100;
-        }
-        .nav-links { max-width: 1400px; margin: 0 auto; display: flex; gap: 10px; flex-wrap: wrap; }
-        .nav-link {
-            padding: 10px 18px; color: var(--brown-dark); text-decoration: none;
-            border-radius: 8px; font-weight: 600; font-size: 13px;
-        }
-        .nav-link:hover, .nav-link.active { background: var(--gold-pale); color: var(--gold-dark); }
-
-        .container { max-width: 1400px; margin: 30px auto; padding: 0 30px; }
-
-        .message-box {
-            padding: 15px 20px; border-radius: 12px; margin-bottom: 20px;
-            display: flex; align-items: center; gap: 10px; font-size: 14px;
-        }
-        .success { background: #D1FAE5; color: #065F46; border: 2px solid var(--success-green); }
-        .error { background: #FEE2E2; color: #991B1B; border: 2px solid var(--error-red); }
-        .warning { background: #FEF3C7; color: #92400E; border: 2px solid var(--warning-yellow); }
-        .rules-box { background: #EFF6FF; border-left: 4px solid var(--info-blue); padding: 15px; border-radius: 8px; }
-        .rules-list { margin-top: 8px; margin-left: 20px; color: #1E40AF; font-size: 13px; line-height: 1.8; }
-
-        .card {
-            background: white; border-radius: 20px; padding: 25px; margin-bottom: 25px;
-            border: 2px solid var(--gold-primary); box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-        }
-        .card-title {
-            color: var(--brown-dark); font-size: 20px; margin-bottom: 20px;
-            padding-bottom: 10px; border-bottom: 2px solid var(--gold-pale);
-            display: flex; align-items: center; gap: 10px;
+        [data-theme="dark"] {
+            --bg-light: #111827;
+            --card-bg: #1F2937;
+            --text-main: #F9FAFB;
+            --text-muted: #9CA3AF;
+            --border-color: #374151;
+            --gold-pale: rgba(218, 165, 32, 0.15);
         }
 
+        body {
+            background: var(--bg-light);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .main-container {
+            max-width: 1300px;
+            margin: 25px auto;
+            padding: 0 20px 50px;
+        }
+
+        /* Page Hero Header */
+        .page-hero {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 24px 28px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--brown-dark), var(--gold-primary), var(--brown-dark));
+        }
+
+        .hero-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .hero-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(139,69,19,0.12), rgba(218,165,32,0.22));
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            border: 1px solid rgba(218,165,32,0.3);
+            flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .hero-icon {
+            color: var(--gold-primary);
+        }
+
+        .hero-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0 0 4px;
+            color: var(--text-main);
+        }
+
+        .hero-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Message banners */
+        .msg-box {
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .msg-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #DC2626;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .lock-card {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1.5px solid rgba(245, 158, 11, 0.3);
+            border-radius: 16px;
+            padding: 22px 24px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .lock-card .icon {
+            font-size: 38px;
+            flex-shrink: 0;
+        }
+
+        /* Stats Grid */
         .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
             margin-bottom: 25px;
         }
+
         .stat-card {
-            background: linear-gradient(135deg, var(--gold-pale), white);
-            border-radius: 15px; padding: 20px; text-align: center;
-            border: 2px solid var(--gold-primary);
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 18px 20px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
         }
-        .stat-value { font-size: 32px; font-weight: bold; color: var(--brown-dark); }
-        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
 
-        .promotion-form {
-            background: linear-gradient(135deg, #FEF3C7, #FFF8DC);
-            border-radius: 15px; padding: 25px; border: 2px dashed var(--gold-primary);
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .stat-icon {
+            color: var(--gold-primary);
+        }
+
+        .stat-num {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        /* Church Card */
+        .church-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
             margin-bottom: 25px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.03);
         }
-        .form-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
-        .form-group { flex: 1; min-width: 200px; }
-        .form-group label { display: block; margin-bottom: 8px; color: var(--brown-dark); font-weight: 600; font-size: 14px; }
-        .form-control {
-            width: 100%; padding: 14px; border: 2px solid #E2E8F0; border-radius: 10px;
-            font-size: 18px; text-align: center; font-weight: bold;
-        }
-        .form-control:focus { outline: none; border-color: var(--gold-primary); }
 
-        .btn {
-            padding: 14px 30px; border: none; border-radius: 10px; cursor: pointer;
-            font-weight: 600; font-size: 16px; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px;
+        .card-header-clean {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 12px;
         }
-        .btn-promote {
-            background: linear-gradient(135deg, #10B981, #059669); color: white; font-size: 18px;
-        }
-        .btn-promote:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(16,185,129,0.3); }
-        .btn-promote:disabled { background: #9CA3AF; cursor: not-allowed; transform: none; }
-        .btn-back { background: var(--gold-primary); color: var(--brown-dark); }
 
-        .pass-mark-preset {
-            display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;
+        .card-heading {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
         }
-        .preset-btn {
-            padding: 6px 16px; border: 2px solid var(--gold-dark); border-radius: 20px;
-            background: white; cursor: pointer; font-weight: 600; font-size: 12px;
-            transition: all 0.2s;
+
+        [data-theme="dark"] .card-heading {
+            color: var(--gold-primary);
         }
-        .preset-btn:hover, .preset-btn.active { background: var(--gold-primary); border-color: var(--brown-dark); }
 
-        .preview-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .preview-table th { background: var(--brown-dark); color: white; padding: 10px; border: 1px solid var(--gold-dark); }
-        .preview-table td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; text-align: center; }
-        .preview-table tr:hover { background: #FFF8DC; }
-        .student-name-cell { text-align: left; font-weight: 600; color: var(--brown-dark); }
-
-        .badge {
-            display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
-        }
-        .badge-promoted { background: #D1FAE5; color: #059669; }
-        .badge-repeated { background: #FEE2E2; color: #DC2626; }
-        .badge-last { background: #DBEAFE; color: #1D4ED8; }
-        .badge-nomarks { background: #F3F4F6; color: #6B7280; }
-
-        .lock-warning {
-            display: flex; align-items: center; gap: 15px; padding: 20px;
-            background: #FEF3C7; border: 2px solid var(--warning-yellow); border-radius: 12px;
+        /* Promotion Execution Box */
+        .promotion-box {
+            background: rgba(255, 215, 0, 0.05);
+            border: 1.5px dashed var(--gold-dark);
+            border-radius: 16px;
+            padding: 24px;
             margin-bottom: 20px;
         }
-        .lock-warning .icon { font-size: 40px; }
 
-        .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .history-table th { background: var(--gold-pale); color: var(--brown-dark); padding: 10px; }
-        .history-table td { padding: 8px; border-bottom: 1px solid #E5E7EB; }
+        .promo-controls {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .passmark-input-wrap {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .passmark-input {
+            width: 140px;
+            padding: 12px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 800;
+            text-align: center;
+            background: var(--card-bg);
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .passmark-input:focus {
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.2);
+        }
+
+        .presets-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .preset-chip {
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .preset-chip:hover {
+            border-color: var(--gold-dark);
+        }
+
+        .preset-chip.active {
+            background: var(--gold-primary);
+            color: #8B4513;
+            border-color: var(--brown-dark);
+        }
+
+        .btn-promote {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 3px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-promote:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.08);
+            box-shadow: 0 5px 18px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Rules summary banner */
+        .rules-guide {
+            background: rgba(59, 130, 246, 0.06);
+            border-left: 4px solid var(--info-blue);
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 13.5px;
+            color: var(--text-main);
+            margin-top: 16px;
+        }
+
+        .rules-list {
+            margin: 8px 0 0 16px;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 6px;
+        }
+
+        /* Tables */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(139, 69, 19, 0.05);
+            color: var(--brown-dark);
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        [data-theme="dark"] th {
+            background: rgba(218, 165, 32, 0.1);
+            color: var(--gold-primary);
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(255, 215, 0, 0.03);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        .badge-promoted { background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-repeated { background: rgba(239, 68, 68, 0.1); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.25); }
+        .badge-last { background: rgba(59, 130, 246, 0.1); color: #2563EB; border: 1px solid rgba(59, 130, 246, 0.25); }
+        .badge-nomarks { background: rgba(107, 114, 128, 0.1); color: #6B7280; border: 1px solid rgba(107, 114, 128, 0.25); }
+
+        /* Simulation live counters */
+        .sim-summary {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .sim-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+        }
 
         @media (max-width: 768px) {
-            .card { padding: 16px 12px; border-radius: 14px; }
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .page-hero { padding: 18px; }
+            .hero-title { font-size: 19px; }
+            .church-card { padding: 16px 12px; }
+            .promo-controls { flex-direction: column; align-items: stretch; }
+            .passmark-input { width: 100%; }
+            .btn-promote { width: 100%; justify-content: center; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .stat-card { padding: 12px 8px; }
-            .stat-value { font-size: 22px; }
-            .form-row { flex-direction: column; }
-            .form-row > div { width: 100%; }
-            .btn-promote { width: 100%; justify-content: center; font-size: 15px; }
-            .pass-mark-preset { justify-content: center; }
-            .preset-btn { flex: 1 1 calc(20% - 6px); min-width: 45px; text-align: center; }
-            .preview-table { font-size: 11px; }
-            .preview-table th, .preview-table td { padding: 6px 4px; }
-            .history-table th, .history-table td { padding: 6px 4px; font-size: 11px; }
+            th, td { padding: 8px 10px; font-size: 12px; }
         }
     </style>
 </head>
@@ -426,84 +715,114 @@ $nav_active = 'promotion';
     <?php include 'mobile_nav.php'; ?>
 
     <div class="main-container">
+        <!-- Hero Header -->
+        <div class="page-hero">
+            <div class="hero-left">
+                <div class="hero-icon">🚀</div>
+                <div>
+                    <h1 class="hero-title">የተማሪዎች ደረጃ ማሳደግ (Student Promotion)</h1>
+                    <p class="hero-subtitle">የትምህርት ዘመን ማብቂያ የተማሪዎችን ውጤት መዝኖ ወደ ቀጣይ ክፍል ማሸጋገሪያ</p>
+                </div>
+            </div>
+            <div>
+                <a href="semester.php" class="preset-chip" style="text-decoration: none; padding: 8px 16px;">
+                    <span>📅</span> የሴሚስተር አስተዳደር
+                </a>
+            </div>
+        </div>
+
         <!-- Messages -->
         <?php if ($message): ?>
-        <div class="message-box success"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
+        <div class="msg-box msg-success"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
         <?php if ($error): ?>
-        <div class="message-box error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
+        <div class="msg-box msg-error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if (!$current_year): ?>
         <!-- No active academic year -->
-        <div class="card">
-            <div style="text-align:center; padding:40px;">
-                <span style="font-size:60px;">📅</span>
-                <h2 style="color:var(--brown-dark); margin-top:15px;">ምንም ንቁ የትምህርት ዘመን የለም</h2>
-                <p style="color:#666;">እባክዎ መጀመሪያ የትምህርት ዘመን ያስጀምሩ</p>
-                <a href="semester.php" class="btn" style="background:var(--gold-primary); color:var(--brown-dark); margin-top:15px;">
-                    📅 ወደ ሴሚስተር አስተዳደር
-                </a>
-            </div>
+        <div class="church-card" style="text-align: center; padding: 50px 20px;">
+            <span style="font-size: 55px; display: block; margin-bottom: 12px;">📅</span>
+            <h2 style="color: var(--brown-dark); margin: 0 0 8px;">ምንም ንቁ የትምህርት ዘመን የለም</h2>
+            <p style="color: var(--text-muted); font-size: 14px;">ደረጃ ከማሳደግዎ በፊት እባክዎ መጀመሪያ ንቁ የትምህርት ዘመን ያስጀምሩ።</p>
+            <a href="semester.php" class="btn-promote" style="text-decoration: none; margin-top: 15px;">
+                📅 ወደ ሴሚስተር አስተዳደር ሂድ
+            </a>
         </div>
         <?php elseif ($promotion_done): ?>
         <!-- Promotion already done -->
-        <div class="lock-warning">
+        <div class="lock-card">
             <span class="icon">🔒</span>
             <div>
-                <strong style="color:var(--brown-dark); font-size:18px;">ደረጃ ማሳደግ ቀድሞውኑ ተከናውኗል!</strong>
-                <p style="color:#666; margin-top:5px;">
-                    ለ <?php echo $current_ethiopian_year; ?> ዓ.ም የትምህርት ዘመን ደረጃ ማሳደግ ተጠናቋል። 
-                    እንደገና ማሳደግ አይቻልም።
+                <strong style="color: var(--text-main); font-size: 17px;">ለዚህ የትምህርት ዘመን ደረጃ ማሳደግ ቀድሞውኑ ተከናውኗል!</strong>
+                <p style="color: var(--text-muted); margin: 5px 0 0; font-size: 13.5px;">
+                    ለ <?php echo $current_ethiopian_year; ?> ዓ.ም የትምህርት ዘመን ደረጃ ማሳደግ ተጠናቋል። ለሚቀጥለው ዓመት አዲስ የትምህርት ዘመን ሲጀመር እንደገና ማሳደግ ይቻላል።
                 </p>
             </div>
         </div>
         <?php else: ?>
 
-        <!-- Statistics -->
+        <!-- Statistics Grid -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value"><?php echo $total_students; ?></div>
-                <div class="stat-label">ጠቅላላ ተማሪዎች</div>
+                <div class="stat-icon">👥</div>
+                <div>
+                    <div class="stat-num"><?php echo $total_students; ?></div>
+                    <div class="stat-label">ጠቅላላ ተማሪዎች</div>
+                </div>
             </div>
             <div class="stat-card">
-                <div class="stat-value"><?php echo $students_with_marks; ?></div>
-                <div class="stat-label">ውጤት ያላቸው</div>
+                <div class="stat-icon">📝</div>
+                <div>
+                    <div class="stat-num"><?php echo $students_with_marks; ?></div>
+                    <div class="stat-label">ውጤት ያላቸው ተማሪዎች</div>
+                </div>
             </div>
             <div class="stat-card">
-                <div class="stat-value"><?php echo count($classes_list); ?></div>
-                <div class="stat-label">ክፍሎች</div>
+                <div class="stat-icon">🏫</div>
+                <div>
+                    <div class="stat-num"><?php echo count($classes_list); ?></div>
+                    <div class="stat-label">የክፍሎች ብዛት</div>
+                </div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" style="color:var(--success-green);"><?php echo $current_ethiopian_year; ?></div>
-                <div class="stat-label">የትምህርት ዘመን</div>
+                <div class="stat-icon">📅</div>
+                <div>
+                    <div class="stat-num" style="color: var(--success-green);"><?php echo $current_ethiopian_year; ?></div>
+                    <div class="stat-label">ንቁ የትምህርት ዘመን (ዓ.ም)</div>
+                </div>
             </div>
         </div>
 
         <!-- Class Progression Map -->
-        <div class="card">
-            <div class="card-title"><span>🗺️</span> የክፍል ሽግግር ካርታ</div>
+        <div class="church-card">
+            <div class="card-header-clean">
+                <h2 class="card-heading">
+                    <span>🗺️</span> የክፍል ሽግግር ካርታ (Progression Map)
+                </h2>
+                <span style="font-size: 12.5px; color: var(--text-muted);">ክፍሎች ደረጃቸውን ጠብቀው የሚሸጋገሩበት ቅደም ተከተል</span>
+            </div>
             <div class="table-responsive">
-                <table class="preview-table">
+                <table>
                     <thead>
                         <tr>
-                            <th>አሁን ያለው ክፍል</th>
-                            <th>➡️</th>
-                            <th>ቀጣይ ክፍል</th>
+                            <th style="width: 45%;">አሁን ያለው ክፍል</th>
+                            <th style="text-align: center; width: 10%;">ሽግግር</th>
+                            <th style="width: 45%;">ቀጣይ ክፍል</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($class_progression as $current_id => $prog): ?>
                         <tr>
-                            <td><strong><?php echo htmlspecialchars($prog['current_name']); ?></strong></td>
-                            <td>→</td>
+                            <td><strong><?php echo htmlspecialchars($prog['current_name']); ?></strong> <span style="font-size: 11px; color: var(--text-muted);">(<?php echo htmlspecialchars($prog['division']); ?>)</span></td>
+                            <td style="text-align: center; color: var(--gold-dark); font-weight: 800;">➔</td>
                             <td>
                                 <?php if ($prog['next_id']): ?>
-                                <span style="color:var(--success-green); font-weight:600;">
-                                    <?php echo htmlspecialchars($prog['next_name']); ?>
-                                </span>
+                                    <span style="color: var(--success-green); font-weight: 700;">
+                                        <?php echo htmlspecialchars($prog['next_name']); ?>
+                                    </span>
                                 <?php else: ?>
-                                <span class="badge badge-last">🎓 የመጨረሻ ክፍል</span>
+                                    <span class="badge badge-last">🎓 <?php echo htmlspecialchars($prog['next_name']); ?></span>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -513,81 +832,109 @@ $nav_active = 'promotion';
             </div>
         </div>
 
-        <!-- Promotion Action Card -->
-        <div class="card">
-            <div class="card-title"><span>🎯</span> የተማሪዎች ደረጃ ማሳደጊያ</div>
+        <!-- Promotion Wizard & Action Form -->
+        <div class="church-card">
+            <div class="card-header-clean">
+                <h2 class="card-heading">
+                    <span>🎯</span> የተማሪዎች ደረጃ ማሳደጊያ ማስፈጸሚያ
+                </h2>
+            </div>
 
-            <div class="promotion-form">
+            <div class="promotion-box">
                 <form method="POST" onsubmit="return confirmPromotion()">
                     <?php echo csrfField(); ?>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>📊 ማለፊያ ውጤት (%)</label>
-                            <input type="number" name="pass_mark" id="pass_mark" class="form-control" 
+                    <div class="promo-controls">
+                        <div class="passmark-input-wrap">
+                            <label class="input-label">📊 ማለፊያ ውጤት (Pass Mark %)</label>
+                            <input type="number" name="pass_mark" id="pass_mark" class="passmark-input" 
                                    value="50" min="0" max="100" step="1" required>
-                            <div class="pass-mark-preset">
-                                <button type="button" class="preset-btn" onclick="setPassMark(40)">40%</button>
-                                <button type="button" class="preset-btn active" onclick="setPassMark(50)">50%</button>
-                                <button type="button" class="preset-btn" onclick="setPassMark(60)">60%</button>
-                                <button type="button" class="preset-btn" onclick="setPassMark(70)">70%</button>
-                                <button type="button" class="preset-btn" onclick="setPassMark(80)">80%</button>
+                            <div class="presets-row">
+                                <button type="button" class="preset-chip" onclick="setPassMark(40)">40%</button>
+                                <button type="button" class="preset-chip active" onclick="setPassMark(50)">50% (መደበኛ)</button>
+                                <button type="button" class="preset-chip" onclick="setPassMark(60)">60%</button>
+                                <button type="button" class="preset-chip" onclick="setPassMark(70)">70%</button>
+                                <button type="button" class="preset-chip" onclick="setPassMark(80)">80%</button>
                             </div>
                         </div>
-                        <div style="display:flex; align-items:flex-end;">
-                            <button type="submit" name="execute_promotion" class="btn btn-promote" id="promoteBtn">
-                                🚀 የተማሪዎችን ደረጃ አሳድግ
+                        <div>
+                            <button type="submit" name="execute_promotion" class="btn-promote" id="promoteBtn">
+                                <span>🚀</span>
+                                <span>የተማሪዎችን ደረጃ አሁን አሳድግ</span>
                             </button>
                         </div>
                     </div>
                 </form>
             </div>
 
-            <!-- Rules -->
-            <div class="rules-box" style="margin-top:15px;">
-                <strong>📋 የተማሪዎች ማሳደጊያ ደንቦች፦</strong>
+            <div class="rules-guide">
+                <strong>📋 የተማሪዎች ሽግግር መመዘኛ ደንቦች፦</strong>
                 <ul class="rules-list">
-                    <li>አማካይ ≥ ማለፊያ ውጤት → <span class="badge badge-promoted">ወደ ቀጣይ ክፍል ያልፋል</span></li>
-                    <li>አማካይ < ማለፊያ ውጤት → <span class="badge badge-repeated">ክፍል ይደግማል</span></li>
-                    <li>ውጤት የሌላቸው → <span class="badge badge-nomarks">ክፍል ይደግማሉ</span></li>
-                    <li>የመጨረሻ ክፍል → <span class="badge badge-last">ማለፍ አይችሉም (ተመርቀዋል)</span></li>
+                    <li>አማካይ ≥ ማለፊያ ውጤት → <span class="badge badge-promoted">ያልፋል</span></li>
+                    <li>አማካይ < ማለፊያ ውጤት → <span class="badge badge-repeated">ይደግማል</span></li>
+                    <li>ምንም ውጤት የሌለው → <span class="badge badge-nomarks">ይደግማል</span></li>
+                    <li>የመጨረሻ ክፍል → <span class="badge badge-last">ተመርቋል</span></li>
                 </ul>
             </div>
         </div>
 
-        <!-- Preview Table -->
-        <div class="card">
-            <div class="card-title">
-                <span>👁️</span> የተማሪዎች ቅድመ እይታ (Preview - Pass Mark: <span id="previewPassMark">50</span>%)
+        <!-- Live Simulation Preview Table -->
+        <div class="church-card">
+            <div class="card-header-clean">
+                <h2 class="card-heading">
+                    <span>👁️</span> የተማሪዎች ቅድመ እይታ (Simulation Preview)
+                </h2>
+                <div style="font-size: 13px; font-weight: 700; color: var(--gold-dark);">
+                    የተመረጠ ማለፊያ ውጤት፦ <span id="previewPassMark">50</span>%
+                </div>
+            </div>
+
+            <!-- Dynamic live counters -->
+            <div class="sim-summary">
+                <div class="sim-item" style="color: #059669;">
+                    <span>✅ የሚያልፉ፦</span>
+                    <span id="simPassCount">0</span>
+                </div>
+                <div class="sim-item" style="color: #DC2626;">
+                    <span>❌ የሚደግሙ፦</span>
+                    <span id="simFailCount">0</span>
+                </div>
+                <div class="sim-item" style="color: #2563EB;">
+                    <span>🎓 ተመራቂዎች፦</span>
+                    <span id="simGradCount">0</span>
+                </div>
+                <div class="sim-item" style="color: #6B7280;">
+                    <span>⚠️ ውጤት የሌላቸው፦</span>
+                    <span id="simNoMarksCount">0</span>
+                </div>
             </div>
             
-            <div style="overflow-x:auto;">
-                <table class="preview-table" id="previewTable">
+            <div class="table-responsive">
+                <table id="previewTable">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>ተማሪ</th>
-                            <th>አሁን ያለው ክፍል</th>
-                            <th>አማካይ</th>
-                            <th>የመምህራን ብዛት</th>
-                            <th>ውጤት አለ?</th>
+                            <th style="width: 50px;">#</th>
+                            <th>የተማሪ ስም</th>
+                            <th>አሁን ያለበት ክፍል</th>
+                            <th style="text-align: right;">አማካይ ውጤት</th>
+                            <th style="text-align: center;">የመምህራን ብዛት</th>
+                            <th style="text-align: center;">ውጤት አለ?</th>
                             <th>ቀጣይ ክፍል</th>
-                            <th>ውሳኔ</th>
+                            <th style="text-align: center;">ውሳኔ (ውጤት)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($preview_data as $index => $student): 
-                            $avg = $student['average_mark'];
+                            $avg = floatval($student['average_mark']);
                             $has_marks = ($student['marks_count'] > 0);
                             $prog = $class_progression[$student['class_id']] ?? null;
                             $is_last = $prog && $prog['next_id'] === null;
                             
-                            // Preview with default 50% pass mark
                             $pass_preview = 50;
                             if ($is_last) {
-                                $decision = 'መጨረሻ';
+                                $decision = 'ተመርቋል 🎓';
                                 $badge_class = 'badge-last';
                             } elseif (!$has_marks) {
-                                $decision = 'ይደግማል';
+                                $decision = 'ይደግማል ⚠️';
                                 $badge_class = 'badge-nomarks';
                             } elseif ($avg >= $pass_preview) {
                                 $decision = 'ያልፋል ✅';
@@ -597,15 +944,18 @@ $nav_active = 'promotion';
                                 $badge_class = 'badge-repeated';
                             }
                         ?>
-                        <tr class="student-row" data-avg="<?php echo $avg; ?>" data-hasmarks="<?php echo $has_marks ? '1' : '0'; ?>" data-islast="<?php echo $is_last ? '1' : '0'; ?>">
+                        <tr class="student-row" 
+                            data-avg="<?php echo $avg; ?>" 
+                            data-hasmarks="<?php echo $has_marks ? '1' : '0'; ?>" 
+                            data-islast="<?php echo $is_last ? '1' : '0'; ?>">
                             <td><?php echo $index + 1; ?></td>
-                            <td class="student-name-cell"><?php echo htmlspecialchars($student['student_name']); ?></td>
+                            <td><strong><?php echo htmlspecialchars($student['student_name']); ?></strong></td>
                             <td><?php echo htmlspecialchars($student['class_name']); ?></td>
-                            <td><strong><?php echo number_format($avg, 1); ?></strong></td>
-                            <td><?php echo $student['teacher_count']; ?></td>
-                            <td><?php echo $has_marks ? '✅' : '❌'; ?></td>
+                            <td style="text-align: right;"><strong><?php echo number_format($avg, 1); ?></strong></td>
+                            <td style="text-align: center;"><?php echo $student['teacher_count']; ?></td>
+                            <td style="text-align: center;"><?php echo $has_marks ? '✅' : '❌'; ?></td>
                             <td><?php echo $prog ? htmlspecialchars($prog['next_name']) : '?'; ?></td>
-                            <td><span class="badge <?php echo $badge_class; ?>"><?php echo $decision; ?></span></td>
+                            <td style="text-align: center;"><span class="badge <?php echo $badge_class; ?>"><?php echo $decision; ?></span></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -615,35 +965,39 @@ $nav_active = 'promotion';
 
         <?php endif; ?>
 
-        <!-- Promotion History -->
+        <!-- Promotion History Table -->
         <?php if (!empty($history_data)): ?>
-        <div class="card">
-            <div class="card-title"><span>📜</span> የደረጃ ማሳደግ ታሪክ (Last 50)</div>
-            <div style="overflow-x:auto;">
-                <table class="history-table">
+        <div class="church-card">
+            <div class="card-header-clean">
+                <h2 class="card-heading">
+                    <span>📜</span> የቅርብ ጊዜ የደረጃ ማሳደግ ታሪክ (የመጨረሻዎቹ 50)
+                </h2>
+            </div>
+            <div class="table-responsive">
+                <table>
                     <thead>
                         <tr>
-                            <th>ተማሪ</th>
+                            <th>የተማሪ ስም</th>
                             <th>ከነበረበት ክፍል</th>
                             <th>ወደ ተሸጋገረበት ክፍል</th>
-                            <th>አማካይ</th>
-                            <th>ሁኔታ</th>
-                            <th>ቀን</th>
+                            <th style="text-align: right;">አማካይ ውጤት</th>
+                            <th style="text-align: center;">ሁኔታ</th>
+                            <th>የተከናወነበት ቀን</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($history_data as $hist): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($hist['student_name']); ?></td>
+                            <td><strong><?php echo htmlspecialchars($hist['student_name']); ?></strong></td>
                             <td><?php echo htmlspecialchars($hist['from_class_name']); ?></td>
                             <td><?php echo htmlspecialchars($hist['to_class_name']); ?></td>
-                            <td><?php echo number_format($hist['total_marks'], 1); ?></td>
-                            <td>
+                            <td style="text-align: right;"><strong><?php echo number_format($hist['total_marks'], 1); ?></strong></td>
+                            <td style="text-align: center;">
                                 <span class="badge <?php echo $hist['status'] == 'promoted' ? 'badge-promoted' : 'badge-repeated'; ?>">
                                     <?php echo $hist['status'] == 'promoted' ? 'ያለፈ' : 'የደገመ'; ?>
                                 </span>
                             </td>
-                            <td><?php echo date('M d, Y', strtotime($hist['promoted_at'])); ?></td>
+                            <td><?php echo date('M d, Y h:i A', strtotime($hist['promoted_at'])); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -658,16 +1012,21 @@ $nav_active = 'promotion';
             document.getElementById('pass_mark').value = value;
             document.getElementById('previewPassMark').textContent = value;
             
-            // Update preset buttons
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.preset-chip').forEach(btn => btn.classList.remove('active'));
+            if (window.event && window.event.target) {
+                window.event.target.classList.add('active');
+            }
             
-            // Update preview table
             updatePreview(value);
         }
         
         function updatePreview(passMark) {
             const rows = document.querySelectorAll('.student-row');
+            let passCount = 0;
+            let failCount = 0;
+            let gradCount = 0;
+            let noMarksCount = 0;
+
             rows.forEach(row => {
                 const avg = parseFloat(row.dataset.avg);
                 const hasMarks = row.dataset.hasmarks === '1';
@@ -676,43 +1035,63 @@ $nav_active = 'promotion';
                 
                 let decision, badgeClass;
                 if (isLast) {
-                    decision = 'መጨረሻ';
+                    decision = 'ተመርቋል 🎓';
                     badgeClass = 'badge-last';
+                    gradCount++;
                 } else if (!hasMarks) {
-                    decision = 'ይደግማል';
+                    decision = 'ይደግማል ⚠️';
                     badgeClass = 'badge-nomarks';
+                    noMarksCount++;
+                    failCount++;
                 } else if (avg >= passMark) {
                     decision = 'ያልፋል ✅';
                     badgeClass = 'badge-promoted';
+                    passCount++;
                 } else {
                     decision = 'ይደግማል ❌';
                     badgeClass = 'badge-repeated';
+                    failCount++;
                 }
                 
                 decisionCell.innerHTML = '<span class="badge ' + badgeClass + '">' + decision + '</span>';
             });
+
+            // Update live simulation counters
+            const passEl = document.getElementById('simPassCount');
+            const failEl = document.getElementById('simFailCount');
+            const gradEl = document.getElementById('simGradCount');
+            const noMarksEl = document.getElementById('simNoMarksCount');
+
+            if (passEl) passEl.textContent = passCount;
+            if (failEl) failEl.textContent = failCount;
+            if (gradEl) gradEl.textContent = gradCount;
+            if (noMarksEl) noMarksEl.textContent = noMarksCount;
         }
         
         function confirmPromotion() {
             const passMark = document.getElementById('pass_mark').value;
-            return confirm('⚠️ ማስጠንቀቂያ!\n\n' +
-                'ይህ እርምጃ ሁሉንም ተማሪዎች በ' + passMark + '% ማለፊያ ውጤት ደረጃ ያሳድጋል!\n\n' +
-                'ይህን አንዴ ካደረጉ በኋላ መመለስ አይቻልም!\n\n' +
-                'እርግጠኛ ነዎት?');
+            return confirm('⚠️ ጥብቅ ማስጠንቀቂያ!\n\n' +
+                'ይህ እርምጃ ሁሉንም ተማሪዎች በ ' + passMark + '% ማለፊያ ውጤት መሰረት ደረጃ ያሳድጋል!\n\n' +
+                'ይህ ከተፈጸመ በኋላ ወደ ኋላ መመለስ አይቻልም!\n\n' +
+                'እርግጠኛ ነዎት? ለመቀጠል እሺ (OK) ይበሉ።');
         }
         
-        // Initialize preset
         document.addEventListener('DOMContentLoaded', function() {
             const passInput = document.getElementById('pass_mark');
-            passInput.addEventListener('input', function() {
-                document.getElementById('previewPassMark').textContent = this.value;
-                updatePreview(parseFloat(this.value) || 0);
+            if (passInput) {
+                passInput.addEventListener('input', function() {
+                    const val = parseFloat(this.value) || 0;
+                    document.getElementById('previewPassMark').textContent = val;
+                    updatePreview(val);
+                    
+                    document.querySelectorAll('.preset-chip').forEach(btn => btn.classList.remove('active'));
+                    const matchingPreset = Array.from(document.querySelectorAll('.preset-chip')).find(b => b.textContent.includes(val + '%'));
+                    if (matchingPreset) matchingPreset.classList.add('active');
+                });
                 
-                // Update preset active state
-                document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-                const matchingPreset = document.querySelector('.preset-btn[onclick*="' + this.value + '"]');
-                if (matchingPreset) matchingPreset.classList.add('active');
-            });
+                // Initial calculation
+                updatePreview(parseFloat(passInput.value) || 50);
+            }
         });
     </script>
 </body>

@@ -165,10 +165,7 @@ $current_ethiopian_year = $current_year ? $current_year['ethiopian_year'] : 2017
 // Get all teachers with username
 $teachers_query = "SELECT * FROM users WHERE role='teacher' ORDER BY name";
 $teachers = mysqli_query($conn, $teachers_query);
-
-// Get all academic years for filtering
-$years_query = "SELECT DISTINCT ethiopian_year FROM semesters ORDER BY ethiopian_year DESC";
-$years = mysqli_query($conn, $years_query);
+$teachers_count = mysqli_num_rows($teachers);
 
 // Get all assignments with full details for each teacher
 $all_assignments_query = "SELECT tc.*, 
@@ -184,6 +181,7 @@ $all_assignments_query = "SELECT tc.*,
                           JOIN semesters s ON tc.semester_id = s.id
                           ORDER BY s.ethiopian_year DESC, s.semester_number DESC, c.name";
 $all_assignments = mysqli_query($conn, $all_assignments_query);
+$total_assignments_count = mysqli_num_rows($all_assignments);
 
 // Organize assignments by teacher and year
 $teacher_history = [];
@@ -218,9 +216,10 @@ $pending_requests = dbFetchAll(
 $nav_active = 'manage_teachers';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>መምህራን አስተዳደር | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
@@ -230,864 +229,465 @@ $nav_active = 'manage_teachers';
             --gold-primary: #FFD700;
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
-            --success-green: #10B981;
-            --error-red: #EF4444;
-            --warning-yellow: #F59E0B;
-            --info-blue: #3B82F6;
+            --bg-cream: #FAF9F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --info: #3B82F6;
+            --warning: #F59E0B;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
 
-        body {
-            background: #FAF9F6;
-        }
+        .main-container { max-width: 1200px; margin: 24px auto; padding: 0 16px 80px; }
 
-        .header {
+        /* Page Header Card */
+        .page-header-card {
             background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
+            border-radius: 16px;
+            padding: 24px 28px;
             color: white;
-            padding: 20px 30px;
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(139, 69, 19, 0.18);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
         }
-
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+        .page-header-card::after {
+            content: '👨‍🏫';
+            position: absolute;
+            right: 20px;
+            bottom: -15px;
+            font-size: 100px;
+            opacity: 0.12;
+            pointer-events: none;
         }
-
-        .logo-icon {
-            width: 55px;
-            height: 55px;
-            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: var(--brown-dark);
-            border: 3px solid white;
-        }
-
-        .title h1 {
+        .header-info h1 {
             font-size: 22px;
+            font-weight: 800;
             color: var(--gold-primary);
-        }
-
-        .title p {
-            font-size: 14px;
-            color: var(--gold-light);
-        }
-
-        .nav {
-    background: white;
-    padding: 12px 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.nav-links {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.nav-link {
-    padding: 8px 14px;
-    color: var(--brown-dark);
-    text-decoration: none;
-    border-radius: 25px;
-    transition: all 0.3s;
-    font-weight: 600;
-    font-size: 12px;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
-
-.nav-link:hover {
-    background: var(--gold-pale);
-    border-color: var(--gold-primary);
-}
-
-.nav-link.active {
-    background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-    color: var(--brown-dark);
-    border-color: var(--brown-dark);
-    font-weight: 700;
-}
-
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 30px;
-        }
-
-        .message {
-            padding: 15px 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            animation: slideDown 0.4s ease;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .header-info p {
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, 0.9);
         }
 
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .success {
-            background: #D1FAE5;
-            color: var(--success-green);
-            border-left: 5px solid var(--success-green);
-        }
-
-        .error {
-            background: #FEE2E2;
-            color: var(--error-red);
-            border-left: 5px solid var(--error-red);
-        }
-
-        .current-year-badge {
-            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            color: var(--brown-dark);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-            display: inline-block;
-        }
-
-        .section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--gold-pale);
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .section-header h2 {
-            color: var(--brown-dark);
-            font-size: 22px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            color: #8B4513;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(218,165,32,0.3);
-        }
-
-        .btn-edit {
-            background: #3B82F6;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-delete {
-            background: #EF4444;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-reset {
-            background: #F59E0B;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .request-review-card {
-            background: white;
-            border: 1.5px solid #FCD34D;
-        }
-        .request-review-header {
-            border-bottom: 1px solid #F3F4F6;
-        }
-        .request-detail-box {
-            background: #F9FAFB;
-        }
-        .request-reason-box {
-            background: #FEF3C7;
-            color: #92400E;
-        }
-
-        .btn-profile {
-            background: #8B5CF6;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-            text-decoration: none;
-        }
-
-        .form-grid {
+        /* Stats Row */
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
-
-        .form-group {
-            margin-bottom: 15px;
+        .stat-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: var(--brown-dark);
-            font-weight: 600;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #E2E8F0;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--gold-primary);
-        }
-
-        .add-teacher-form {
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
             background: var(--gold-pale);
-            padding: 25px;
-            border-radius: 12px;
-            border: 2px dashed var(--gold-primary);
-        }
-
-        /* Teacher Cards Grid */
-        .teachers-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            margin-top: 20px;
-        }
-
-        .teacher-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border: 2px solid var(--gold-pale);
-            transition: all 0.3s;
-        }
-
-        .teacher-card:hover {
-            transform: translateY(-3px);
-            border-color: var(--gold-primary);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-
-        .teacher-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--gold-pale);
-        }
-
-        .teacher-avatar {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            border-radius: 50%;
+            color: var(--brown-dark);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .stat-data .stat-val {
+            font-size: 24px;
+            font-weight: 800;
             color: var(--brown-dark);
-            border: 3px solid white;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
         }
-        
-        .teacher-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .teacher-title {
-            flex: 1;
-        }
-
-        .teacher-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: var(--brown-dark);
-            margin-bottom: 3px;
-            text-decoration: none;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        
-        .teacher-name:hover {
-            color: var(--gold-dark);
-            text-decoration: underline;
-        }
-
-        .teacher-username {
-            color: #8B5CF6;
+        .stat-data .stat-lbl {
             font-size: 12px;
+            color: var(--text-muted);
             font-weight: 600;
-            background: #F3F0FF;
-            padding: 2px 10px;
-            border-radius: 15px;
-            display: inline-block;
-            margin-bottom: 3px;
         }
 
-        .teacher-phone {
-            color: #666;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .teacher-status {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-
-        .status-new {
-            background: #FEF3C7;
-            color: var(--warning-yellow);
-        }
-
-        .status-active {
-            background: #D1FAE5;
-            color: var(--success-green);
-        }
-
-        .teacher-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-
-        /* Timeline Styles */
-        .timeline {
-            margin-top: 20px;
-        }
-
-        .year-group {
+        /* Alerts */
+        .message {
+            padding: 14px 18px;
+            border-radius: 12px;
             margin-bottom: 20px;
-            border-left: 3px solid var(--gold-primary);
-            padding-left: 15px;
-        }
-
-        .year-header {
             display: flex;
             align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            padding: 8px;
-            background: #F8F9FA;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .year-header:hover {
-            background: var(--gold-pale);
-        }
-
-        .year-badge {
-            background: var(--brown-dark);
-            color: var(--gold-primary);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .year-status {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .toggle-icon {
-            margin-left: auto;
-            font-size: 18px;
-            color: var(--gold-dark);
-        }
-
-        .semester-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #F8F9FA;
-            border-radius: 8px;
-            animation: slideDown 0.3s ease;
-        }
-
-        .semester-badge {
-            min-width: 100px;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
+            gap: 10px;
             font-weight: 600;
-            text-align: center;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
+        .message.success { background: #DCFCE7; color: #166534; border-left: 4px solid var(--success); }
+        .message.error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--error); }
 
-        .semester-1 {
-            background: #EFF6FF;
-            color: #3B82F6;
-        }
-
-        .semester-2 {
+        /* Pending Requests Box */
+        .requests-card {
             background: #FEF3C7;
-            color: #F59E0B;
+            border: 2px solid #F59E0B;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
         }
-
-        .classes-list {
-            flex: 1;
+        .requests-card-header {
             display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
+            align-items: center;
+            gap: 10px;
+            color: #92400E;
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 14px;
         }
-
-        .class-tag {
+        .req-item {
             background: white;
-            border: 1px solid var(--gold-primary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            border: 1px solid #FDE68A;
+        }
+        .req-item:last-child { margin-bottom: 0; }
+        .req-info { font-size: 13.5px; color: #374151; }
+        .req-info strong { color: #1F2937; }
+        .req-actions { display: flex; gap: 8px; }
+
+        /* Card Container */
+        .content-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        }
+        .content-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gold-pale);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .content-card-header h2 {
+            font-size: 17px;
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+        .header-badge {
+            background: var(--gold-pale);
             color: var(--brown-dark);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--brown-dark);
+        }
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+        .form-control:focus {
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.15);
+        }
+        .btn-primary-action {
+            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+            color: var(--brown-dark);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(218, 165, 32, 0.25);
+        }
+        .btn-primary-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(218, 165, 32, 0.35);
         }
 
-        .class-tag.locked {
-            background: #FEE2E2;
-            border-color: var(--error-red);
-            color: var(--error-red);
+        /* Teachers Grid */
+        .teachers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+        .teacher-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1.5px solid var(--border-color);
+            padding: 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .teacher-card:hover {
+            border-color: var(--gold-dark);
+            box-shadow: 0 8px 20px rgba(139, 69, 19, 0.1);
         }
 
-        .no-data {
-            color: #999;
-            font-style: italic;
-            padding: 10px;
-            text-align: center;
+        .teacher-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
         }
-
-        .empty-state {
-            text-align: center;
-            padding: 50px;
-            color: #666;
+        .teacher-avatar-img {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--gold-primary);
+            flex-shrink: 0;
+            background: var(--gold-pale);
         }
-
-        .empty-state span {
-            font-size: 50px;
+        .teacher-avatar-fallback {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            color: var(--brown-dark);
+            font-size: 20px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 2px solid white;
+        }
+        .teacher-meta-head h3 {
+            font-size: 16.5px;
+            font-weight: 800;
+            color: var(--brown-dark);
+            margin-bottom: 4px;
+        }
+        .teacher-user-tag {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-family: monospace;
+            background: #F3F4F6;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+        .teacher-phone {
+            font-size: 12.5px;
+            color: #2563EB;
+            margin-top: 4px;
             display: block;
-            margin-bottom: 15px;
+            text-decoration: none;
+            font-family: monospace;
         }
 
-        .modal {
+        /* History Section Inside Card */
+        .teacher-history-box {
+            background: #F9FAFB;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #F3F4F6;
+            font-size: 12.5px;
+        }
+        .history-toggle-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            color: var(--brown-dark);
+            cursor: pointer;
+            user-select: none;
+        }
+        .history-content {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed #E5E7EB;
+        }
+        .class-chip {
+            display: inline-block;
+            background: white;
+            border: 1px solid #E5E7EB;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            margin: 2px;
+            font-weight: 600;
+        }
+        .class-chip.locked { background: #FEE2E2; color: #991B1B; border-color: #FECACA; }
+
+        /* Action Buttons */
+        .teacher-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .btn-profile-link {
+            flex: 1;
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        .btn-profile-link:hover { background: var(--gold-primary); }
+
+        .btn-t-edit {
+            background: #FEF3C7;
+            color: #B45309;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-t-edit:hover { background: #FDE68A; }
+
+        .btn-t-reset {
+            background: #E0E7FF;
+            color: #3730A3;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-t-reset:hover { background: #C7D2FE; }
+
+        .btn-t-del {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-t-del:hover { background: #FCA5A5; }
+
+        /* Modal */
+        .modal-overlay {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
             z-index: 1000;
-        }
-
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 500px;
-            margin: 50px auto;
-            padding: 30px;
-            border-radius: 15px;
-            border: 3px solid var(--gold-primary);
-        }
-
-        .close {
-            float: right;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--brown-dark);
-        }
-
-        .close:hover {
-            color: var(--error-red);
-        }
-
-        .info-box {
-            background: #EFF6FF;
-            border-left: 4px solid var(--info-blue);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            padding: 16px;
         }
-
-        .info-box span {
-            font-size: 24px;
+        .modal-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 26px;
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid var(--gold-primary);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalPop 0.25s ease-out;
+            position: relative;
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--gold-pale);
+        }
+        .modal-header h3 {
+            color: var(--brown-dark);
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
         }
 
         @media (max-width: 768px) {
-            .main-container { padding: 0 12px 30px; margin: 15px auto; }
-            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
-            .section-header h2 { font-size: 17px; }
-            .teachers-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            .teacher-card { padding: 15px 12px; }
-            .teacher-header { gap: 10px; }
-            .teacher-avatar { width: 50px; height: 50px; font-size: 20px; }
-            .teacher-actions { flex-direction: column; }
-            .teacher-actions .btn { width: 100%; justify-content: center; min-height: 38px; }
-            
-            .semester-row {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .semester-badge {
-                align-self: flex-start;
-            }
-            
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            .add-teacher-form { padding: 16px 12px; }
-            .modal-content { width: 95%; margin: 20px auto; padding: 20px 14px; border-radius: 12px; }
-        }
-
-        .requests-section {
-            border: 2px solid #E5E7EB;
-            background: white;
-            margin-bottom: 25px;
-        }
-        .requests-section.has-pending {
-            border-color: var(--warning-yellow);
-            background: #FFFDF5;
-        }
-
-        .count-badge {
-            background: var(--gold-pale);
-            color: var(--brown-dark);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .reject-box {
-            background: #FEF2F2;
-            border: 1px solid #FECACA;
-        }
-
-        /* ── DIRECT DARK-MODE OVERRIDES FOR MANAGE_TEACHERS.PHP ── */
-        html.dark-mode body {
-            background-color: #0B1120 !important;
-        }
-
-        html.dark-mode .section {
-            background-color: #1E293B !important;
-            border: 1px solid #334155 !important;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4) !important;
-            color: #F1F5F9 !important;
-        }
-
-        html.dark-mode .requests-section {
-            background-color: #1E293B !important;
-            border-color: #334155 !important;
-        }
-
-        html.dark-mode .requests-section.has-pending {
-            background: linear-gradient(135deg, #1E293B 0%, #261E0A 100%) !important;
-            border-color: #D97706 !important;
-        }
-
-        html.dark-mode .section-header {
-            border-bottom: 2px solid #334155 !important;
-        }
-
-        html.dark-mode .section-header h2 {
-            color: #FCD34D !important;
-        }
-
-        html.dark-mode .count-badge {
-            background: #0F172A !important;
-            color: #FCD34D !important;
-            border: 1px solid #F59E0B !important;
-        }
-
-        html.dark-mode .form-group label {
-            color: #CBD5E1 !important;
-        }
-
-        html.dark-mode .form-control {
-            background-color: #0F172A !important;
-            border: 1.5px solid #475569 !important;
-            color: #F8FAFC !important;
-        }
-
-        html.dark-mode .form-control:focus {
-            border-color: #F59E0B !important;
-            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
-        }
-
-        html.dark-mode .add-teacher-form {
-            background-color: #0F172A !important;
-            border: 2px dashed #F59E0B !important;
-            color: #F1F5F9 !important;
-        }
-
-        html.dark-mode .info-box {
-            background-color: #1E293B !important;
-            border: 1px solid #334155 !important;
-            border-left: 4px solid #3B82F6 !important;
-            color: #BFDBFE !important;
-        }
-
-        html.dark-mode .info-box strong {
-            color: #FCD34D !important;
-        }
-
-        html.dark-mode .teacher-card {
-            background-color: #1E293B !important;
-            border: 1.5px solid #334155 !important;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3) !important;
-            color: #F1F5F9 !important;
-        }
-
-        html.dark-mode .teacher-card:hover {
-            border-color: #F59E0B !important;
-            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2) !important;
-        }
-
-        html.dark-mode .teacher-header {
-            border-bottom: 1.5px solid #334155 !important;
-        }
-
-        html.dark-mode .teacher-avatar {
-            border: 2.5px solid #F59E0B !important;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
-        }
-
-        html.dark-mode .teacher-name {
-            color: #F8FAFC !important;
-        }
-
-        html.dark-mode .teacher-name:hover {
-            color: #FCD34D !important;
-        }
-
-        html.dark-mode .teacher-username {
-            background-color: #2E1065 !important;
-            color: #DDD6FE !important;
-            border: 1px solid #6D28D9 !important;
-        }
-
-        html.dark-mode .teacher-phone {
-            color: #94A3B8 !important;
-        }
-
-        html.dark-mode .status-new {
-            background-color: #78350F !important;
-            color: #FDE68A !important;
-            border: 1px solid #D97706 !important;
-        }
-
-        html.dark-mode .status-active {
-            background-color: #064E3B !important;
-            color: #A7F3D0 !important;
-            border: 1px solid #059669 !important;
-        }
-
-        html.dark-mode .year-group {
-            border-left: 3px solid #F59E0B !important;
-        }
-
-        html.dark-mode .year-header {
-            background-color: #0F172A !important;
-            border: 1px solid #334155 !important;
-            color: #F1F5F9 !important;
-        }
-
-        html.dark-mode .year-header:hover {
-            background-color: #26354A !important;
-        }
-
-        html.dark-mode .year-badge {
-            background: #D97706 !important;
-            color: #FFFFFF !important;
-        }
-
-        html.dark-mode .year-status {
-            color: #94A3B8 !important;
-        }
-
-        html.dark-mode .semester-row {
-            background-color: #0F172A !important;
-            border: 1px solid #334155 !important;
-        }
-
-        html.dark-mode .semester-badge.semester-1 {
-            background-color: #1E3A8A !important;
-            color: #BFDBFE !important;
-            border: 1px solid #2563EB !important;
-        }
-
-        html.dark-mode .semester-badge.semester-2 {
-            background-color: #78350F !important;
-            color: #FDE68A !important;
-            border: 1px solid #D97706 !important;
-        }
-
-        html.dark-mode .class-tag {
-            background-color: #1E293B !important;
-            border: 1px solid #F59E0B !important;
-            color: #FCD34D !important;
-        }
-
-        html.dark-mode .class-tag.locked {
-            background-color: #3B1212 !important;
-            border-color: #DC2626 !important;
-            color: #FCA5A5 !important;
-        }
-
-        html.dark-mode .no-data {
-            color: #64748B !important;
-        }
-
-        html.dark-mode .empty-state {
-            color: #94A3B8 !important;
-        }
-
-        html.dark-mode .modal-content {
-            background-color: #1E293B !important;
-            border: 2px solid #F59E0B !important;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7) !important;
-            color: #F1F5F9 !important;
-        }
-
-        html.dark-mode .modal-content h2,
-        html.dark-mode .modal-title {
-            color: #FCD34D !important;
-        }
-
-        html.dark-mode .close {
-            color: #94A3B8 !important;
-        }
-
-        html.dark-mode .close:hover {
-            color: #EF4444 !important;
-        }
-
-        /* Profile Requests Review Cards */
-        html.dark-mode .request-review-card {
-            background-color: #0F172A !important;
-            border: 1.5px solid #334155 !important;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
-        }
-
-        html.dark-mode .request-review-header {
-            border-bottom: 1px solid #334155 !important;
-        }
-
-        html.dark-mode .request-review-header strong {
-            color: #FCD34D !important;
-        }
-
-        html.dark-mode .request-detail-box {
-            background-color: #1E293B !important;
-            border: 1px solid #334155 !important;
-            color: #E2E8F0 !important;
-        }
-
-        html.dark-mode .request-reason-box {
-            background-color: #78350F !important;
-            border: 1px solid #D97706 !important;
-            color: #FDE68A !important;
-        }
-
-        html.dark-mode .reject-box {
-            background-color: #3B1212 !important;
-            border: 1px solid #7F1D1D !important;
-            color: #FECACA !important;
-        }
-
-        html.dark-mode .reject-box label {
-            color: #FCA5A5 !important;
-        }
-
-        html.dark-mode .reject-box input {
-            background-color: #0F172A !important;
-            border-color: #475569 !important;
-            color: #F8FAFC !important;
+            .main-container { padding: 0 10px 40px; margin: 12px auto; }
+            .page-header-card { padding: 18px 16px; }
+            .content-card { padding: 16px 14px; border-radius: 14px; }
+            .teachers-grid { grid-template-columns: 1fr; }
+            .btn-primary-action { width: 100%; justify-content: center; min-height: 44px; }
         }
     </style>
 </head>
@@ -1095,340 +695,280 @@ $nav_active = 'manage_teachers';
     <?php include 'mobile_nav.php'; ?>
 
     <div class="main-container">
-        <?php if($message): ?>
-        <div class="message success">
-            <span>✅</span>
-            <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
+        <!-- Page Header -->
+        <div class="page-header-card">
+            <div class="header-info">
+                <h1>👨‍🏫 የመምህራን አስተዳደር</h1>
+                <p>አዳዲስ መምህራንን ይመዝግቡ፣ የተመደቡባቸውን ክፍሎች ይከታተሉ እና የይለፍ ቃሎችን ያስተዳድሩ።</p>
+            </div>
         </div>
+
+        <?php if($message): ?>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if($error): ?>
-        <div class="message error">
-            <span>⚠️</span>
-            <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php endif; ?>
+
+        <!-- Pending Profile Requests Section (If Any) -->
+        <?php if (!empty($pending_requests)): ?>
+        <div class="requests-card">
+            <div class="requests-card-header">
+                <span>🔔</span> የጸደቁ የመረጃ ለውጥ ጥያቄዎች (<?php echo count($pending_requests); ?>)
+            </div>
+            <?php foreach ($pending_requests as $req): ?>
+            <div class="req-item">
+                <div class="req-info">
+                    <strong><?php echo htmlspecialchars($req['current_name']); ?></strong> (@<?php echo htmlspecialchars($req['username']); ?>)<br>
+                    <?php if ($req['requested_name']): ?>
+                        ስም መቀየር፦ <code><?php echo htmlspecialchars($req['requested_name']); ?></code><br>
+                    <?php endif; ?>
+                    <?php if ($req['requested_phone']): ?>
+                        ስልክ መቀየር፦ <code><?php echo htmlspecialchars($req['requested_phone']); ?></code><br>
+                    <?php endif; ?>
+                    <?php if ($req['requested_photo']): ?>
+                        ፎቶ መቀየር፦ <a href="<?php echo htmlspecialchars($req['requested_photo']); ?>" target="_blank">ፎቶውን ይመልከቱ</a><br>
+                    <?php endif; ?>
+                    <small style="color:#666;">የቀረበበት ቀን፦ <?php echo date('Y-m-d H:i', strtotime($req['created_at'])); ?></small>
+                </div>
+                <div class="req-actions">
+                    <form method="POST" style="display:inline;">
+                        <?php echo csrfField(); ?>
+                        <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
+                        <button type="submit" name="approve_profile_request" class="btn-primary-action" style="padding:8px 14px; font-size:12.5px; background:#10B981; color:white;">
+                            ✅ አጽድቅ
+                        </button>
+                    </form>
+                    <button onclick="openRejectModal(<?php echo $req['id']; ?>, '<?php echo htmlspecialchars(addslashes($req['current_name'])); ?>')" 
+                            style="padding:8px 14px; font-size:12.5px; background:#EF4444; color:white; border:none; border-radius:10px; font-weight:700; cursor:pointer;">
+                        ❌ ውድቅ አድርግ
+                    </button>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
-        <!-- Current Academic Year Info -->
-        <div class="current-year-badge" style="margin-bottom: 20px;">
-            ንቁ ዘመን: <?php echo $current_ethiopian_year; ?> ዓ.ም
-        </div>
-
-        <!-- Profile Change Requests from Teachers -->
-        <div class="section requests-section <?php echo !empty($pending_requests) ? 'has-pending' : ''; ?>" id="requests">
-            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <h2>
-                    <span>📋</span> የመምህራን የመረጃ ለውጥ ጥያቄዎች
-                    <?php if (!empty($pending_requests)): ?>
-                        <span style="background: #DC2626; color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; margin-left: 8px;">
-                            <?php echo count($pending_requests); ?> አዲስ ጥያቄ
-                        </span>
-                    <?php endif; ?>
-                </h2>
-                <span style="font-size: 13px; color: #666;">
-                    <?php echo !empty($pending_requests) ? count($pending_requests) . ' ጥያቄዎች ውሳኔ ይጠብቃሉ' : 'ምንም በመጠባበቅ ላይ ያለ ጥያቄ የለም'; ?>
-                </span>
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon">👨‍🏫</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo $teachers_count; ?></div>
+                    <div class="stat-lbl">ጠቅላላ መምህራን</div>
+                </div>
             </div>
-
-            <?php if (!empty($pending_requests)): ?>
-                <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 15px;">
-                    <?php foreach ($pending_requests as $req): ?>
-                        <div class="request-review-card" style="border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                            <div class="request-review-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                                <div>
-                                    <strong style="color: var(--brown-dark); font-size: 15px;"><?php echo htmlspecialchars($req['current_name']); ?></strong>
-                                    <span style="color: #6B7280; font-size: 12px; margin-left: 6px;">(@<?php echo htmlspecialchars($req['username']); ?>)</span>
-                                </div>
-                                <span style="font-size: 12px; color: #9CA3AF;">የቀረበበት ቀን፡ <?php echo date('M d, Y h:i A', strtotime($req['created_at'])); ?></span>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; font-size: 13px;">
-                                <div class="request-detail-box" style="padding: 10px; border-radius: 8px;">
-                                    <span style="color: #6B7280; display: block; font-size: 11px; text-transform: uppercase;">ሙሉ ስም</span>
-                                    <div>የነበረው፡ <strong><?php echo htmlspecialchars($req['current_name']); ?></strong></div>
-                                    <div style="color: <?php echo ($req['requested_name'] && $req['requested_name'] !== $req['current_name']) ? '#D97706' : '#059669'; ?>; margin-top: 3px;">
-                                        የተጠየቀው፡ <strong><?php echo htmlspecialchars($req['requested_name'] ?: $req['current_name']); ?></strong>
-                                    </div>
-                                </div>
-
-                                <div class="request-detail-box" style="padding: 10px; border-radius: 8px;">
-                                    <span style="color: #6B7280; display: block; font-size: 11px; text-transform: uppercase;">ስልክ ቁጥር</span>
-                                    <div>የነበረው፡ <strong><?php echo htmlspecialchars($req['current_phone'] ?: '---'); ?></strong></div>
-                                    <div style="color: <?php echo ($req['requested_phone'] && $req['requested_phone'] !== $req['current_phone']) ? '#D97706' : '#059669'; ?>; margin-top: 3px;">
-                                        የተጠየቀው፡ <strong><?php echo htmlspecialchars($req['requested_phone'] ?: ($req['current_phone'] ?: '---')); ?></strong>
-                                    </div>
-                                </div>
-
-                                <?php if ($req['requested_photo']): ?>
-                                    <div class="request-detail-box" style="padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 12px;">
-                                        <img src="<?php echo htmlspecialchars($req['requested_photo']); ?>" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold-primary);" alt="New photo">
-                                        <div>
-                                            <span style="color: #6B7280; font-size: 11px; text-transform: uppercase; display: block;">አዲስ ፎቶ</span>
-                                            <a href="<?php echo htmlspecialchars($req['requested_photo']); ?>" target="_blank" style="color: #2563EB; font-size: 12px; text-decoration: underline;">በሙሉ እይ</a>
-                                        </div>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-
-                            <?php if ($req['reason']): ?>
-                                <div class="request-reason-box" style="padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 14px;">
-                                    <strong>ምክንያት፡</strong> <?php echo htmlspecialchars($req['reason']); ?>
-                                </div>
-                            <?php endif; ?>
-
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: flex-end;">
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('ይህን የመረጃ ለውጥ ማጽደቅ እርግጠኛ ነዎት?')">
-                                    <?php echo csrfField(); ?>
-                                    <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
-                                    <button type="submit" name="approve_profile_request" class="btn" style="background: #059669; color: white; padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                                        ✅ ጥያቄውን አጽድቅ
-                                    </button>
-                                </form>
-
-                                <button type="button" class="btn" onclick="document.getElementById('reject-box-<?php echo $req['id']; ?>').style.display='block'" style="background: #DC2626; color: white; padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                                    ❌ ውድቅ አድርግ
-                                </button>
-                            </div>
-
-                            <div id="reject-box-<?php echo $req['id']; ?>" class="reject-box" style="display: none; margin-top: 12px; padding: 12px; border-radius: 8px;">
-                                <form method="POST">
-                                    <?php echo csrfField(); ?>
-                                    <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
-                                    <label style="display: block; font-size: 12px; font-weight: 600; color: #991B1B; margin-bottom: 4px;">የውድቅ ማድረጊያ ምክንያት (ለመምህሩ የሚላክ)</label>
-                                    <input type="text" name="admin_notes" placeholder="ምሳሌ፡ መረጃው ትክክል አይደለም..." style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 13px; margin-bottom: 8px;">
-                                    <div style="display: flex; gap: 8px;">
-                                        <button type="submit" name="reject_profile_request" class="btn" style="background: #DC2626; color: white; padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">ውድቅ አድርግ</button>
-                                        <button type="button" class="btn" onclick="document.getElementById('reject-box-<?php echo $req['id']; ?>').style.display='none'" style="background: #6B7280; color: white; padding: 6px 14px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">ሰርዝ</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+            <div class="stat-box">
+                <div class="stat-icon">📚</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo $total_assignments_count; ?></div>
+                    <div class="stat-lbl">የክፍል ምደባዎች</div>
                 </div>
-            <?php else: ?>
-                <div style="padding: 15px; text-align: center; color: #9CA3AF; font-size: 13px;">
-                    ✨ በአሁኑ ሰዓት ምንም ያልተመለሰ የመረጃ ለውጥ ጥያቄ የለም።
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">🔔</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo count($pending_requests); ?></div>
+                    <div class="stat-lbl">የመረጃ ለውጥ ጥያቄዎች</div>
                 </div>
-            <?php endif; ?>
+            </div>
         </div>
 
         <!-- Add Teacher Form -->
-        <div class="section">
-            <div class="section-header">
+        <div class="content-card">
+            <div class="content-card-header">
                 <h2><span>➕</span> አዲስ መምህር መመዝገቢያ</h2>
             </div>
-            
-            <div class="add-teacher-form">
-                <form method="POST">
-                    <?php echo csrfField(); ?>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>ሙሉ ስም <span style="color: var(--error-red);">*</span></label>
-                            <input type="text" name="name" class="form-control" required 
-                                   placeholder="ሙሉ ስም ያስገቡ">
-                        </div>
-                        <div class="form-group">
-                            <label>የተጠቃሚ ስም <span style="color: var(--error-red);">*</span></label>
-                            <input type="text" name="username" class="form-control" required 
-                                   placeholder="ለምሳሌ: memhir_abebe">
-                        </div>
-                        <div class="form-group">
-                            <label>ስልክ ቁጥር</label>
-                            <input type="text" name="phone" class="form-control" 
-                                   placeholder="0912345678">
-                        </div>
+            <form method="POST">
+                <?php echo csrfField(); ?>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>ሙሉ ስም <span style="color: var(--error);">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="የመምህር ሙሉ ስም">
                     </div>
-                    
-                    <div class="info-box">
-                        <span>ℹ️</span>
-                        <div>
-                            <strong>የመጀመሪያ የይለፍ ቃል:</strong> 123<br>
-                            <small>መምህሩ ለመጀመሪያ ጊዜ ሲገባ ይለውጠዋል</small>
-                        </div>
+                    <div class="form-group">
+                        <label>የተጠቃሚ ስም (Username) <span style="color: var(--error);">*</span></label>
+                        <input type="text" name="username" class="form-control" required placeholder="ለመግቢያ የሚያገለግል ስም">
                     </div>
-                    
-                    <button type="submit" name="add_teacher" class="btn btn-primary">
-                        <span>➕</span> መምህር አስመዝግብ
-                    </button>
-                </form>
-            </div>
+                    <div class="form-group">
+                        <label>ስልክ ቁጥር</label>
+                        <input type="text" name="phone" class="form-control" placeholder="09...">
+                    </div>
+                </div>
+                <button type="submit" name="add_teacher" class="btn-primary-action">
+                    ➕ መምህር መዝግብ (ነባሪ የይለፍ ቃል: 123)
+                </button>
+            </form>
         </div>
 
-        <!-- Teachers List with History -->
-        <div class="section">
-            <div class="section-header">
-                <h2><span>👨‍🏫</span> የመምህራን ዝርዝር እና ታሪክ</h2>
-                <span class="count-badge">
-                    <?php echo mysqli_num_rows($teachers); ?> መምህራን
-                </span>
+        <!-- Teachers Grid List -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><span>📋</span> የመምህራን ማውጫ ዝርዝር</h2>
+                <span class="header-badge"><?php echo $teachers_count; ?> መምህራን</span>
             </div>
-            
+
+            <!-- Instant Search Box -->
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="teacherSearch" class="form-control" placeholder="🔍 የመምህር ስም፣ ስልክ ወይም username ይፈልጉ..." onkeyup="filterTeachers()">
+            </div>
+
             <?php if($teachers && mysqli_num_rows($teachers) > 0): ?>
-            <div class="teachers-grid">
-                <?php while($teacher = mysqli_fetch_assoc($teachers)): 
-                    $teacher_id = $teacher['id'];
-                    $has_history = isset($teacher_history[$teacher_id]);
-                    $teacher_photo = $teacher['photo'] ?: null;
+            <div class="teachers-grid" id="teachersListContainer">
+                <?php 
+                mysqli_data_seek($teachers, 0);
+                while($teacher = mysqli_fetch_assoc($teachers)): 
+                    $t_id = $teacher['id'];
+                    $t_name = $teacher['name'];
+                    $t_username = $teacher['username'];
+                    $t_phone = $teacher['phone'];
+                    $t_photo = $teacher['photo'];
+                    $t_initial = mb_substr($t_name, 0, 1, 'UTF-8');
+                    $history = $teacher_history[$t_id] ?? [];
                 ?>
-                <div class="teacher-card">
-                    <div class="teacher-header">
-                        <div class="teacher-avatar">
-                            <?php if($teacher_photo): ?>
-                            <img src="<?php echo htmlspecialchars($teacher_photo); ?>" alt="<?php echo htmlspecialchars($teacher['name']); ?>" onerror="this.style.display='none'; this.parentElement.innerHTML='<?php echo mb_substr($teacher['name'], 0, 1); ?>';">
+                <div class="teacher-card" data-search="<?php echo htmlspecialchars(strtolower($t_name . ' ' . $t_username . ' ' . $t_phone)); ?>">
+                    <div>
+                        <div class="teacher-top">
+                            <?php if ($t_photo && file_exists($t_photo)): ?>
+                                <img src="<?php echo htmlspecialchars($t_photo); ?>" class="teacher-avatar-img" alt="Photo">
                             <?php else: ?>
-                            <?php echo mb_substr($teacher['name'], 0, 1); ?>
+                                <div class="teacher-avatar-fallback"><?php echo htmlspecialchars($t_initial); ?></div>
                             <?php endif; ?>
-                        </div>
-                        <div class="teacher-title">
-                            <div>
-                                <a href="teacher_profile.php?id=<?php echo $teacher['id']; ?>" class="teacher-name">
-                                    <?php echo htmlspecialchars($teacher['name']); ?>
+                            <div class="teacher-meta-head">
+                                <h3><?php echo htmlspecialchars($t_name); ?></h3>
+                                <span class="teacher-user-tag">@<?php echo htmlspecialchars($t_username); ?></span>
+                                <?php if ($t_phone): ?>
+                                <a href="tel:<?php echo htmlspecialchars($t_phone); ?>" class="teacher-phone">
+                                    📞 <?php echo htmlspecialchars($t_phone); ?>
                                 </a>
-                                <span class="teacher-status <?php echo $teacher['first_login'] ? 'status-new' : 'status-active'; ?>">
-                                    <?php echo $teacher['first_login'] ? '🆕 አዲስ' : '✅ ንቁ'; ?>
-                                </span>
+                                <?php endif; ?>
                             </div>
-                            <div class="teacher-username">
-                                @<?php echo htmlspecialchars($teacher['username']); ?>
+                        </div>
+
+                        <!-- Teaching Assignments Overview -->
+                        <div class="teacher-history-box">
+                            <div class="history-toggle-title" onclick="toggleHistory(<?php echo $t_id; ?>)">
+                                <span>📚 የተመደቡባቸው ክፍሎች (<?php echo count($history); ?> ዓመታት)</span>
+                                <span id="toggleIcon-<?php echo $t_id; ?>">▼</span>
                             </div>
-                            <div class="teacher-phone">
-                                <span>📱</span>
-                                <?php echo htmlspecialchars($teacher['phone'] ?: 'ስልክ የለም'); ?>
+                            <div id="historyDetails-<?php echo $t_id; ?>" class="history-content" style="display: none;">
+                                <?php if (!empty($history)): 
+                                    foreach ($history as $yr => $sems):
+                                ?>
+                                <div style="margin-bottom: 8px;">
+                                    <strong style="color:var(--brown-dark); font-size:11.5px;">📅 <?php echo $yr; ?> ዓ.ም፦</strong>
+                                    <?php if (!empty($sems['semester1'])): ?>
+                                        <div style="margin-top:2px;">
+                                            <span style="font-size:11px; color:#666;">ሴ1:</span>
+                                            <?php foreach ($sems['semester1'] as $asg): ?>
+                                                <span class="class-chip <?php echo $asg['locked'] ? 'locked' : ''; ?>">
+                                                    <?php echo $asg['locked'] ? '🔒' : ''; ?> <?php echo htmlspecialchars($asg['class_name']); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($sems['semester2'])): ?>
+                                        <div style="margin-top:2px;">
+                                            <span style="font-size:11px; color:#666;">ሴ2:</span>
+                                            <?php foreach ($sems['semester2'] as $asg): ?>
+                                                <span class="class-chip <?php echo $asg['locked'] ? 'locked' : ''; ?>">
+                                                    <?php echo $asg['locked'] ? '🔒' : ''; ?> <?php echo htmlspecialchars($asg['class_name']); ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endforeach; else: ?>
+                                <div style="color: #999; font-style: italic;">ምንም የተመደበ ክፍል የለም</div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Actions -->
                     <div class="teacher-actions">
-                        <a href="teacher_profile.php?id=<?php echo $teacher['id']; ?>" class="btn btn-profile">
-                            👤 መገለጫ
+                        <a href="teacher_profile.php?id=<?php echo $t_id; ?>" class="btn-profile-link" title="የመምህር ሙሉ ፕሮፋይል ይመልከቱ">
+                            👤 ፕሮፋይል
                         </a>
-                        
-                        <button onclick="editTeacher(<?php echo $teacher['id']; ?>, '<?php echo htmlspecialchars(addslashes($teacher['name'])); ?>', '<?php echo htmlspecialchars($teacher['username']); ?>', '<?php echo $teacher['phone']; ?>')" 
-                                class="btn btn-edit">
-                            ✏️ አስተካክል
+                        <button onclick="editTeacher(<?php echo $t_id; ?>, '<?php echo htmlspecialchars(addslashes($t_name), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($t_username), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($t_phone ?? ''), ENT_QUOTES); ?>')" 
+                                class="btn-t-edit" title="መረጃ አርትዕ">
+                            ✏️ አርትዕ
                         </button>
-                        
-                        <form method="POST" style="display: inline;" 
-                              onsubmit="return confirm('የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('የ[<?php echo htmlspecialchars(addslashes($t_name), ENT_QUOTES); ?>] የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
                             <?php echo csrfField(); ?>
-                            <input type="hidden" name="teacher_id" value="<?php echo $teacher['id']; ?>">
-                            <button type="submit" name="reset_password" class="btn btn-reset">
-                                🔄 ይለፍ ቃል መልስ
+                            <input type="hidden" name="teacher_id" value="<?php echo $t_id; ?>">
+                            <button type="submit" name="reset_password" class="btn-t-reset" title="የይለፍ ቃል ወደ 123 መልስ">
+                                🔄 123
                             </button>
                         </form>
-                        
-                        <?php if(!$has_history): ?>
-                        <form method="POST" style="display: inline;" 
-                              onsubmit="return confirm('መምህሩን መሰረዝ እርግጠኛ ነዎት?')">
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('መምህር [<?php echo htmlspecialchars(addslashes($t_name), ENT_QUOTES); ?>] መሰረዝ ይፈልጋሉ? የተያያዙ ውጤቶችና ምደባዎች ይሰረዛሉ!')">
                             <?php echo csrfField(); ?>
-                            <input type="hidden" name="teacher_id" value="<?php echo $teacher['id']; ?>">
-                            <button type="submit" name="delete_teacher" class="btn btn-delete">
-                                🗑️ ሰርዝ
+                            <input type="hidden" name="teacher_id" value="<?php echo $t_id; ?>">
+                            <button type="submit" name="delete_teacher" class="btn-t-del" title="መምህር ሰርዝ">
+                                🗑️
                             </button>
                         </form>
-                        <?php else: ?>
-                        <button class="btn btn-delete" style="opacity: 0.5; cursor: not-allowed;" 
-                                title="ይህ መምህር ታሪክ አለው መሰረዝ አይቻልም">
-                            🗑️ መሰረዝ አይቻልም
-                        </button>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- Assignment History Timeline -->
-                    <div class="timeline">
-                        <?php if($has_history): ?>
-                            <?php 
-                            $teacher_years = $teacher_history[$teacher_id];
-                            krsort($teacher_years);
-                            foreach($teacher_years as $year => $semesters): 
-                                $is_current = ($year == $current_ethiopian_year);
-                            ?>
-                            <div class="year-group">
-                                <div class="year-header" onclick="toggleYear('year-<?php echo $teacher_id . '-' . $year; ?>')">
-                                    <span class="year-badge"><?php echo $year; ?> ዓ.ም</span>
-                                    <?php if($is_current): ?>
-                                    <span class="year-status" style="color: var(--success-green);">(ንቁ)</span>
-                                    <?php endif; ?>
-                                    <span class="toggle-icon" id="icon-<?php echo $teacher_id . '-' . $year; ?>">▼</span>
-                                </div>
-                                
-                                <div id="year-<?php echo $teacher_id . '-' . $year; ?>" style="display: <?php echo $is_current ? 'block' : 'none'; ?>;">
-                                    <?php if(!empty($semesters['semester1'])): ?>
-                                    <div class="semester-row">
-                                        <div class="semester-badge semester-1">ሴሚስተር 1</div>
-                                        <div class="classes-list">
-                                            <?php foreach($semesters['semester1'] as $assignment): ?>
-                                            <span class="class-tag <?php echo $assignment['locked'] ? 'locked' : ''; ?>">
-                                                <?php if($assignment['locked']): ?>🔒 <?php endif; ?>
-                                                <?php echo htmlspecialchars($assignment['class_name']); ?>
-                                            </span>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    </div>
-                                    <?php endif; ?>
-
-                                    <?php if(!empty($semesters['semester2'])): ?>
-                                    <div class="semester-row">
-                                        <div class="semester-badge semester-2">ሴሚስተር 2</div>
-                                        <div class="classes-list">
-                                            <?php foreach($semesters['semester2'] as $assignment): ?>
-                                            <span class="class-tag <?php echo $assignment['locked'] ? 'locked' : ''; ?>">
-                                                <?php if($assignment['locked']): ?>🔒 <?php endif; ?>
-                                                <?php echo htmlspecialchars($assignment['class_name']); ?>
-                                            </span>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="no-data">
-                                ይህ መምህር እስካሁን ምንም ክፍል አልተመደበም
-                            </div>
-                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endwhile; ?>
             </div>
             <?php else: ?>
-            <div class="empty-state">
-                <span>👨‍🏫</span>
-                <h3>ምንም መምህራን የሉም</h3>
-                <p>እባክዎ ከላይ ባለው ቅጽ አዲስ መምህር ይመዝግቡ</p>
+            <div style="text-align:center; padding:50px 20px; color:var(--text-muted);">
+                <div style="font-size:48px; margin-bottom:12px;">👨‍🏫</div>
+                <div style="font-weight:700;">ምንም መምህራን አልተመዘገቡም</div>
+                <p>እባክዎ ከላይ ያለውን ቅጽ በመጠቀም አዲስ መምህር ይመዝግቡ።</p>
             </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2 class="modal-title" style="margin-bottom: 20px;">የመምህር መረጃ አስተካክል</h2>
-            
+    <!-- Edit Teacher Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✏️ የመምህር መረጃ ማስተካከያ</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
             <form method="POST" id="editForm">
                 <?php echo csrfField(); ?>
                 <input type="hidden" name="teacher_id" id="edit_id">
-                
-                <div class="form-group">
-                    <label>ሙሉ ስም <span style="color: var(--error-red);">*</span></label>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>ሙሉ ስም <span style="color: var(--error);">*</span></label>
                     <input type="text" name="name" id="edit_name" class="form-control" required>
                 </div>
-                
-                <div class="form-group">
-                    <label>የተጠቃሚ ስም <span style="color: var(--error-red);">*</span></label>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>የተጠቃሚ ስም (Username) <span style="color: var(--error);">*</span></label>
                     <input type="text" name="username" id="edit_username" class="form-control" required>
                 </div>
-                
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 20px;">
                     <label>ስልክ ቁጥር</label>
                     <input type="text" name="phone" id="edit_phone" class="form-control">
                 </div>
-                
-                <button type="submit" name="edit_teacher" class="btn btn-primary" style="width: 100%;">
-                    💾 አስቀምጥ
+                <button type="submit" name="edit_teacher" class="btn-primary-action" style="width: 100%; justify-content: center;">
+                    💾 ለውጦችን አስቀምጥ
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reject Profile Modal -->
+    <div id="rejectModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>❌ ጥያቄ ውድቅ ማድረጊያ</h3>
+                <button class="modal-close" onclick="closeRejectModal()">&times;</button>
+            </div>
+            <form method="POST">
+                <?php echo csrfField(); ?>
+                <input type="hidden" name="request_id" id="reject_req_id">
+                <p id="reject_teacher_name" style="margin-bottom: 12px; font-weight: 600; color: var(--brown-dark);"></p>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label>ውድቅ የተደረገበት ምክንያት / ማብራሪያ፦</label>
+                    <textarea name="admin_notes" class="form-control" rows="3" placeholder="ለምሳሌ፦ ስልክ ቁጥሩ የተሳሳተ ነው..."></textarea>
+                </div>
+                <button type="submit" name="reject_profile_request" style="width: 100%; padding: 12px; border: none; border-radius: 10px; background: var(--error); color: white; font-weight: 700; cursor: pointer;">
+                    ❌ ጥያቄውን ውድቅ አድርግ
                 </button>
             </form>
         </div>
@@ -1440,30 +980,53 @@ $nav_active = 'manage_teachers';
             document.getElementById('edit_name').value = name;
             document.getElementById('edit_username').value = username;
             document.getElementById('edit_phone').value = phone || '';
-            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('editModal').style.display = 'flex';
         }
 
         function closeModal() {
             document.getElementById('editModal').style.display = 'none';
         }
 
-        function toggleYear(elementId) {
-            const yearDiv = document.getElementById(elementId);
-            const icon = document.getElementById('icon-' + elementId.replace('year-', ''));
-            
-            if (yearDiv.style.display === 'none') {
-                yearDiv.style.display = 'block';
-                icon.innerHTML = '▼';
+        function openRejectModal(id, name) {
+            document.getElementById('reject_req_id').value = id;
+            document.getElementById('reject_teacher_name').innerText = "ለመምህር " + name + " የተላከ ማብራሪያ";
+            document.getElementById('rejectModal').style.display = 'flex';
+        }
+
+        function closeRejectModal() {
+            document.getElementById('rejectModal').style.display = 'none';
+        }
+
+        function toggleHistory(teacherId) {
+            var el = document.getElementById('historyDetails-' + teacherId);
+            var icon = document.getElementById('toggleIcon-' + teacherId);
+            if (el.style.display === 'none' || el.style.display === '') {
+                el.style.display = 'block';
+                icon.innerText = '▲';
             } else {
-                yearDiv.style.display = 'none';
-                icon.innerHTML = '▶';
+                el.style.display = 'none';
+                icon.innerText = '▼';
             }
         }
 
+        function filterTeachers() {
+            var q = document.getElementById('teacherSearch').value.toLowerCase();
+            var cards = document.querySelectorAll('.teacher-card');
+            cards.forEach(function(card) {
+                var searchData = card.getAttribute('data-search');
+                if (!q || searchData.indexOf(q) > -1) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
         window.onclick = function(event) {
-            if (event.target == document.getElementById('editModal')) {
-                closeModal();
-            }
+            var editM = document.getElementById('editModal');
+            var rejM = document.getElementById('rejectModal');
+            if (event.target === editM) closeModal();
+            if (event.target === rejM) closeRejectModal();
         }
     </script>
 </body>

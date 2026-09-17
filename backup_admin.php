@@ -99,79 +99,447 @@ $backups = glob(__DIR__ . '/backups/backup_*.sql');
 rsort($backups);
 
 $nav_active = 'backup_admin';
+
+// Calculate storage stats
+$total_backups = count($backups);
+$total_bytes = 0;
+foreach ($backups as $b) {
+    if (file_exists($b)) {
+        $total_bytes += filesize($b);
+    }
+}
+$total_size_mb = round($total_bytes / (1024 * 1024), 2);
+$latest_backup_time = !empty($backups) ? date('Y-m-d h:i A', filemtime($backups[0])) : 'ምንም የለም';
 ?>
 <!DOCTYPE html>
 <html lang="am">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ምትኬ | አጸደ ትጉሃን</title>
+<title>የመረጃ ቋት ምትኬ | አጸደ ትጉሃን</title>
 <?php include 'pwa_head.php'; ?>
 <style>
-:root { --brown-dark:#8B4513; --gold-primary:#FFD700; --success:#10B981; --error:#EF4444; }
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
-body { background:#FAF9F6; }
-.main-container { max-width:800px; margin:20px auto; padding:0 15px 60px; }
-.card { background:white; border-radius:14px; padding:20px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-.message { padding:12px 15px; border-radius:8px; margin-bottom:15px; }
-.success { background:#D1FAE5; color:var(--success); } .error { background:#FEE2E2; color:var(--error); }
-.btn { background:var(--gold-primary); color:var(--brown-dark); border:none; padding:12px 24px; border-radius:10px; font-weight:700; cursor:pointer; font-size:15px; }
-.backup-row { display:flex; justify-content:space-between; align-items:center; padding:12px 5px; border-bottom:1px solid #eee; gap:10px; flex-wrap:wrap; }
-.backup-row:last-child { border-bottom:none; }
-.btn-sm { padding:6px 14px; border-radius:8px; font-size:13px; text-decoration:none; font-weight:600; }
-.btn-download { background:var(--success); color:white; }
-.btn-delete { background:var(--error); color:white; border:none; cursor:pointer; }
-@media (max-width: 600px) {
+:root {
+    --brown-dark: #8B4513;
+    --brown-medium: #A52A2A;
+    --gold-primary: #FFD700;
+    --gold-dark: #DAA520;
+    --gold-pale: #FFF8DC;
+    --bg-cream: #FAF9F6;
+    --card-bg: #FFFFFF;
+    --text-main: #1F2937;
+    --text-muted: #6B7280;
+    --border-color: #E5E7EB;
+    --success: #10B981;
+    --error: #EF4444;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
+
+.main-container { max-width: 1000px; margin: 24px auto; padding: 0 16px 80px; }
+
+/* Page Header Card */
+.page-header-card {
+    background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
+    border-radius: 16px;
+    padding: 24px 28px;
+    color: white;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(139, 69, 19, 0.18);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+}
+.page-header-card::after {
+    content: '💾';
+    position: absolute;
+    right: 20px;
+    bottom: -15px;
+    font-size: 100px;
+    opacity: 0.12;
+    pointer-events: none;
+}
+.header-info h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--gold-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+.header-info p {
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 600px;
+    line-height: 1.5;
+}
+
+/* Stats Row */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.stat-box {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--gold-pale);
+    color: var(--brown-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.stat-data .stat-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--brown-dark);
+}
+.stat-data .stat-lbl {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+/* Alerts */
+.message {
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.message.success { background: #DCFCE7; color: #166534; border-left: 4px solid var(--success); }
+.message.error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--error); }
+
+/* Create Card */
+.action-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.action-card-text h3 {
+    color: var(--brown-dark);
+    font-size: 17px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.action-card-text p {
+    color: var(--text-muted);
+    font-size: 13.5px;
+    max-width: 550px;
+    line-height: 1.5;
+}
+.btn-create-backup {
+    background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+    color: var(--brown-dark);
+    border: none;
+    padding: 13px 26px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(218, 165, 32, 0.25);
+    white-space: nowrap;
+}
+.btn-create-backup:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(218, 165, 32, 0.35);
+}
+.btn-create-backup:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Backups List Card */
+.list-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.list-card-header {
+    padding: 18px 24px;
+    background: #F9FAFB;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.list-card-header h3 {
+    font-size: 16px;
+    color: var(--brown-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.backup-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #F3F4F6;
+    transition: background 0.15s ease;
+    gap: 14px;
+}
+.backup-item:last-child { border-bottom: none; }
+.backup-item:hover { background: rgba(255, 215, 0, 0.03); }
+
+.backup-file-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.file-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #EFF6FF;
+    color: #2563EB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.file-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-main);
+    word-break: break-all;
+    font-family: monospace;
+}
+.file-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 12px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+}
+.file-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.backup-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.btn-dl {
+    background: #10B981;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+.btn-dl:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+.btn-del {
+    background: #FEE2E2;
+    color: #DC2626;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+.btn-del:hover {
+    background: #EF4444;
+    color: white;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--text-muted);
+}
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.7;
+}
+
+@media (max-width: 650px) {
     .main-container { padding: 0 10px 40px; margin: 12px auto; }
-    .card { padding: 15px 12px; }
-    .btn { width: 100%; justify-content: center; font-size: 14px; min-height: 44px; }
-    .backup-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .backup-row > div:first-child { width: 100%; word-break: break-all; }
-    .backup-row > div:last-child { width: 100%; display: flex; justify-content: flex-end; gap: 8px; }
+    .page-header-card { padding: 18px 16px; }
+    .action-card { flex-direction: column; align-items: stretch; text-align: center; }
+    .btn-create-backup { width: 100%; justify-content: center; }
+    .backup-item { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .backup-actions { width: 100%; justify-content: flex-end; }
+    .btn-dl, .btn-del { flex: 1; justify-content: center; min-height: 40px; }
 }
 </style>
 </head>
 <body>
 <?php include 'mobile_nav.php'; ?>
-<div class="main-container">
-    <?php if ($message): ?><div class="message success">✅ <?php echo htmlspecialchars($message); ?></div><?php endif; ?>
-    <?php if ($error): ?><div class="message error">⚠️ <?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
-    <div class="card">
-        <h2 style="color:var(--brown-dark); margin-bottom:10px;">💾 የመረጃ ቋት ምትኬ</h2>
-        <p style="color:#777; font-size:14px; margin-bottom:15px;">
-            ሙሉ የመረጃ ቋት ምትኬ ይፈጥራል (ሁሉንም ሠንጠረዦች እና መረጃ)። ፋይሉ በ<code>backups/</code> ማህደር ውስጥ ይቀመጣል -
-            ከድር በቀጥታ ሊደረስበት አይችልም (ለአስተዳዳሪ ብቻ በዚህ ገጽ በኩል ማውረድ ይቻላል)።
-        </p>
-        <form method="POST">
+<div class="main-container">
+    <!-- Header -->
+    <div class="page-header-card">
+        <div class="header-info">
+            <h1>💾 የመረጃ ቋት ምትኬ (Database Backup)</h1>
+            <p>የተማሪዎችን ውጤት፣ መምህራንን፣ ክፍሎችን እና ሁሉንም መረጃዎች በደህና ሁኔታ ምትኬ ወስደው ያስቀምጡ።</p>
+        </div>
+    </div>
+
+    <?php if ($message): ?>
+    <div class="message success">✅ <?php echo htmlspecialchars($message); ?></div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+    <div class="message error">⚠️ <?php echo htmlspecialchars($error); ?></div>
+    <?php endif; ?>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-icon">📁</div>
+            <div class="stat-data">
+                <div class="stat-val"><?php echo $total_backups; ?></div>
+                <div class="stat-lbl">ያሉ ምትኬ ፋይሎች</div>
+            </div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-icon">📊</div>
+            <div class="stat-data">
+                <div class="stat-val"><?php echo $total_size_mb; ?> MB</div>
+                <div class="stat-lbl">ጠቅላላ የተያዘ ቦታ</div>
+            </div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-icon">🕒</div>
+            <div class="stat-data">
+                <div class="stat-val" style="font-size: 14px;"><?php echo $latest_backup_time; ?></div>
+                <div class="stat-lbl">የመጨረሻው ምትኬ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Action -->
+    <div class="action-card">
+        <div class="action-card-text">
+            <h3>⚡ አዲስ ምትኬ መፍጠር</h3>
+            <p>ይህ ትዕዛዝ ሙሉውን የመረጃ ቋት ሰንጠረዦች በUTF-8 ቅርጸት ወደ <code>backups/</code> ማህደር ያዘጋጃል።</p>
+        </div>
+        <form method="POST" onsubmit="handleBackupSubmit(this)">
             <?php echo csrfField(); ?>
-            <button type="submit" name="run_backup" class="btn">💾 አዲስ ምትኬ ፍጠር</button>
+            <button type="submit" name="run_backup" id="btnBackup" class="btn-create-backup">
+                💾 አዲስ ምትኬ ፍጠር
+            </button>
         </form>
     </div>
 
-    <div class="card">
-        <h2 style="color:var(--brown-dark); margin-bottom:10px;">📁 ያሉ ምትኬዎች (<?php echo count($backups); ?>)</h2>
+    <!-- Backups List -->
+    <div class="list-card">
+        <div class="list-card-header">
+            <h3>🗄️ የተቀመጡ ምትኬዎች ዝርዝር (<?php echo $total_backups; ?>)</h3>
+        </div>
+
         <?php if (empty($backups)): ?>
-            <p style="color:#999; text-align:center; padding:20px;">ምንም ምትኬ የለም።</p>
+        <div class="empty-state">
+            <div class="empty-icon">📂</div>
+            <div style="font-size: 15px; font-weight: 600;">ምንም የተቀመጠ ምትኬ ፋይል የለም።</div>
+            <p style="font-size: 13px; margin-top: 6px;">ከላይ ያለውን "አዲስ ምትኬ ፍጠር" የሚለውን በመጫን አዲስ ምትኬ መውሰድ ይችላሉ።</p>
+        </div>
         <?php else: foreach ($backups as $b):
             $fname = basename($b);
             $size = round(filesize($b) / 1024, 1);
-            $time = date('Y-m-d H:i', filemtime($b));
+            $time = date('Y-m-d h:i A', filemtime($b));
         ?>
-        <div class="backup-row">
-            <div><strong><?php echo htmlspecialchars($fname); ?></strong><div style="font-size:12px; color:#999;"><?php echo $time; ?> · <?php echo $size; ?> KB</div></div>
-            <div>
-                <a href="?download=<?php echo urlencode($fname); ?>" class="btn-sm btn-download">⬇️ አውርድ</a>
-                <form method="POST" style="display:inline;" onsubmit="return confirm('ይህን ምትኬ መሰረዝ እርግጠኛ ነዎት?')">
+        <div class="backup-item">
+            <div class="backup-file-info">
+                <div class="file-badge">🗃️</div>
+                <div>
+                    <div class="file-name"><?php echo htmlspecialchars($fname); ?></div>
+                    <div class="file-meta">
+                        <span>📅 <?php echo $time; ?></span>
+                        <span>⚖️ <?php echo $size; ?> KB</span>
+                    </div>
+                </div>
+            </div>
+            <div class="backup-actions">
+                <a href="?download=<?php echo urlencode($fname); ?>" class="btn-dl">
+                    ⬇️ አውርድ
+                </a>
+                <form method="POST" style="display:inline;" onsubmit="return confirm('እርግጠኛ ነዎት ይህን ምትኬ ፋይል [<?php echo htmlspecialchars($fname); ?>] መሰረዝ ይፈልጋሉ?')">
                     <?php echo csrfField(); ?>
                     <input type="hidden" name="filename" value="<?php echo htmlspecialchars($fname); ?>">
-                    <button type="submit" name="delete_backup" class="btn-sm btn-delete">🗑️</button>
+                    <button type="submit" name="delete_backup" class="btn-del" title="ሰርዝ">
+                        🗑️ ሰርዝ
+                    </button>
                 </form>
             </div>
         </div>
         <?php endforeach; endif; ?>
     </div>
 </div>
+
+<script>
+function handleBackupSubmit(form) {
+    var btn = document.getElementById('btnBackup');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ ምትኬ እየተፈጠረ ነው...';
+    }
+}
+</script>
 </body>
 </html>
 <?php mysqli_close($conn); ?>

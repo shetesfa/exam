@@ -136,68 +136,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get all classes
 $classes = mysqli_query($conn, "SELECT * FROM classes ORDER BY id ASC");
 
-// Get search filter
+// Filters
 $search_filter = isset($_GET['search']) ? trim($_GET['search']) : '';
+$class_filter = isset($_GET['class_id']) ? intval($_GET['class_id']) : 0;
 
-// Pagination - 30 per page. Was unbounded before; fine at 84 rows today,
-// but will not scale once Children division adds more students.
+// Pagination
 $per_page = 30;
 $page = max(1, intval($_GET['page'] ?? 1));
 $offset = ($page - 1) * $per_page;
 
-// Get all students with class names and portal status - WITH SEARCH
+// Build dynamic WHERE clause
+$where_clauses = ["(s.is_deleted = 0 OR s.is_deleted IS NULL)"];
+$params = [];
+$types = "";
+
 if (!empty($search_filter)) {
     $searchParam = '%' . $search_filter . '%';
-    $count_row = dbFetchOne(
-        $conn,
-        "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id
-         WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL) AND (s.name LIKE ? OR c.name LIKE ?)",
-        "ss",
-        [$searchParam, $searchParam]
-    );
-    $total_students = $count_row ? (int)$count_row['cnt'] : 0;
-    $students = dbQuery(
-        $conn,
-        "SELECT s.*, c.name as class_name,
-                COALESCE(sl.pin IS NOT NULL, 0) as has_pin,
-                COALESCE(sl.first_login, 1) as pin_first_login,
-                s.student_portal_enabled
-         FROM students s
-         JOIN classes c ON s.class_id = c.id
-         LEFT JOIN student_logins sl ON s.id = sl.student_id
-         WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)
-           AND (s.name LIKE ? OR c.name LIKE ?)
-         ORDER BY c.id, s.name
-         LIMIT $per_page OFFSET $offset",
-        "ss",
-        [$searchParam, $searchParam]
-    );
-} else {
-    $count_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)");
-    $total_students = $count_row ? (int)$count_row['cnt'] : 0;
-    $students = dbQuery(
-        $conn,
-        "SELECT s.*, c.name as class_name,
-                COALESCE(sl.pin IS NOT NULL, 0) as has_pin,
-                COALESCE(sl.first_login, 1) as pin_first_login,
-                s.student_portal_enabled
-         FROM students s
-         JOIN classes c ON s.class_id = c.id
-         LEFT JOIN student_logins sl ON s.id = sl.student_id
-         WHERE (s.is_deleted = 0 OR s.is_deleted IS NULL)
-         ORDER BY c.id, s.name
-         LIMIT $per_page OFFSET $offset"
-    );
+    $where_clauses[] = "(s.name LIKE ? OR c.name LIKE ? OR s.parent_phone LIKE ?)";
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $types .= "sss";
 }
-$total_pages = max(1, ceil($total_students / $per_page));
 
+if ($class_filter > 0) {
+    $where_clauses[] = "s.class_id = ?";
+    $params[] = $class_filter;
+    $types .= "i";
+}
+
+$where_sql = implode(" AND ", $where_clauses);
+
+// Count
+if (!empty($types)) {
+    $count_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id WHERE $where_sql", $types, $params);
+} else {
+    $count_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id WHERE $where_sql");
+}
+$total_students = $count_row ? (int)$count_row['cnt'] : 0;
+
+// Portal active count
+$active_portal_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students WHERE (is_deleted = 0 OR is_deleted IS NULL) AND student_portal_enabled = 1");
+$total_portal_active = $active_portal_row ? (int)$active_portal_row['cnt'] : 0;
+
+// Fetch query
+$query_sql = "SELECT s.*, c.name as class_name,
+                     COALESCE(sl.pin IS NOT NULL, 0) as has_pin,
+                     COALESCE(sl.first_login, 1) as pin_first_login,
+                     s.student_portal_enabled
+              FROM students s
+              JOIN classes c ON s.class_id = c.id
+              LEFT JOIN student_logins sl ON s.id = sl.student_id
+              WHERE $where_sql
+              ORDER BY c.id, s.name
+              LIMIT $per_page OFFSET $offset";
+
+if (!empty($types)) {
+    $students = dbFetchAll($conn, $query_sql, $types, $params);
+} else {
+    $students = dbFetchAll($conn, $query_sql);
+}
+
+$total_pages = max(1, ceil($total_students / $per_page));
 $nav_active = 'manage_students';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>ተማሪዎች አስተዳደር | አጸደ ትጉሃን</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የተማሪዎች አስተዳደር | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
         :root {
@@ -206,181 +214,519 @@ $nav_active = 'manage_students';
             --gold-primary: #FFD700;
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
-            --success-green: #10B981;
-            --error-red: #EF4444;
-            --warning-yellow: #F59E0B;
-            --info-blue: #3B82F6;
-            --purple: #8B5CF6;
+            --bg-cream: #FAF9F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --info: #3B82F6;
+            --warning: #F59E0B;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: #FAF9F6; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
 
-        .header {
+        .main-container { max-width: 1300px; margin: 24px auto; padding: 0 16px 80px; }
+
+        /* Page Header Card */
+        .page-header-card {
             background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
-            color: white; padding: 20px 30px;
+            border-radius: 16px;
+            padding: 24px 28px;
+            color: white;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(139, 69, 19, 0.18);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
         }
-        .header-content {
-            max-width: 1400px; margin: 0 auto;
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+        .page-header-card::after {
+            content: '👥';
+            position: absolute;
+            right: 20px;
+            bottom: -15px;
+            font-size: 100px;
+            opacity: 0.12;
+            pointer-events: none;
         }
-        .logo-area { display: flex; align-items: center; gap: 15px; }
-        .logo-img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold-primary); background: white; }
-        .title h1 { font-size: 20px; color: var(--gold-primary); }
-        .title p { font-size: 14px; color: rgba(255,255,255,0.8); }
+        .header-info h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--gold-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .header-info p {
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, 0.9);
+        }
 
-        .nav {
-    background: white;
-    padding: 12px 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .stat-data .stat-val {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--brown-dark);
+        }
+        .stat-data .stat-lbl {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
 
-.nav-links {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.nav-link {
-    padding: 8px 14px;
-    color: var(--brown-dark);
-    text-decoration: none;
-    border-radius: 25px;
-    transition: all 0.3s;
-    font-weight: 600;
-    font-size: 12px;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
-
-.nav-link:hover {
-    background: var(--gold-pale);
-    border-color: var(--gold-primary);
-}
-
-.nav-link.active {
-    background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-    color: var(--brown-dark);
-    border-color: var(--brown-dark);
-    font-weight: 700;
-}
-
-        .container { max-width: 1400px; margin: 30px auto; padding: 0 30px; }
-
+        /* Alerts */
         .message {
-            padding: 15px 20px; border-radius: 12px; margin-bottom: 25px;
-            display: flex; align-items: center; gap: 12px; animation: slideDown 0.4s ease;
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        .success { background: #D1FAE5; color: var(--success-green); border-left: 5px solid var(--success-green); }
-        .error { background: #FEE2E2; color: var(--error-red); border-left: 5px solid var(--error-red); }
+        .message.success { background: #DCFCE7; color: #166534; border-left: 4px solid var(--success); }
+        .message.error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--error); }
 
-        .section {
-            background: white; border-radius: 15px; padding: 25px; margin-bottom: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        /* Tip Alert */
+        .portal-tip-card {
+            background: #EFF6FF;
+            border: 1.5px solid #BFDBFE;
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
         }
-        .section-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--gold-pale);
-            flex-wrap: wrap; gap: 15px;
-        }
-        .section-header h2 { color: var(--brown-dark); font-size: 20px; display: flex; align-items: center; gap: 10px; }
+        .tip-icon { font-size: 24px; }
+        .tip-content { font-size: 13.5px; color: #1E40AF; line-height: 1.5; }
+        .tip-content strong { color: #1E3A8A; }
+        .tip-content a { color: #2563EB; font-weight: 700; text-decoration: underline; }
 
-        .btn {
-            padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer;
-            font-weight: 600; transition: all 0.3s; text-decoration: none;
-            display: inline-flex; align-items: center; gap: 8px; font-size: 14px;
+        /* Card Container */
+        .content-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
         }
-        .btn-primary { background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%); color: #8B4513; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(218,165,32,0.3); }
-        .btn-edit { background: #3B82F6; color: white; padding: 6px 12px; font-size: 12px; }
-        .btn-delete { background: #EF4444; color: white; padding: 6px 12px; font-size: 12px; }
-        .btn-reset { background: #F59E0B; color: white; padding: 6px 12px; font-size: 12px; }
-        .btn-toggle { padding: 6px 12px; font-size: 12px; color: white; }
-        .btn-toggle.enable { background: var(--success-green); }
-        .btn-toggle.disable { background: #6B7280; }
-        .btn-search { background: var(--info-blue); color: white; padding: 12px 20px; font-size: 14px; }
-        .btn-clear { background: #6B7280; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+        .content-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gold-pale);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .content-card-header h2 {
+            font-size: 17px;
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+        .header-badge {
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
 
-        .search-box {
-            display: flex; gap: 10px; margin-bottom: 20px; max-width: 500px; flex-wrap: wrap;
-        }
-        .search-input {
-            flex: 1; padding: 12px 15px; border: 2px solid #E2E8F0; border-radius: 8px;
-            font-size: 14px; min-width: 200px;
-        }
-        .search-input:focus { outline: none; border-color: var(--gold-primary); }
-
+        /* Forms */
         .form-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px; margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
         }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: var(--brown-dark); font-weight: 600; }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--brown-dark);
+        }
         .form-control {
-            width: 100%; padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 16px;
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+            color: var(--text-main);
         }
-        .form-control:focus { outline: none; border-color: var(--gold-primary); }
-
-        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: collapse; }
-        .table-responsive table { min-width: 800px; }
-        th { background: var(--brown-dark); color: white; padding: 15px 10px; text-align: left; font-size: 13px; border: 1px solid var(--gold-dark); }
-        td { padding: 12px 10px; border-bottom: 1px solid #E2E8F0; }
-        tr:hover { background: #FEF9E7; }
-        .action-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
-        .student-name { font-weight: 600; color: var(--brown-dark); }
-
-        .portal-status {
-            display: inline-block; padding: 4px 10px; border-radius: 15px; font-size: 11px; font-weight: 600;
+        .form-control:focus {
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.15);
         }
-        .status-enabled { background: #D1FAE5; color: #059669; }
-        .status-disabled { background: #FEE2E2; color: #DC2626; }
-
-        .pin-status { display: inline-block; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-        .pin-new { background: #FEF3C7; color: #D97706; }
-        .pin-active { background: #D1FAE5; color: #059669; }
-
-        .info-box {
-            background: #EFF6FF; border: 2px solid var(--info-blue); border-radius: 12px;
-            padding: 15px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;
+        .btn-primary-action {
+            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+            color: var(--brown-dark);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(218, 165, 32, 0.25);
         }
-        .info-box .info-icon { font-size: 30px; }
-        .info-box .info-text { font-size: 14px; color: #1E40AF; line-height: 1.6; }
-
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 1000;
+        .btn-primary-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(218, 165, 32, 0.35);
         }
-        .modal-content {
-            background: white; width: 90%; max-width: 500px; margin: 50px auto;
-            padding: 30px; border-radius: 15px; border: 3px solid var(--gold-primary);
-        }
-        .close { float: right; font-size: 24px; cursor: pointer; color: var(--brown-dark); }
 
-        .search-results-info {
-            background: var(--gold-pale); padding: 10px 15px; border-radius: 8px;
-            margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+        /* Filter Row */
+        .filters-toolbar {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto auto;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .btn-search {
+            padding: 11px 20px;
+            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+            color: var(--brown-dark);
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-clear {
+            padding: 11px 16px;
+            background: #F3F4F6;
+            color: var(--text-muted);
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Table */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        table.student-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            text-align: left;
+        }
+        table.student-table th {
+            background: #F9FAFB;
+            color: var(--brown-dark);
+            font-weight: 700;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
+        }
+        table.student-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #F3F4F6;
+            vertical-align: middle;
+        }
+        table.student-table tbody tr:hover {
+            background: rgba(255, 215, 0, 0.03);
+        }
+
+        /* User Chip */
+        .student-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .student-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            color: var(--brown-dark);
+            font-weight: 800;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .student-name-text {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Badges */
+        .class-badge {
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 12px;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .phone-link {
+            color: #2563EB;
+            text-decoration: none;
+            font-weight: 600;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        /* Status Toggle */
+        .btn-portal-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: opacity 0.2s;
+        }
+        .btn-portal-status.active { background: #DCFCE7; color: #166534; }
+        .btn-portal-status.inactive { background: #F3F4F6; color: #6B7280; }
+        .btn-portal-status:hover { opacity: 0.85; }
+
+        .pin-pill {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11.5px;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .pin-pill.new { background: #FEF3C7; color: #92400E; }
+        .pin-pill.active { background: #DCFCE7; color: #166534; }
+
+        /* Action Buttons */
+        .actions-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+        .btn-st-edit {
+            background: #FEF3C7;
+            color: #B45309;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-st-edit:hover { background: #FDE68A; }
+
+        .btn-st-reset {
+            background: #E0E7FF;
+            color: #3730A3;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-st-reset:hover { background: #C7D2FE; }
+
+        .btn-st-del {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            padding: 6px 9px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-st-del:hover { background: #FCA5A5; }
+
+        /* Pagination */
+        .pager-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: #F9FAFB;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .pager-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .pager-controls a, .pager-controls span {
+            min-width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .pager-controls a {
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+        .pager-controls a:hover {
+            background: var(--gold-pale);
+            border-color: var(--gold-dark);
+            color: var(--brown-dark);
+        }
+        .pager-controls span.current {
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            color: var(--brown-dark);
+            font-weight: 800;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 26px;
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid var(--gold-primary);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalPop 0.25s ease-out;
+            position: relative;
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--gold-pale);
+        }
+        .modal-header h3 {
+            color: var(--brown-dark);
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-muted);
+        }
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.7;
         }
 
         @media (max-width: 768px) {
-            .main-container { padding: 0 12px 30px; margin: 15px auto; }
-            .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
-            .section-header h2 { font-size: 17px; }
+            .main-container { padding: 0 10px 40px; margin: 12px auto; }
+            .page-header-card { padding: 18px 16px; }
+            .content-card { padding: 16px 14px; border-radius: 14px; }
             .form-grid { grid-template-columns: 1fr; }
-            .action-buttons { flex-direction: column; gap: 4px; }
-            .action-buttons .btn { width: 100%; justify-content: center; min-height: 38px; }
-            .search-box { max-width: 100%; flex-direction: column; }
-            .search-input { width: 100%; min-width: 0; }
-            .btn-search, .btn-clear { width: 100%; text-align: center; justify-content: center; min-height: 44px; }
-            .modal-content { width: 95%; margin: 20px auto; padding: 20px 14px; border-radius: 12px; }
-            .info-box { flex-direction: column; align-items: flex-start; padding: 14px; gap: 10px; }
+            .filters-toolbar { grid-template-columns: 1fr; }
+            .btn-search, .btn-clear, .btn-primary-action { width: 100%; justify-content: center; min-height: 44px; }
+            .actions-group { flex-wrap: wrap; }
+            .pager-container { justify-content: center; text-align: center; }
         }
     </style>
 </head>
@@ -388,6 +734,14 @@ $nav_active = 'manage_students';
     <?php include 'mobile_nav.php'; ?>
 
     <div class="main-container">
+        <!-- Page Header -->
+        <div class="page-header-card">
+            <div class="header-info">
+                <h1>👥 የተማሪዎች አስተዳደር</h1>
+                <p>ተማሪዎችን ይመዝግቡ፣ ክፍል መድቡ፣ የተማሪ ፖርታል መዳረሻ እና የPIN ኮዶችን ያስተዳድሩ።</p>
+            </div>
+        </div>
+
         <?php if($message): ?>
         <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
@@ -396,79 +750,111 @@ $nav_active = 'manage_students';
         <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
-        <!-- Student Portal Info Box -->
-        <div class="info-box">
-            <div class="info-icon">🎓</div>
-            <div class="info-text">
-                <strong>የተማሪ ፖርታል</strong><br>
-                ተማሪዎች <a href="student_login.php" target="_blank">በዚህ ሊንክ</a> ሙሉ ስማቸውን እና ፒናቸውን በመጠቀም ውጤታቸውን ማየት ይችላሉ።<br>
-                <strong>ነባሪ ፒን:</strong> 123 | ተማሪዎች መጀመሪያ ሲገቡ ፒን እንዲቀይሩ ይጠየቃሉ።
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon">👥</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo number_format($total_students); ?></div>
+                    <div class="stat-lbl">ጠቅላላ ተማሪዎች</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">🎓</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo number_format($total_portal_active); ?></div>
+                    <div class="stat-lbl">ፖርታል የነቃላቸው</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon">📄</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo $page; ?> / <?php echo $total_pages; ?></div>
+                    <div class="stat-lbl">የአሁኑ ገጽ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portal Tip Box -->
+        <div class="portal-tip-card">
+            <div class="tip-icon">💡</div>
+            <div class="tip-content">
+                <strong>የተማሪ ፖርታል መረጃ፦</strong> ተማሪዎች በ<a href="student_login.php" target="_blank">የተማሪ መግቢያ ገጽ</a> በኩል ሙሉ ስማቸውን እና ፒናቸውን በማስገባት ውጤታቸውን ማየት ይችላሉ። <strong>ነባሪ ፒን: 123</strong> (ወይም የወላጅ ስልክ የመጨረሻ 4 አሃዝ) ነው።
             </div>
         </div>
 
         <!-- Add Student Form -->
-        <div class="section">
-            <div class="section-header">
-                <h2>➕ አዲስ ተማሪ መመዝገቢያ</h2>
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><span>➕</span> አዲስ ተማሪ መመዝገቢያ</h2>
             </div>
             <form method="POST">
                 <?php echo csrfField(); ?>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>የተማሪው ሙሉ ስም <span style="color: red;">*</span></label>
-                        <input type="text" name="name" class="form-control" required placeholder="ሙሉ ስም">
+                        <label>የተማሪው ሙሉ ስም <span style="color: var(--error);">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="የተማሪ ሙሉ ስም">
                     </div>
                     <div class="form-group">
-                        <label>ክፍል <span style="color: red;">*</span></label>
+                        <label>ክፍል <span style="color: var(--error);">*</span></label>
                         <select name="class_id" class="form-control" required>
-                            <option value="">ክፍል ምረጥ</option>
+                            <option value="">-- ክፍል ይምረጡ --</option>
                             <?php 
                             mysqli_data_seek($classes, 0);
-                            while($class = mysqli_fetch_assoc($classes)): 
+                            while($cl = mysqli_fetch_assoc($classes)): 
                             ?>
-                            <option value="<?php echo $class['id']; ?>"><?php echo htmlspecialchars($class['name']); ?></option>
+                            <option value="<?php echo $cl['id']; ?>" <?php echo $class_filter == $cl['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($cl['name']); ?>
+                            </option>
                             <?php endwhile; ?>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>የወላጅ ስልክ ቁጥር</label>
-                        <input type="text" name="parent_phone" class="form-control" placeholder="ከሆነ ያስገቡ...">
-                        <small style="color: #666;">ፒን ከስልክ ቁጥር የመጨረሻ 4 አሃዝ ይወሰዳል (ወይም 123)</small>
+                        <input type="text" name="parent_phone" class="form-control" placeholder="09...">
                     </div>
                 </div>
-                <button type="submit" name="add_student" class="btn btn-primary">
+                <button type="submit" name="add_student" class="btn-primary-action">
                     ➕ ተማሪ አስመዝግብ
                 </button>
             </form>
         </div>
 
-        <!-- Students List -->
-        <div class="section">
-            <div class="section-header">
-                <h2>👥 የተማሪዎች ዝርዝር</h2>
-                <span><?php echo $total_students; ?> ተማሪዎች</span>
+        <!-- Students List Section -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><span>📋</span> የተማሪዎች ዝርዝር</h2>
+                <span class="header-badge"><?php echo number_format($total_students); ?> ተማሪዎች</span>
             </div>
 
-            <!-- SEARCH BOX -->
-            <form method="GET" class="search-box">
-                <input type="text" name="search" class="search-input" 
-                       placeholder="🔍 የተማሪ ስም ይፈልጉ... (Search student name...)" 
+            <!-- Search & Filters Toolbar -->
+            <form method="GET" class="filters-toolbar">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="🔍 የተማሪ ስም ወይም የወላጅ ስልክ ይፈልጉ..." 
                        value="<?php echo htmlspecialchars($search_filter); ?>">
-                <button type="submit" class="btn btn-search">🔍 ፈልግ</button>
-                <?php if(!empty($search_filter)): ?>
+                
+                <select name="class_id" class="form-control" onchange="this.form.submit()">
+                    <option value="0">📚 ሁሉም ክፍሎች</option>
+                    <?php 
+                    mysqli_data_seek($classes, 0);
+                    while($cl = mysqli_fetch_assoc($classes)): 
+                    ?>
+                    <option value="<?php echo $cl['id']; ?>" <?php echo $class_filter == $cl['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($cl['name']); ?>
+                    </option>
+                    <?php endwhile; ?>
+                </select>
+
+                <button type="submit" class="btn-search">🔍 ፈልግ</button>
+                
+                <?php if(!empty($search_filter) || $class_filter > 0): ?>
                 <a href="manage_students.php" class="btn-clear">✕ አጽዳ</a>
                 <?php endif; ?>
             </form>
 
-            <?php if(!empty($search_filter)): ?>
-            <div class="search-results-info">
-                <span>🔍 የፍለጋ ውጤት: "<strong><?php echo htmlspecialchars($search_filter); ?></strong>"</span>
-                <span><?php echo $total_students; ?> ተማሪዎች ተገኝተዋል</span>
-            </div>
-            <?php endif; ?>
-
+            <!-- Table -->
             <div class="table-responsive">
-                <table>
+                <table class="student-table">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -476,76 +862,99 @@ $nav_active = 'manage_students';
                             <th>ክፍል</th>
                             <th>የወላጅ ስልክ</th>
                             <th>ፖርታል</th>
-                            <th>ፒን ሁኔታ</th>
+                            <th>የፒን ሁኔታ</th>
                             <th>የተመዘገበበት</th>
-                            <th>ድርጊት</th>
+                            <th>ድርጊቶች</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php 
-                        $counter = 1;
-                        if($students && mysqli_num_rows($students) > 0):
-                            while($student = mysqli_fetch_assoc($students)): 
+                        $counter = $offset + 1;
+                        if(!empty($students)):
+                            foreach($students as $st): 
+                                $initial = mb_substr($st['name'], 0, 1, 'UTF-8');
                         ?>
                         <tr>
                             <td><?php echo $counter++; ?></td>
-                            <td class="student-name"><?php echo htmlspecialchars($student['name']); ?></td>
-                            <td><?php echo htmlspecialchars($student['class_name']); ?></td>
-                            <td><?php echo htmlspecialchars($student['parent_phone'] ?: '---'); ?></td>
+                            <td>
+                                <div class="student-chip">
+                                    <div class="student-avatar"><?php echo htmlspecialchars($initial); ?></div>
+                                    <span class="student-name-text"><?php echo htmlspecialchars($st['name']); ?></span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="class-badge">
+                                    🏫 <?php echo htmlspecialchars($st['class_name']); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?php if (!empty($st['parent_phone'])): ?>
+                                <a href="tel:<?php echo htmlspecialchars($st['parent_phone']); ?>" class="phone-link">
+                                    📞 <?php echo htmlspecialchars($st['parent_phone']); ?>
+                                </a>
+                                <?php else: ?>
+                                <span style="color: var(--text-muted);">—</span>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <form method="POST" style="display: inline;">
                                     <?php echo csrfField(); ?>
-                                    <input type="hidden" name="student_id" value="<?php echo $student['id']; ?>">
-                                    <input type="hidden" name="current_status" value="<?php echo $student['student_portal_enabled']; ?>">
+                                    <input type="hidden" name="student_id" value="<?php echo $st['id']; ?>">
+                                    <input type="hidden" name="current_status" value="<?php echo $st['student_portal_enabled']; ?>">
                                     <button type="submit" name="toggle_portal" 
-                                            class="btn-toggle <?php echo $student['student_portal_enabled'] ? 'enable' : 'disable'; ?>">
-                                        <?php echo $student['student_portal_enabled'] ? '✅ Active' : '⛔ Disabled'; ?>
+                                            class="btn-portal-status <?php echo $st['student_portal_enabled'] ? 'active' : 'inactive'; ?>"
+                                            title="ሁኔታ ለመቀየር ይጫኑ">
+                                        <?php echo $st['student_portal_enabled'] ? '✅ በርቷል' : '⛔ ጠፍቷል'; ?>
                                     </button>
                                 </form>
                             </td>
                             <td>
-                                <?php if ($student['pin_first_login']): ?>
-                                <span class="pin-status pin-new">🆕 አዲስ</span>
+                                <?php if ($st['pin_first_login']): ?>
+                                <span class="pin-pill new">🆕 አዲስ (123)</span>
                                 <?php else: ?>
-                                <span class="pin-status pin-active">✅ Active</span>
+                                <span class="pin-pill active">✅ የተቀየረ</span>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo date('M d, Y', strtotime($student['enrollment_date'])); ?></td>
+                            <td style="font-size: 12.5px; color: var(--text-muted); white-space: nowrap;">
+                                <?php echo date('Y-m-d', strtotime($st['enrollment_date'])); ?>
+                            </td>
                             <td>
-                                <div class="action-buttons">
-                                    <button onclick="editStudent(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars(addslashes($student['name'])); ?>', <?php echo $student['class_id']; ?>, '<?php echo $student['parent_phone']; ?>')" 
-                                            class="btn btn-edit">✏️ አስተካክል</button>
+                                <div class="actions-group">
+                                    <button onclick="editStudent(<?php echo $st['id']; ?>, '<?php echo htmlspecialchars(addslashes($st['name']), ENT_QUOTES); ?>', <?php echo $st['class_id']; ?>, '<?php echo htmlspecialchars(addslashes($st['parent_phone'] ?? ''), ENT_QUOTES); ?>')" 
+                                            class="btn-st-edit">
+                                        ✏️ አርትዕ
+                                    </button>
                                     
                                     <form method="POST" style="display: inline;" 
-                                          onsubmit="return confirm('የዚህን ተማሪ ፒን ወደ 123 ማስጀመር እርግጠኛ ነዎት?')">
+                                          onsubmit="return confirm('የ[<?php echo htmlspecialchars(addslashes($st['name']), ENT_QUOTES); ?>] ፒን ወደ 123 ማስጀመር እርግጠኛ ነዎት?')">
                                         <?php echo csrfField(); ?>
-                                        <input type="hidden" name="student_id" value="<?php echo $student['id']; ?>">
-                                        <button type="submit" name="reset_student_pin" class="btn btn-reset">
-                                            🔄 Reset PIN
+                                        <input type="hidden" name="student_id" value="<?php echo $st['id']; ?>">
+                                        <button type="submit" name="reset_student_pin" class="btn-st-reset" title="ፒን ወደ 123 መልስ">
+                                            🔄 ፒን
                                         </button>
                                     </form>
                                     
                                     <form method="POST" style="display: inline;" 
-                                          onsubmit="return confirm('እርግጠኛ ነዎት ተማሪውን መሰረዝ ይፈልጋሉ?')">
+                                          onsubmit="return confirm('ተማሪ [<?php echo htmlspecialchars(addslashes($st['name']), ENT_QUOTES); ?>] መሰረዝ እርግጠኛ ነዎት?')">
                                         <?php echo csrfField(); ?>
-                                        <input type="hidden" name="student_id" value="<?php echo $student['id']; ?>">
-                                        <button type="submit" name="delete_student" class="btn btn-delete">🗑️ ሰርዝ</button>
+                                        <input type="hidden" name="student_id" value="<?php echo $st['id']; ?>">
+                                        <button type="submit" name="delete_student" class="btn-st-del" title="ተማሪ ሰርዝ">
+                                            🗑️
+                                        </button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
-                        <?php 
-                            endwhile;
-                        else:
-                        ?>
+                        <?php endforeach; else: ?>
                         <tr>
-                            <td colspan="8" style="text-align: center; padding: 30px; color: #999;">
-                                <span style="font-size: 40px; display: block; margin-bottom: 10px;">👥</span>
-                                <?php if(!empty($search_filter)): ?>
-                                    ምንም ተማሪ አልተገኘም ለ "<strong><?php echo htmlspecialchars($search_filter); ?></strong>"
-                                <?php else: ?>
-                                    ምንም ተማሪዎች አልተገኙም
-                                <?php endif; ?>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👥</div>
+                                    <div style="font-weight: 700; margin-bottom: 4px;">ምንም ተማሪ አልተገኘም</div>
+                                    <?php if(!empty($search_filter)): ?>
+                                    <p>ለ "<?php echo htmlspecialchars($search_filter); ?>" የተገኘ ውጤት የለም።</p>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                         <?php endif; ?>
@@ -553,52 +962,76 @@ $nav_active = 'manage_students';
                 </table>
             </div>
 
+            <!-- Pagination -->
             <?php if ($total_pages > 1): ?>
-            <div style="display:flex; justify-content:center; align-items:center; gap:8px; padding:15px; flex-wrap:wrap;">
-                <?php
-                $qs = !empty($search_filter) ? '&search=' . urlencode($search_filter) : '';
-                for ($p = 1; $p <= $total_pages; $p++):
-                    if ($p === $page): ?>
-                        <span style="padding:8px 14px; border-radius:8px; background:var(--gold-primary); color:var(--brown-dark); font-weight:700;"><?php echo $p; ?></span>
-                    <?php else: ?>
-                        <a href="?page=<?php echo $p; ?><?php echo $qs; ?>" style="padding:8px 14px; border-radius:8px; background:#F3F4F6; color:#555; text-decoration:none;"><?php echo $p; ?></a>
-                    <?php endif;
-                endfor; ?>
+            <div class="pager-container">
+                <div style="font-size: 13px; color: var(--text-muted);">
+                    በአጠቃላይ <?php echo number_format($total_students); ?> ተማሪዎች | ገጽ <?php echo $page; ?> ከ <?php echo $total_pages; ?>
+                </div>
+                <div class="pager-controls">
+                    <?php
+                    $qs = '';
+                    if (!empty($search_filter)) $qs .= '&search=' . urlencode($search_filter);
+                    if ($class_filter > 0) $qs .= '&class_id=' . $class_filter;
+
+                    if ($page > 1): ?>
+                        <a href="?page=1<?php echo $qs; ?>">««</a>
+                        <a href="?page=<?php echo ($page - 1) . $qs; ?>">‹</a>
+                    <?php endif; ?>
+
+                    <?php
+                    $start_p = max(1, $page - 2);
+                    $end_p = min($total_pages, $page + 2);
+                    for ($p = $start_p; $p <= $end_p; $p++):
+                        if ($p === $page): ?>
+                            <span class="current"><?php echo $p; ?></span>
+                        <?php else: ?>
+                            <a href="?page=<?php echo $p . $qs; ?>"><?php echo $p; ?></a>
+                        <?php endif;
+                    endfor; ?>
+
+                    <?php if ($page < $total_pages): ?>
+                        <a href="?page=<?php echo ($page + 1) . $qs; ?>">›</a>
+                        <a href="?page=<?php echo $total_pages . $qs; ?>">»»</a>
+                    <?php endif; ?>
+                </div>
             </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h2 style="color: var(--brown-dark); margin-bottom: 20px;">የተማሪ መረጃ አስተካክል</h2>
+    <!-- Edit Student Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✏️ የተማሪ መረጃ ማስተካከያ</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
             <form method="POST" id="editForm">
                 <?php echo csrfField(); ?>
                 <input type="hidden" name="student_id" id="edit_id">
-                <div class="form-group">
-                    <label>የተማሪ ስም <span style="color: red;">*</span></label>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>የተማሪው ሙሉ ስም <span style="color: var(--error);">*</span></label>
                     <input type="text" name="name" id="edit_name" class="form-control" required>
                 </div>
-                <div class="form-group">
-                    <label>ክፍል <span style="color: red;">*</span></label>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label>ክፍል <span style="color: var(--error);">*</span></label>
                     <select name="class_id" id="edit_class" class="form-control" required>
-                        <option value="">ክፍል ምረጥ</option>
+                        <option value="">-- ክፍል ይምረጡ --</option>
                         <?php 
                         mysqli_data_seek($classes, 0);
-                        while($class = mysqli_fetch_assoc($classes)): 
+                        while($cl = mysqli_fetch_assoc($classes)): 
                         ?>
-                        <option value="<?php echo $class['id']; ?>"><?php echo htmlspecialchars($class['name']); ?></option>
+                        <option value="<?php echo $cl['id']; ?>"><?php echo htmlspecialchars($cl['name']); ?></option>
                         <?php endwhile; ?>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>የወላጅ ስልክ</label>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>የወላጅ ስልክ ቁጥር</label>
                     <input type="text" name="parent_phone" id="edit_phone" class="form-control">
                 </div>
-                <button type="submit" name="edit_student" class="btn btn-primary" style="width: 100%;">
-                    💾 አስቀምጥ
+                <button type="submit" name="edit_student" class="btn-primary-action" style="width: 100%; justify-content: center;">
+                    💾 ለውጦችን አስቀምጥ
                 </button>
             </form>
         </div>
@@ -610,7 +1043,7 @@ $nav_active = 'manage_students';
             document.getElementById('edit_name').value = name;
             document.getElementById('edit_class').value = classId;
             document.getElementById('edit_phone').value = phone || '';
-            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('editModal').style.display = 'flex';
         }
 
         function closeModal() {
@@ -618,7 +1051,8 @@ $nav_active = 'manage_students';
         }
 
         window.onclick = function(event) {
-            if (event.target == document.getElementById('editModal')) {
+            var modal = document.getElementById('editModal');
+            if (event.target === modal) {
                 closeModal();
             }
         }

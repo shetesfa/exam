@@ -82,10 +82,11 @@ if ($selected_class_id) {
 $nav_active = 'teacher_marking_scheme';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>የውጤት መስፈርት ማስተካከያ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የውጤት መስፈርት ማስተካከያ | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
         :root {
@@ -94,281 +95,480 @@ $nav_active = 'teacher_marking_scheme';
             --gold-primary: #FFD700;
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
-            --bg-cream: #FAF9F6;
+            --bg-light: #FAF9F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
             --success-green: #10B981;
             --error-red: #EF4444;
+            --warning-amber: #F59E0B;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', sans-serif;
+        [data-theme="dark"] {
+            --bg-light: #111827;
+            --card-bg: #1F2937;
+            --text-main: #F9FAFB;
+            --text-muted: #9CA3AF;
+            --border-color: #374151;
+            --gold-pale: rgba(218, 165, 32, 0.15);
         }
 
         body {
-            background: var(--bg-cream);
+            background: var(--bg-light);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
             min-height: 100vh;
         }
 
-        .header {
-            background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
-            color: white;
-            padding: 20px 30px;
-            border-bottom: 5px solid #FFD700;
+        .main-container {
+            max-width: 950px;
+            margin: 25px auto;
+            padding: 0 20px 50px;
         }
 
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Page Hero Header */
+        .page-hero {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 24px 28px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.05);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 16px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .logo-wrapper {
+        .page-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--brown-dark), var(--gold-primary), var(--brown-dark));
+        }
+
+        .hero-left {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 16px;
         }
 
-        .logo-circle {
-            width: 55px;
-            height: 55px;
-            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            border-radius: 50%;
+        .hero-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(139,69,19,0.12), rgba(218,165,32,0.22));
+            color: var(--brown-dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            color: #8B4513;
-            border: 3px solid white;
+            font-size: 26px;
+            border: 1px solid rgba(218,165,32,0.3);
+            flex-shrink: 0;
         }
 
-        .title h1 {
-            color: #FFD700;
-            font-size: 20px;
+        [data-theme="dark"] .hero-icon {
+            color: var(--gold-primary);
         }
 
-        .title p {
-            color: rgba(255,255,255,0.9);
-            font-size: 13px;
+        .hero-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0 0 4px;
+            color: var(--text-main);
         }
 
-        .user-info {
+        .hero-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        /* Alert notifications */
+        .message-banner {
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 22px;
             display: flex;
             align-items: center;
-            gap: 20px;
-        }
-
-        .user-name {
-            background: rgba(0,0,0,0.3);
-            padding: 8px 20px;
-            border-radius: 30px;
-            border: 1px solid #FFD700;
-        }
-
-        .user-name strong {
-            color: #FFD700;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            gap: 12px;
             font-size: 14px;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease;
         }
 
-        .btn-back {
-            background: var(--gold-primary);
-            color: var(--brown-dark);
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .btn-back:hover {
-            background: var(--gold-dark);
-            transform: translateY(-2px);
+        .message-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
-        .container {
-            max-width: 900px;
-            margin: 30px auto;
-            padding: 0 20px;
+        .message-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #DC2626;
+            border: 1px solid rgba(239, 68, 68, 0.25);
         }
 
-        .message {
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        /* Class tabs selector */
+        .class-selector-wrap {
+            margin-bottom: 24px;
         }
 
-        .success {
-            background: #D1FAE5;
-            color: #065F46;
-            border: 2px solid var(--success-green);
-        }
-
-        .error {
-            background: #FEE2E2;
-            color: #991B1B;
-            border: 2px solid var(--error-red);
+        .selector-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .class-tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 25px;
             flex-wrap: wrap;
         }
 
         .class-tab {
-            padding: 10px 20px;
-            border: 2px solid var(--gold-dark);
-            border-radius: 30px;
-            background: white;
-            color: var(--brown-dark);
+            padding: 10px 18px;
+            border-radius: 12px;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            color: var(--text-main);
             text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
+            font-weight: 700;
+            font-size: 13.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
         .class-tab:hover {
-            background: var(--gold-pale);
+            border-color: var(--gold-dark);
+            transform: translateY(-1px);
         }
 
         .class-tab.active {
-            background: var(--gold-primary);
+            background: linear-gradient(135deg, var(--brown-dark), var(--brown-medium));
+            color: #FFFFFF;
             border-color: var(--brown-dark);
+            box-shadow: 0 3px 10px rgba(139, 69, 19, 0.25);
         }
 
+        /* Scheme Form Card */
         .scheme-card {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            border: 2px solid var(--gold-primary);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 28px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
         }
 
-        .scheme-title {
-            color: var(--brown-dark);
-            font-size: 22px;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--gold-pale);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .component-row {
-            display: grid;
-            grid-template-columns: 1fr 120px;
-            gap: 15px;
-            margin-bottom: 15px;
-            align-items: end;
-        }
-
-        .component-label {
-            font-weight: 600;
-            color: var(--brown-dark);
-            font-size: 14px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #E2E8F0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--gold-primary);
-            box-shadow: 0 0 0 3px rgba(255,215,0,0.2);
-        }
-
-        .percentage-input {
-            text-align: center;
-            font-weight: bold;
-            color: var(--brown-dark);
-        }
-
-        .total-row {
+        .scheme-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            background: var(--gold-pale);
-            border-radius: 10px;
-            margin: 20px 0;
-            font-weight: bold;
+            margin-bottom: 22px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .scheme-heading {
+            font-size: 18px;
+            font-weight: 800;
             color: var(--brown-dark);
-        }
-
-        .total-value {
-            font-size: 24px;
-        }
-
-        .total-value.valid {
-            color: var(--success-green);
-        }
-
-        .total-value.invalid {
-            color: var(--error-red);
-        }
-
-        .btn-save {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            color: #8B4513;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-save:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(218,165,32,0.3);
-        }
-
-        .btn-save:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .info-box {
-            background: #EFF6FF;
-            border: 2px solid #3B82F6;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 13px;
-            color: #1E40AF;
+            margin: 0;
         }
 
-        @media (max-width: 600px) {
-            .component-row {
-                grid-template-columns: 1fr 80px;
+        [data-theme="dark"] .scheme-heading {
+            color: var(--gold-primary);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preset-btn {
+            font-size: 11.5px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            border: 1px solid rgba(218,165,32,0.3);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        [data-theme="dark"] .preset-btn {
+            color: var(--gold-primary);
+        }
+
+        .preset-btn:hover {
+            background: var(--gold-primary);
+            color: #000;
+        }
+
+        /* Component Rows */
+        .components-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .component-item {
+            background: rgba(139, 69, 19, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: 35px 1fr 130px;
+            gap: 14px;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        [data-theme="dark"] .component-item {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .component-item:hover {
+            border-color: rgba(218, 165, 32, 0.5);
+            background: rgba(255, 215, 0, 0.02);
+        }
+
+        .comp-badge {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            font-weight: 800;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(218,165,32,0.3);
+        }
+
+        [data-theme="dark"] .comp-badge {
+            color: var(--gold-primary);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            background: var(--card-bg);
+            color: var(--text-main);
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.15);
+        }
+
+        .perc-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .perc-input-wrap .form-input {
+            padding-right: 28px;
+            font-weight: 800;
+            text-align: right;
+        }
+
+        .perc-symbol {
+            position: absolute;
+            right: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            pointer-events: none;
+            font-size: 13px;
+        }
+
+        /* Dynamic Progress Bar & Total Box */
+        .total-summary-card {
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin: 24px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+
+        .total-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .total-label {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .total-val-badge {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            padding: 4px 14px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .total-val-badge.valid {
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .total-val-badge.under {
+            background: rgba(245, 158, 11, 0.12);
+            color: #D97706;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .total-val-badge.over {
+            background: rgba(239, 68, 68, 0.12);
+            color: #DC2626;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Progress Bar Track */
+        .progress-track {
+            height: 10px;
+            background: rgba(0,0,0,0.06);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        [data-theme="dark"] .progress-track {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 10px;
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+
+        .progress-status-hint {
+            font-size: 12.5px;
+            margin-top: 8px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Save Button */
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--brown-dark), var(--brown-medium));
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 3px 12px rgba(139, 69, 19, 0.25);
+            transition: all 0.2s ease;
+        }
+
+        .btn-save:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn-save:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            filter: grayscale(0.6);
+            box-shadow: none;
+        }
+
+        .hint-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 14px;
+            border-radius: 10px;
+            background: rgba(218, 165, 32, 0.08);
+            border: 1px solid rgba(218, 165, 32, 0.25);
+            margin-top: 20px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 650px) {
+            .main-container { padding: 0 12px 30px; margin: 15px auto; }
+            .page-hero { padding: 18px; }
+            .hero-title { font-size: 19px; }
+            .scheme-card { padding: 18px 14px; }
+            .component-item {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                padding: 12px;
+            }
+            .comp-badge {
+                display: none;
+            }
+            .preset-buttons {
+                width: 100%;
+                justify-content: flex-start;
             }
         }
     </style>
@@ -377,93 +577,150 @@ $nav_active = 'teacher_marking_scheme';
     <?php include 'mobile_nav.php'; ?>
 
     <div class="main-container">
+        <!-- Hero Header -->
+        <div class="page-hero">
+            <div class="hero-left">
+                <div class="hero-icon">⚖️</div>
+                <div>
+                    <h1 class="hero-title">የውጤት መስፈርት ማስተካከያ</h1>
+                    <p class="hero-subtitle">ለእያንዳንዱ ክፍል የውጤት ማከፋፈያ መቶኛዎችን (ድምር 100%) ይወስኑ</p>
+                </div>
+            </div>
+            <div>
+                <a href="dashboard_teacher.php" class="class-tab" style="font-size: 13px;">
+                    <span>←</span> ወደ ዳሽቦርድ ተመለስ
+                </a>
+            </div>
+        </div>
+
         <?php if ($message): ?>
-        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
+        <div class="message-banner message-success">
+            <span>✅</span>
+            <span><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></span>
+        </div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
+        <div class="message-banner message-error">
+            <span>⚠️</span>
+            <span><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></span>
+        </div>
         <?php endif; ?>
 
         <?php if (!empty($classes)): ?>
-        <div class="class-tabs">
-            <?php foreach ($classes as $class): ?>
-            <a href="?class_id=<?php echo $class['class_id']; ?>" 
-               class="class-tab <?php echo $selected_class_id == $class['class_id'] ? 'active' : ''; ?>">
-                📚 <?php echo htmlspecialchars($class['class_name']); ?>
-            </a>
-            <?php endforeach; ?>
+        <!-- Class Tabs -->
+        <div class="class-selector-wrap">
+            <div class="selector-label">የሚያስተምሩትን ክፍል ይምረጡ፦</div>
+            <div class="class-tabs">
+                <?php foreach ($classes as $class): ?>
+                <a href="?class_id=<?php echo $class['class_id']; ?>" 
+                   class="class-tab <?php echo $selected_class_id == $class['class_id'] ? 'active' : ''; ?>">
+                    <span>🏫</span>
+                    <span><?php echo htmlspecialchars($class['class_name']); ?></span>
+                </a>
+                <?php endforeach; ?>
+            </div>
         </div>
 
         <?php if ($selected_class_id): ?>
         <div class="scheme-card">
-            <div class="scheme-title">
-                <span>📊</span>
-                <?php 
-                    $className = '';
-                    foreach($classes as $c) {
-                        if($c['class_id'] == $selected_class_id) {
-                            $className = $c['class_name'];
-                            break;
+            <div class="scheme-header">
+                <h2 class="scheme-heading">
+                    <span>📊</span>
+                    <?php 
+                        $className = '';
+                        foreach($classes as $c) {
+                            if($c['class_id'] == $selected_class_id) {
+                                $className = $c['class_name'];
+                                break;
+                            }
                         }
-                    }
-                    echo 'የውጤት መስፈርት - ' . htmlspecialchars($className);
-                ?>
+                        echo 'የውጤት መስፈርት - ' . htmlspecialchars($className);
+                    ?>
+                </h2>
+                <div class="preset-buttons">
+                    <button type="button" class="preset-btn" onclick="applyPreset([20, 20, 10, 25, 25])">
+                        ⚡ መደበኛ (20/20/10/25/25)
+                    </button>
+                    <button type="button" class="preset-btn" onclick="applyPreset([10, 10, 10, 30, 40])">
+                        ⚡ ፈተና-መር (10/10/10/30/40)
+                    </button>
+                </div>
             </div>
 
             <form method="POST" id="schemeForm">
                 <?php echo csrfField(); ?>
                 <input type="hidden" name="class_id" value="<?php echo $selected_class_id; ?>">
 
-                <?php
-                $components = [
-                    1 => ['name' => $current_scheme['component1_name'] ?? 'Assignment', 'perc' => $current_scheme['component1_percentage'] ?? 20],
-                    2 => ['name' => $current_scheme['component2_name'] ?? 'Participation', 'perc' => $current_scheme['component2_percentage'] ?? 20],
-                    3 => ['name' => $current_scheme['component3_name'] ?? 'Attendance', 'perc' => $current_scheme['component3_percentage'] ?? 10],
-                    4 => ['name' => $current_scheme['component4_name'] ?? 'Mid Exam', 'perc' => $current_scheme['component4_percentage'] ?? 25],
-                    5 => ['name' => $current_scheme['component5_name'] ?? 'Final Exam', 'perc' => $current_scheme['component5_percentage'] ?? 25],
-                ];
+                <div class="components-list">
+                    <?php
+                    $components = [
+                        1 => ['name' => $current_scheme['component1_name'] ?? 'Assignment', 'perc' => $current_scheme['component1_percentage'] ?? 20],
+                        2 => ['name' => $current_scheme['component2_name'] ?? 'Participation', 'perc' => $current_scheme['component2_percentage'] ?? 20],
+                        3 => ['name' => $current_scheme['component3_name'] ?? 'Attendance', 'perc' => $current_scheme['component3_percentage'] ?? 10],
+                        4 => ['name' => $current_scheme['component4_name'] ?? 'Mid Exam', 'perc' => $current_scheme['component4_percentage'] ?? 25],
+                        5 => ['name' => $current_scheme['component5_name'] ?? 'Final Exam', 'perc' => $current_scheme['component5_percentage'] ?? 25],
+                    ];
 
-                foreach ($components as $index => $comp):
-                ?>
-                <div class="component-row">
-                    <div>
-                        <label class="component-label">ክፍል <?php echo $index; ?> ስም (Component <?php echo $index; ?> Name)</label>
-                        <input type="text" name="c<?php echo $index; ?>_name" class="form-control" 
-                               value="<?php echo htmlspecialchars($comp['name']); ?>" required>
+                    foreach ($components as $index => $comp):
+                    ?>
+                    <div class="component-item">
+                        <div class="comp-badge"><?php echo $index; ?></div>
+                        <div class="form-group">
+                            <label class="form-label">የክፍል <?php echo $index; ?> መጠሪያ ስም</label>
+                            <input type="text" name="c<?php echo $index; ?>_name" id="c<?php echo $index; ?>_name" class="form-input" 
+                                   value="<?php echo htmlspecialchars($comp['name']); ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ድርሻ መቶኛ</label>
+                            <div class="perc-input-wrap">
+                                <input type="number" name="c<?php echo $index; ?>_perc" id="c<?php echo $index; ?>_perc" 
+                                       class="form-input perc-input" 
+                                       value="<?php echo $comp['perc']; ?>" min="0" max="100" step="0.01" required>
+                                <span class="perc-symbol">%</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="component-label">መቶኛ (%)</label>
-                        <input type="number" name="c<?php echo $index; ?>_perc" class="form-control percentage-input perc-input" 
-                               value="<?php echo $comp['perc']; ?>" min="0" max="100" step="0.01" required>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
 
-                <div class="total-row">
-                    <span>ጠቅላላ ድምር፦</span>
-                    <span class="total-value" id="totalDisplay">100%</span>
+                <!-- Total Summary & Dynamic Progress -->
+                <div class="total-summary-card">
+                    <div class="total-info-row">
+                        <div class="total-label">
+                            <span>📈</span>
+                            <span>አጠቃላይ የመቶኛ ድምር</span>
+                        </div>
+                        <div class="total-val-badge" id="totalDisplay">100%</div>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-status-hint" id="statusHint">
+                        የሁሉም 5 ክፍሎች ድምር በትክክል 100% መሆን አለበት።
+                    </div>
                 </div>
 
                 <button type="submit" name="save_scheme" class="btn-save" id="saveBtn">
-                    💾 የውጤት መስፈርቱን አስቀምጥ
+                    <span>💾</span>
+                    <span>የውጤት መስፈርቱን አስቀምጥ</span>
                 </button>
             </form>
 
-            <div class="info-box">
-                <span>ℹ️</span>
+            <div class="hint-notice">
+                <span style="font-size: 18px;">💡</span>
                 <div>
-                    <strong>ማስታወሻ፡</strong> የሁሉም ክፍሎች መቶኛ ድምር 100% መሆን አለበት።
+                    <strong>ማስታወሻ፦</strong> የውጤት መስፈርቱ ሲቀየር ቀደም ሲል ለዚህ ክፍል የተሞሉ ውጤቶች ካሉ ባስቀመጡት አዲስ መቶኛ መሰረት ዳግም ይሰላሉ። ጠቅላላ ድምሩ በትክክል 100% ካልሞላ ማስቀመጥ አይቻልም።
                 </div>
             </div>
         </div>
         <?php endif; ?>
 
         <?php else: ?>
-        <div class="empty-state">
-            <span style="font-size: 48px;">📚</span>
-            <h3>ምንም የተመደቡ ክፍሎች የሉም</h3>
-            <p>ለዚህ መንፈቀ ዓመት የተመደበልዎት ክፍል የለም።</p>
+        <div class="scheme-card" style="text-align: center; padding: 50px 20px;">
+            <span style="font-size: 50px; display: block; margin-bottom: 15px;">📚</span>
+            <h3 style="margin-bottom: 8px;">ምንም የተመደበ ክፍል የለም</h3>
+            <p style="color: var(--text-muted); font-size: 14px;">ለዚህ መንፈቀ ዓመት እስካሁን የተመደበልዎት ክፍል የለም።</p>
         </div>
         <?php endif; ?>
     </div>
@@ -471,6 +728,8 @@ $nav_active = 'teacher_marking_scheme';
     <script>
         const percInputs = document.querySelectorAll('.perc-input');
         const totalDisplay = document.getElementById('totalDisplay');
+        const progressFill = document.getElementById('progressFill');
+        const statusHint = document.getElementById('statusHint');
         const saveBtn = document.getElementById('saveBtn');
 
         function updateTotal() {
@@ -482,12 +741,42 @@ $nav_active = 'teacher_marking_scheme';
             total = Math.round(total * 100) / 100;
             totalDisplay.textContent = total.toFixed(2) + '%';
             
+            // Progress bar capped at 100% for width
+            const fillWidth = Math.min(100, Math.max(0, total));
+            progressFill.style.width = fillWidth + '%';
+
             if (Math.abs(total - 100) < 0.01) {
-                totalDisplay.className = 'total-value valid';
+                totalDisplay.className = 'total-val-badge valid';
+                progressFill.style.background = '#10B981';
+                statusHint.textContent = '✓ ድምሩ በትክክል 100% ደርሷል! አሁን ማስቀመጥ ይችላሉ።';
+                statusHint.style.color = '#059669';
                 saveBtn.disabled = false;
-            } else {
-                totalDisplay.className = 'total-value invalid';
+            } else if (total < 100) {
+                totalDisplay.className = 'total-val-badge under';
+                progressFill.style.background = '#F59E0B';
+                const remaining = (100 - total).toFixed(2);
+                statusHint.textContent = `⚠️ ድምሩ ገና አልሞላም! ${remaining}% ይጎድላል።`;
+                statusHint.style.color = '#D97706';
                 saveBtn.disabled = true;
+            } else {
+                totalDisplay.className = 'total-val-badge over';
+                progressFill.style.background = '#EF4444';
+                const excess = (total - 100).toFixed(2);
+                statusHint.textContent = `⚠️ ድምሩ ከ100% በላይ ሆኗል! ${excess}% ይቀንሱ።`;
+                statusHint.style.color = '#DC2626';
+                saveBtn.disabled = true;
+            }
+        }
+
+        function applyPreset(values) {
+            if (values.length === 5) {
+                for (let i = 1; i <= 5; i++) {
+                    const input = document.getElementById('c' + i + '_perc');
+                    if (input) {
+                        input.value = values[i - 1];
+                    }
+                }
+                updateTotal();
             }
         }
 

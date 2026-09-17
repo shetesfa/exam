@@ -126,13 +126,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get all users
 $users_query = "SELECT * FROM users ORDER BY role, name";
-$users = mysqli_query($conn, $users_query);
+$users_res = mysqli_query($conn, $users_query);
+$users_list = [];
+$admin_count = 0;
+$teacher_count = 0;
+$submitter_count = 0;
+
+if ($users_res) {
+    while ($u = mysqli_fetch_assoc($users_res)) {
+        $users_list[] = $u;
+        if ($u['role'] === 'admin') $admin_count++;
+        elseif ($u['role'] === 'teacher') $teacher_count++;
+        elseif ($u['role'] === 'attendance_submitter') $submitter_count++;
+    }
+}
+$total_users = count($users_list);
+
 $nav_active = 'manage_users';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ተጠቃሚዎች አስተዳደር | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
@@ -143,361 +159,379 @@ $nav_active = 'manage_users';
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
             --bg-cream: #FAF9F6;
-            --success-green: #10B981;
-            --error-red: #EF4444;
-            --info-blue: #3B82F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --info: #3B82F6;
             --purple: #8B5CF6;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
 
-        body {
-            background: var(--bg-cream);
-        }
+        .main-container { max-width: 1200px; margin: 24px auto; padding: 0 16px 80px; }
 
-        .header {
+        /* Page Header Card */
+        .page-header-card {
             background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
+            border-radius: 16px;
+            padding: 24px 28px;
             color: white;
-            padding: 20px 30px;
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(139, 69, 19, 0.18);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
         }
-
-        .logo-area {
+        .page-header-card::after {
+            content: '👤';
+            position: absolute;
+            right: 20px;
+            bottom: -15px;
+            font-size: 100px;
+            opacity: 0.12;
+            pointer-events: none;
+        }
+        .header-info h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--gold-primary);
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .header-info p {
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, 0.9);
         }
 
-        .logo-icon {
-            width: 55px;
-            height: 55px;
-            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            border-radius: 50%;
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .stat-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: var(--gold-pale);
+            color: var(--brown-dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            color: var(--brown-dark);
-            border: 3px solid white;
-        }
-
-        .title h1 {
             font-size: 22px;
-            color: var(--gold-primary);
+            flex-shrink: 0;
+        }
+        .stat-data .stat-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--brown-dark);
+        }
+        .stat-data .stat-lbl {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
-        .title p {
-            font-size: 14px;
-            color: var(--gold-light);
-        }
-
-        .nav {
-    background: white;
-    padding: 12px 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.nav-links {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.nav-link {
-    padding: 8px 14px;
-    color: var(--brown-dark);
-    text-decoration: none;
-    border-radius: 25px;
-    transition: all 0.3s;
-    font-weight: 600;
-    font-size: 12px;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
-
-.nav-link:hover {
-    background: var(--gold-pale);
-    border-color: var(--gold-primary);
-}
-
-.nav-link.active {
-    background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-    color: var(--brown-dark);
-    border-color: var(--brown-dark);
-    font-weight: 700;
-}
-
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 30px;
-        }
-
+        /* Alerts */
         .message {
-            padding: 15px 20px;
+            padding: 14px 18px;
             border-radius: 12px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
-            animation: slideDown 0.4s ease;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .success {
-            background: #D1FAE5;
-            color: #065F46;
-            border-left: 4px solid #10B981;
-        }
-
-        .error {
-            background: #FEE2E2;
-            color: #991B1B;
-            border-left: 4px solid #EF4444;
-        }
-
-        /* Form Section */
-        .form-section {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 2px solid var(--gold-primary);
-        }
-
-        .form-title {
-            color: var(--brown-dark);
-            font-size: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--gold-pale);
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-group label {
-            color: var(--brown-dark);
             font-weight: 600;
-            font-size: 13px;
-        }
-
-        .form-group input, .form-group select {
-            padding: 12px;
-            border: 2px solid #E2E8F0;
-            border-radius: 10px;
             font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
+        .message.success { background: #DCFCE7; color: #166534; border-left: 4px solid var(--success); }
+        .message.error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--error); }
 
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: var(--gold-primary);
+        /* Card Container */
+        .content-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
         }
-
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            text-decoration: none;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            color: #8B4513;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(218,165,32,0.3);
-        }
-
-        .btn-edit {
-            background: #3B82F6;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-reset {
-            background: #F59E0B;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn-delete {
-            background: #EF4444;
-            color: white;
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        /* Table */
-        .section-card {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            border: 1px solid #FFD700;
-        }
-
-        .section-header {
+        .content-card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #FFD700;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gold-pale);
             flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .section-header h2 {
-            color: var(--brown-dark);
-            font-size: 20px;
-            display: flex;
-            align-items: center;
             gap: 10px;
         }
+        .content-card-header h2 {
+            font-size: 17px;
+            color: var(--brown-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+        }
+        .header-badge {
+            background: var(--gold-pale);
+            color: var(--brown-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
 
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--brown-dark);
+        }
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+        .form-control:focus {
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.15);
+        }
+        .btn-primary-action {
+            background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-dark) 100%);
+            color: var(--brown-dark);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 10px rgba(218, 165, 32, 0.25);
+        }
+        .btn-primary-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(218, 165, 32, 0.35);
+        }
+
+        /* Filters Toolbar */
+        .filter-toolbar {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        /* Table */
         .table-responsive {
+            width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
-
-        table {
+        table.users-table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        .table-responsive table {
-            min-width: 650px;
-        }
-
-        th {
-            background: #8B4513;
-            color: white;
-            padding: 12px 10px;
+            font-size: 13.5px;
             text-align: left;
-            border: 1px solid #DAA520;
-            font-size: 13px;
+        }
+        table.users-table th {
+            background: #F9FAFB;
+            color: var(--brown-dark);
+            font-weight: 700;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
+        }
+        table.users-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #F3F4F6;
+            vertical-align: middle;
+        }
+        table.users-table tbody tr:hover {
+            background: rgba(255, 215, 0, 0.03);
         }
 
-        td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #FFD700;
-        }
-
-        tr:hover {
-            background: #FFF8DC;
-        }
-
-        .role-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .role-admin {
-            background: #8B4513;
-            color: #FFD700;
-        }
-
-        .role-teacher {
-            background: #3B82F6;
-            color: white;
-        }
-
-        .role-attendance_submitter {
-            background: #8B5CF6;
-            color: white;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .logo-img {
-            width: 50px; height: 50px; border-radius: 50%; object-fit: cover;
-            border: 3px solid var(--gold-primary); background: white;
-        }
-        .info-note {
-            background: #EFF6FF;
-            border-left: 4px solid var(--info-blue);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            font-size: 13px;
+        /* User Chip */
+        .user-chip {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+        }
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            color: var(--brown-dark);
+            font-weight: 800;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .user-name-text {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Role Badges */
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .role-badge.admin { background: #F3E8FF; color: #6B21A8; }
+        .role-badge.teacher { background: #EFF6FF; color: #1D4ED8; }
+        .role-badge.submitter { background: #ECFDF5; color: #047857; }
+
+        /* Actions */
+        .actions-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-u-edit {
+            background: #FEF3C7;
+            color: #B45309;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-u-edit:hover { background: #FDE68A; }
+
+        .btn-u-reset {
+            background: #E0E7FF;
+            color: #3730A3;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-u-reset:hover { background: #C7D2FE; }
+
+        .btn-u-del {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            padding: 6px 9px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-u-del:hover { background: #FCA5A5; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 26px;
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid var(--gold-primary);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalPop 0.25s ease-out;
+            position: relative;
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--gold-pale);
+        }
+        .modal-header h3 {
+            color: var(--brown-dark);
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
         }
 
         @media (max-width: 768px) {
-            .main-container { padding: 0 12px 30px; margin: 15px auto; }
-            .form-section, .section-card { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
-            .form-title, .section-header h2 { font-size: 17px; }
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            .action-buttons {
-                flex-direction: column;
-                gap: 4px;
-            }
-            .action-buttons .btn {
-                width: 100%;
-                justify-content: center;
-                min-height: 38px;
-            }
-            .btn-primary { width: 100%; justify-content: center; min-height: 44px; }
-            .modal-card { width: 95% !important; padding: 20px 14px !important; border-radius: 12px !important; }
+            .main-container { padding: 0 10px 40px; margin: 12px auto; }
+            .page-header-card { padding: 18px 16px; }
+            .content-card { padding: 16px 14px; border-radius: 14px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .filter-toolbar { grid-template-columns: 1fr; }
+            .btn-primary-action { width: 100%; justify-content: center; min-height: 44px; }
         }
     </style>
 </head>
@@ -505,6 +539,14 @@ $nav_active = 'manage_users';
     <?php include 'mobile_nav.php'; ?>
 
     <div class="main-container">
+        <!-- Header -->
+        <div class="page-header-card">
+            <div class="header-info">
+                <h1>👥 የተጠቃሚዎች መለያ አስተዳደር</h1>
+                <p>የሲስተሙን ተጠቃሚዎች (የትምህርት ክፍል፣ መምህራን እና የክፍል ጸሐፊዎች) መለያዎችን ያስተዳድሩ።</p>
+            </div>
+        </div>
+
         <?php if($message): ?>
         <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
@@ -513,184 +555,212 @@ $nav_active = 'manage_users';
         <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon">👥</div>
+                <div class="stat-data">
+                    <div class="stat-val"><?php echo $total_users; ?></div>
+                    <div class="stat-lbl">ጠቅላላ ተጠቃሚዎች</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#F3E8FF; color:#7C3AED;">👑</div>
+                <div class="stat-data">
+                    <div class="stat-val" style="color:#7C3AED;"><?php echo $admin_count; ?></div>
+                    <div class="stat-lbl">የትምህርት ክፍል (አስተዳዳሪ)</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#EFF6FF; color:#2563EB;">👨‍🏫</div>
+                <div class="stat-data">
+                    <div class="stat-val" style="color:#2563EB;"><?php echo $teacher_count; ?></div>
+                    <div class="stat-lbl">መምህራን</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#ECFDF5; color:#059669;">✍️</div>
+                <div class="stat-data">
+                    <div class="stat-val" style="color:#059669;"><?php echo $submitter_count; ?></div>
+                    <div class="stat-lbl">የክፍል ጸሐፊዎች</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Add User Form -->
-        <div class="form-section">
-            <div class="form-title">
-                <span>➕</span> አዲስ ተጠቃሚ መፍጠሪያ / Add New User
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><span>➕</span> አዲስ ተጠቃሚ መመዝገቢያ</h2>
             </div>
             <form method="POST">
                 <?php echo csrfField(); ?>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>ሙሉ ስም / Full Name</label>
-                        <input type="text" name="name" required placeholder="ለምሳሌ: ዲ/ን ኪብረአብ ዘለለም">
+                        <label>ሙሉ ስም <span style="color: var(--error);">*</span></label>
+                        <input type="text" name="name" class="form-control" required placeholder="የተጠቃሚው ሙሉ ስም">
                     </div>
                     <div class="form-group">
-                        <label>የተጠቃሚ ስም / Username</label>
-                        <input type="text" name="username" required placeholder="ለምሳሌ: kibreab">
+                        <label>የተጠቃሚ ስም (Username) <span style="color: var(--error);">*</span></label>
+                        <input type="text" name="username" class="form-control" required placeholder="ለመግቢያ የሚሆን ስም">
                     </div>
                     <div class="form-group">
-                        <label>ስልክ / Phone</label>
-                        <input type="text" name="phone" placeholder="0912345678">
+                        <label>ስልክ ቁጥር</label>
+                        <input type="text" name="phone" class="form-control" placeholder="09...">
                     </div>
                     <div class="form-group">
-                        <label>ሚና / Role</label>
-                        <select name="role" required>
-                            <option value="teacher">👨‍🏫 መምህር / Teacher</option>
-                            <option value="attendance_submitter">📋 የክፍል ጸሐፊ / Attendance Submitter</option>
-                            <option value="admin">👑 አስተዳዳሪ / Admin</option>
+                        <label>የስራ ድርሻ (Role) <span style="color: var(--error);">*</span></label>
+                        <select name="role" class="form-control" required>
+                            <option value="teacher">👨‍🏫 መምህር</option>
+                            <option value="attendance_submitter">✍️ የክፍል ጸሐፊ (Attendance Submitter)</option>
+                            <option value="admin">👑 ትምህርት ክፍል (አስተዳዳሪ)</option>
                         </select>
                     </div>
                 </div>
-                <div class="info-note">
-                    <span>ℹ️</span>
-                    <div>
-                        <strong>የመጀመሪያ የይለፍ ቃል / Default Password:</strong> 123<br>
-                        <small>ተጠቃሚው ለመጀመሪያ ጊዜ ሲገባ ይለውጠዋል / User will change on first login</small>
-                    </div>
-                </div>
-                <button type="submit" name="add_user" class="btn btn-primary" style="margin-top: 20px;">
-                    <span>➕</span> ተጠቃሚ ፍጠር / Create User
+                <button type="submit" name="add_user" class="btn-primary-action">
+                    ➕ ተጠቃሚ መዝግብ (ነባሪ የይለፍ ቃል: 123)
                 </button>
             </form>
         </div>
 
-        <!-- Users List -->
-        <div class="section-card">
-            <div class="section-header">
-                <h2>
-                    <span>📋</span> 
-                    የተጠቃሚዎች ዝርዝር / Users List
-                </h2>
-                <span><?php echo mysqli_num_rows($users); ?> ተጠቃሚዎች</span>
+        <!-- Users Directory -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><span>📋</span> የተጠቃሚዎች ዝርዝር</h2>
+                <span class="header-badge"><?php echo $total_users; ?> ተጠቃሚዎች</span>
+            </div>
+
+            <div class="filter-toolbar">
+                <input type="text" id="userSearch" class="form-control" placeholder="🔍 የተጠቃሚ ስም፣ username ወይም ስልክ ይፈልጉ..." onkeyup="filterUserList()">
+                <select id="roleFilter" class="form-control" onchange="filterUserList()">
+                    <option value="">👤 ሁሉም የስራ ድርሻዎች</option>
+                    <option value="admin">👑 ትምህርት ክፍል</option>
+                    <option value="teacher">👨‍🏫 መምህር</option>
+                    <option value="attendance_submitter">✍️ የክፍል ጸሐፊ</option>
+                </select>
             </div>
 
             <div class="table-responsive">
-                <?php if($users && mysqli_num_rows($users) > 0): ?>
-                <table>
+                <table class="users-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>ሙሉ ስም</th>
+                            <th>ተጠቃሚ</th>
                             <th>የተጠቃሚ ስም</th>
-                            <th>ስልክ</th>
-                            <th>ሚና</th>
-                            <th>ሁኔታ</th>
-                            <th>ድርጊት</th>
+                            <th>የስራ ድርሻ</th>
+                            <th>ስልክ ቁጥር</th>
+                            <th>የተመዘገበበት</th>
+                            <th>ድርጊቶች</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php while($user = mysqli_fetch_assoc($users)): 
-                            $role_class = '';
-                            $role_text = '';
-                            if($user['role'] == 'admin') {
-                                $role_class = 'role-admin';
-                                $role_text = '👑 አስተዳዳሪ';
-                            } elseif($user['role'] == 'teacher') {
-                                $role_class = 'role-teacher';
-                                $role_text = '👨‍🏫 መምህር';
-                            } else {
-                                $role_class = 'role-attendance_submitter';
-                                $role_text = '📋 የክፍል ጸሐፊ';
-                            }
+                        <?php foreach($users_list as $u): 
+                            $uRole = $u['role'];
+                            $roleLabel = ($uRole === 'admin') ? '👑 ትምህርት ክፍል' : (($uRole === 'attendance_submitter') ? '✍️ የክፍል ጸሐፊ' : '👨‍🏫 መምህር');
+                            $roleClass = ($uRole === 'admin') ? 'admin' : (($uRole === 'attendance_submitter') ? 'submitter' : 'teacher');
+                            $initial = mb_substr($u['name'], 0, 1, 'UTF-8');
+                            $isSelf = intval($u['id']) === intval($_SESSION['user_id']);
                         ?>
-                        <tr>
-                            <td><?php echo $user['id']; ?></td>
-                            <td><strong><?php echo htmlspecialchars($user['name']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($user['username']); ?></td>
-                            <td><?php echo htmlspecialchars($user['phone'] ?: '-'); ?></td>
-                            <td><span class="role-badge <?php echo $role_class; ?>"><?php echo $role_text; ?></span></td>
+                        <tr class="user-row" data-search="<?php echo htmlspecialchars(strtolower($u['name'] . ' ' . $u['username'] . ' ' . ($u['phone'] ?? ''))); ?>" data-role="<?php echo $uRole; ?>">
                             <td>
-                                <?php if($user['first_login']): ?>
-                                    <span style="color: #F59E0B;">🆕 አዲስ</span>
+                                <div class="user-chip">
+                                    <div class="user-avatar"><?php echo htmlspecialchars($initial); ?></div>
+                                    <div>
+                                        <div class="user-name-text"><?php echo htmlspecialchars($u['name']); ?></div>
+                                        <?php if($isSelf): ?>
+                                            <span style="font-size:11px; color:#10B981; font-weight:700;">(የእርስዎ አካውንት)</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <code style="background:#F3F4F6; padding:3px 8px; border-radius:6px; font-size:12.5px;">@<?php echo htmlspecialchars($u['username']); ?></code>
+                            </td>
+                            <td>
+                                <span class="role-badge <?php echo $roleClass; ?>">
+                                    <?php echo $roleLabel; ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?php if (!empty($u['phone'])): ?>
+                                    <a href="tel:<?php echo htmlspecialchars($u['phone']); ?>" style="color:#2563EB; text-decoration:none; font-family:monospace; font-weight:600;">
+                                        📞 <?php echo htmlspecialchars($u['phone']); ?>
+                                    </a>
                                 <?php else: ?>
-                                    <span style="color: #10B981;">✅ ንቁ</span>
+                                    <span style="color:var(--text-muted);">—</span>
                                 <?php endif; ?>
-                             </td>
-                            <td class="action-buttons">
-                                <button onclick="editUser(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars(addslashes($user['name'])); ?>', '<?php echo $user['username']; ?>', '<?php echo $user['phone']; ?>', '<?php echo $user['role']; ?>')" 
-                                        class="btn btn-edit">
-                                    ✏️ አስተካክል
-                                </button>
-                                <?php if($user['id'] != $_SESSION['user_id']): ?>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
-                                    <?php echo csrfField(); ?>
-                                    <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                    <button type="submit" name="reset_password" class="btn btn-reset">
-                                        🔄 ይለፍ ቃል መልስ
+                            </td>
+                            <td style="font-size:12.5px; color:var(--text-muted); white-space:nowrap;">
+                                <?php echo date('Y-m-d', strtotime($u['created_at'])); ?>
+                            </td>
+                            <td>
+                                <div class="actions-group">
+                                    <button onclick="editUser(<?php echo $u['id']; ?>, '<?php echo htmlspecialchars(addslashes($u['name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($u['username']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($u['phone'] ?? ''), ENT_QUOTES); ?>', '<?php echo $u['role']; ?>')" 
+                                            class="btn-u-edit" title="መረጃ አርትዕ">
+                                        ✏️ አርትዕ
                                     </button>
-                                </form>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('ተጠቃሚውን መሰረዝ እርግጠኛ ነዎት?')">
-                                    <?php echo csrfField(); ?>
-                                    <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                    <button type="submit" name="delete_user" class="btn btn-delete">
-                                        🗑️ ሰርዝ
-                                    </button>
-                                </form>
-                                <?php else: ?>
-                                    <button class="btn btn-delete" style="opacity:0.5; cursor:not-allowed;" disabled>
-                                        🗑️ አይቻልም
-                                    </button>
-                                <?php endif; ?>
-                             </td>
-                         </tr>
-                        <?php endwhile; ?>
+                                    
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('የ[<?php echo htmlspecialchars(addslashes($u['name']), ENT_QUOTES); ?>] የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
+                                        <?php echo csrfField(); ?>
+                                        <input type="hidden" name="user_id" value="<?php echo $u['id']; ?>">
+                                        <button type="submit" name="reset_password" class="btn-u-reset" title="የይለፍ ቃል ወደ 123 መልስ">
+                                            🔄 123
+                                        </button>
+                                    </form>
+
+                                    <?php if (!$isSelf): ?>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('ተጠቃሚ [<?php echo htmlspecialchars(addslashes($u['name']), ENT_QUOTES); ?>] መሰረዝ እርግጠኛ ነዎት?')">
+                                        <?php echo csrfField(); ?>
+                                        <input type="hidden" name="user_id" value="<?php echo $u['id']; ?>">
+                                        <button type="submit" name="delete_user" class="btn-u-del" title="ተጠቃሚ ሰርዝ">
+                                            🗑️
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
-                <?php else: ?>
-                <div class="no-data" style="text-align:center; padding:50px;">
-                    <span style="font-size:48px;">👥</span>
-                    <p>ምንም ተጠቃሚዎች የሉም</p>
-                </div>
-                <?php endif; ?>
             </div>
         </div>
     </div>
 
     <!-- Edit Modal -->
-    <div id="editModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1000; justify-content:center; align-items:center;">
-        <div class="modal-card modal-box" style="width:90%; max-width:500px; padding:30px; border-radius:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="color:var(--brown-dark);">✏️ የተጠቃሚ መረጃ አስተካክል</h2>
-                <span onclick="closeModal()" style="font-size:28px; cursor:pointer;">&times;</span>
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>✏️ የተጠቃሚ መረጃ ማስተካከያ</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <form method="POST" id="editForm">
                 <?php echo csrfField(); ?>
                 <input type="hidden" name="user_id" id="edit_id">
-                <div class="form-group" style="margin-bottom:15px;">
-                    <label>ሙሉ ስም</label>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>ሙሉ ስም <span style="color:var(--error);">*</span></label>
                     <input type="text" name="name" id="edit_name" class="form-control" required>
                 </div>
-                <div class="form-group" style="margin-bottom:15px;">
-                    <label>የተጠቃሚ ስም</label>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>የተጠቃሚ ስም (Username) <span style="color:var(--error);">*</span></label>
                     <input type="text" name="username" id="edit_username" class="form-control" required>
                 </div>
-                <div class="form-group" style="margin-bottom:15px;">
-                    <label>ስልክ</label>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>ስልክ ቁጥር</label>
                     <input type="text" name="phone" id="edit_phone" class="form-control">
                 </div>
                 <div class="form-group" style="margin-bottom:20px;">
-                    <label>ሚና</label>
+                    <label>የስራ ድርሻ (Role) <span style="color:var(--error);">*</span></label>
                     <select name="role" id="edit_role" class="form-control" required>
-                        <option value="teacher">👨‍🏫 መምህር / Teacher</option>
-                        <option value="attendance_submitter">📋 የክፍል ጸሐፊ / Attendance Submitter</option>
-                        <option value="admin">👑 አስተዳዳሪ / Admin</option>
+                        <option value="teacher">👨‍🏫 መምህር</option>
+                        <option value="attendance_submitter">✍️ የክፍል ጸሐፊ</option>
+                        <option value="admin">👑 ትምህርት ክፍል (አስተዳዳሪ)</option>
                     </select>
                 </div>
-                <button type="submit" name="edit_user" class="btn btn-primary" style="width:100%;">
-                    💾 አስቀምጥ / Save
+                <button type="submit" name="edit_user" class="btn-primary-action" style="width:100%; justify-content:center;">
+                    💾 ለውጦችን አስቀምጥ
                 </button>
             </form>
         </div>
     </div>
-
-    <style>
-        .form-control:focus {
-            outline: none;
-            border-color: #FFD700;
-            box-shadow: 0 0 0 3px rgba(255,215,0,0.2);
-        }
-    </style>
 
     <script>
         function editUser(id, name, username, phone, role) {
@@ -706,8 +776,29 @@ $nav_active = 'manage_users';
             document.getElementById('editModal').style.display = 'none';
         }
 
+        function filterUserList() {
+            var q = document.getElementById('userSearch').value.toLowerCase();
+            var r = document.getElementById('roleFilter').value;
+            var rows = document.querySelectorAll('.user-row');
+
+            rows.forEach(function(row) {
+                var searchData = row.getAttribute('data-search');
+                var roleData = row.getAttribute('data-role');
+
+                var matchQ = (!q || searchData.indexOf(q) > -1);
+                var matchR = (!r || roleData === r);
+
+                if (matchQ && matchR) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
         window.onclick = function(event) {
-            if (event.target == document.getElementById('editModal')) {
+            var modal = document.getElementById('editModal');
+            if (event.target === modal) {
                 closeModal();
             }
         }

@@ -12,22 +12,11 @@ $ethiopian_months = [
     9 => 'ግንቦት', 10 => 'ሰኔ', 11 => 'ሐምሌ', 12 => 'ነሐሴ', 13 => 'ጳጉሜን'
 ];
 
-// Function to format time in 12-hour Gregorian format
-function formatTime12Hour($datetime) {
-    if (!$datetime) return 'N/A';
-    return date('M d, Y - h:i A', strtotime($datetime));
-}
-
-// Current date in Gregorian
-$current_date_gregorian = date('l, F j, Y');
-$current_time_12hr = date('h:i A');
-$current_datetime_gregorian = date('l, F j, Y - h:i A');
-
 // Current academic year
 $active_year = getCurrentAcademicYear($conn);
 $current_ethiopian_year = $active_year ? intval($active_year['ethiopian_year']) : 2018;
 
-// First, ensure academic year exists
+// Ensure academic year exists
 $check_year = dbFetchOne($conn, "SELECT * FROM academic_years WHERE ethiopian_year = ?", "i", [$current_ethiopian_year]);
 if (!$check_year) {
     dbExecute($conn, "INSERT INTO academic_years (ethiopian_year, status, start_date) VALUES (?, 'active', CURDATE())", "i", [$current_ethiopian_year]);
@@ -96,7 +85,7 @@ if(isset($_GET['opened']) && $_GET['opened'] == 1) {
     $message = "ሴሚስተር በተሳካ ሁኔታ ተከፍቷል!";
 }
 
-// Get ALL semesters for current Ethiopian year - DON'T force any to be active automatically
+// Get ALL semesters for current Ethiopian year
 $sem1_query = "SELECT * FROM semesters WHERE ethiopian_year = $current_ethiopian_year AND semester_number = 1";
 $sem1_result = mysqli_query($conn, $sem1_query);
 $sem1 = mysqli_fetch_assoc($sem1_result);
@@ -105,7 +94,6 @@ $sem2_query = "SELECT * FROM semesters WHERE ethiopian_year = $current_ethiopian
 $sem2_result = mysqli_query($conn, $sem2_query);
 $sem2 = mysqli_fetch_assoc($sem2_result);
 
-// If no semesters exist at all for this year, create Semester 1 as active (only for initial setup)
 if(!$sem1 && !$sem2) {
     $full_name = "$current_ethiopian_year ዓ.ም መጀመሪያ ሴሚስተር";
     dbExecute(
@@ -114,8 +102,6 @@ if(!$sem1 && !$sem2) {
         "si",
         [$full_name, $current_ethiopian_year]
     );
-    
-    // Refresh the query
     $sem1_result = mysqli_query($conn, $sem1_query);
     $sem1 = mysqli_fetch_assoc($sem1_result);
 }
@@ -144,10 +130,11 @@ if($history_result) {
 $nav_active = 'semester';
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>ሴሚስተር አስተዳደር | አጸደ ትጉሃን </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ሴሚስተር አስተዳደር | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
         :root {
@@ -156,552 +143,258 @@ $nav_active = 'semester';
             --gold-primary: #FFD700;
             --gold-dark: #DAA520;
             --gold-pale: #FFF8DC;
-            --success-green: #10B981;
-            --error-red: #EF4444;
-            --warning-yellow: #F59E0B;
-            --info-blue: #3B82F6;
+            --bg-cream: #FAF9F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border-color: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+            --warning: #F59E0B;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
 
-        body {
-            background: #FAF9F6;
-        }
+        .main-container { max-width: 1100px; margin: 24px auto; padding: 0 16px 80px; }
 
-        .header {
+        /* Page Header Card */
+        .page-header-card {
             background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
+            border-radius: 16px;
+            padding: 24px 28px;
             color: white;
-            padding: 20px 30px;
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(139, 69, 19, 0.18);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo-icon {
-            width: 55px;
-            height: 55px;
-            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: var(--brown-dark);
-            border: 3px solid white;
-        }
-
-        .title h1 {
-            font-size: 22px;
-            color: var(--gold-primary);
-        }
-
-        .title p {
-            font-size: 14px;
-            color: var(--gold-light);
-        }
-
-        .nav {
-    background: white;
-    padding: 12px 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.nav-links {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.nav-link {
-    padding: 8px 14px;
-    color: var(--brown-dark);
-    text-decoration: none;
-    border-radius: 25px;
-    transition: all 0.3s;
-    font-weight: 600;
-    font-size: 12px;
-    white-space: nowrap;
-    border: 1px solid transparent;
-}
-
-.nav-link:hover {
-    background: var(--gold-pale);
-    border-color: var(--gold-primary);
-}
-
-.nav-link.active {
-    background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-    color: var(--brown-dark);
-    border-color: var(--brown-dark);
-    font-weight: 700;
-}
-
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 30px;
-        }
-
-        .message {
-            padding: 15px 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideDown 0.4s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .success {
-            background: #D1FAE5;
-            color: var(--success-green);
-            border-left: 5px solid var(--success-green);
-        }
-
-        .error {
-            background: #FEE2E2;
-            color: var(--error-red);
-            border-left: 5px solid var(--error-red);
-        }
-
-        .current-year-card {
-            background: linear-gradient(135deg, var(--gold-pale), white);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 3px solid var(--gold-primary);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .year-info h2 {
-            color: var(--brown-dark);
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-
-        .year-info p {
-            color: #666;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .gregorian-date {
-            background: var(--info-blue);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-active {
-            background: #D1FAE5;
-            color: var(--success-green);
-        }
-
-        .badge-closed {
-            background: #FEE2E2;
-            color: var(--error-red);
-        }
-
-        .badge-warning {
-            background: #FEF3C7;
-            color: var(--warning-yellow);
-        }
-
-        .semester-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin: 30px 0;
-        }
-
-        .semester-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            border: 2px solid var(--gold-pale);
-            transition: all 0.3s;
+            gap: 16px;
             position: relative;
             overflow: hidden;
         }
-
-        .semester-card:hover {
-            transform: translateY(-3px);
-            border-color: var(--gold-primary);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        .semester-card::before {
-            content: '📚';
+        .page-header-card::after {
+            content: '📅';
             position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 40px;
-            opacity: 0.1;
+            right: 20px;
+            bottom: -15px;
+            font-size: 100px;
+            opacity: 0.12;
+            pointer-events: none;
         }
-
-        .semester-number {
+        .header-info h1 {
             font-size: 22px;
-            font-weight: bold;
+            font-weight: 800;
+            color: var(--gold-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .header-info p {
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .year-pill {
+            background: rgba(255, 215, 0, 0.2);
+            border: 1px solid var(--gold-primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13.5px;
+            font-weight: 800;
+            color: var(--gold-primary);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Alerts */
+        .message {
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .message.success { background: #DCFCE7; color: #166534; border-left: 4px solid var(--success); }
+        .message.error { background: #FEE2E2; color: #991B1B; border-left: 4px solid var(--error); }
+
+        /* Semesters 2-Card Layout */
+        .semesters-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .sem-card {
+            background: var(--card-bg);
+            border-radius: 18px;
+            border: 2px solid var(--border-color);
+            padding: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            transition: all 0.25s;
+        }
+        .sem-card.active {
+            border-color: var(--gold-dark);
+            box-shadow: 0 10px 24px rgba(218, 165, 32, 0.15);
+        }
+        .sem-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1.5px solid var(--gold-pale);
+        }
+        .sem-title {
+            font-size: 18px;
+            font-weight: 800;
             color: var(--brown-dark);
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--gold-pale);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-
-        .semester-status {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 16px;
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
         }
+        .status-pill.active { background: #DCFCE7; color: #166534; }
+        .status-pill.closed { background: #FEE2E2; color: #991B1B; }
+        .status-pill.pending { background: #F3F4F6; color: #6B7280; }
 
-        .btn {
-            padding: 12px 25px;
+        .sem-dates {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .sem-dates div { display: flex; align-items: center; gap: 6px; }
+
+        .sem-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn-open-sem {
+            flex: 1;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            color: var(--brown-dark);
             border: none;
-            border-radius: 8px;
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13.5px;
             cursor: pointer;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-close-sem {
+            flex: 1;
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            padding: 11px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13.5px;
+            cursor: pointer;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-history-link {
+            background: #F3F4F6;
+            color: var(--text-main);
+            padding: 11px 16px;
+            border-radius: 10px;
+            font-size: 13px;
             font-weight: 600;
-            transition: all 0.3s;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 14px;
+            gap: 4px;
         }
+        .btn-history-link:hover { background: #E5E7EB; }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            color: #8B4513;
+        /* History Table Card */
+        .content-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
         }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(218,165,32,0.3);
-        }
-
-        .btn-success {
-            background: #10B981;
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(16,185,129,0.3);
-        }
-
-        .btn-danger {
-            background: #EF4444;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(239,68,68,0.3);
-        }
-
-        .history-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-top: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .history-header {
+        .content-card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 15px;
+            padding-bottom: 12px;
             border-bottom: 2px solid var(--gold-pale);
-            flex-wrap: wrap;
-            gap: 15px;
         }
-
-        .history-header h2 {
+        .content-card-header h2 {
+            font-size: 17px;
             color: var(--brown-dark);
-            font-size: 22px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            font-weight: 700;
         }
-
-        .year-group {
-            margin-bottom: 25px;
-            border-left: 4px solid var(--gold-primary);
-            padding-left: 20px;
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
-
-        .year-title {
-            font-size: 20px;
-            font-weight: bold;
+        table.history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            text-align: left;
+        }
+        table.history-table th {
+            background: #F9FAFB;
             color: var(--brown-dark);
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
+            font-weight: 700;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border-color);
+            white-space: nowrap;
         }
-
-        .year-badge {
-            background: var(--brown-dark);
-            color: var(--gold-primary);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 14px;
+        table.history-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #F3F4F6;
+            vertical-align: middle;
         }
-
-        .history-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 12px;
-            padding: 12px;
-            background: #F8F9FA;
-            border-radius: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .history-label {
-            min-width: 120px;
-            font-weight: 600;
-            color: var(--brown-medium);
-            font-size: 15px;
-        }
-
-        .history-value {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .info-box {
-            background: #EFF6FF;
-            border-left: 4px solid var(--info-blue);
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .info-box span {
-            font-size: 28px;
-        }
-
-        .info-box strong {
-            color: var(--brown-dark);
-            font-size: 18px;
-        }
-
-        .warning-box {
-            background: #FEF3C7;
-            border-left: 4px solid var(--warning-yellow);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-
-        .time-display {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-top: 10px;
+        table.history-table tbody tr:hover {
+            background: rgba(255, 215, 0, 0.03);
         }
 
         @media (max-width: 768px) {
-            .main-container { padding: 0 12px 30px; margin: 15px auto; }
-            .current-year-card {
-                flex-direction: column;
-                text-align: center;
-                padding: 18px 14px;
-                border-radius: 12px;
-            }
-            .year-info h2 { font-size: 24px; }
-            .year-info p { justify-content: center; gap: 10px; }
-            
-            .semester-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-                margin: 20px 0;
-            }
-            .semester-card { padding: 18px 14px; border-radius: 12px; }
-            .btn { width: 100%; justify-content: center; min-height: 44px; }
-            
-            .history-section { padding: 16px 12px; border-radius: 12px; margin-top: 20px; }
-            .history-header h2 { font-size: 17px; }
-            .history-row {
-                flex-direction: column;
-                gap: 8px;
-                align-items: flex-start;
-                padding: 10px;
-            }
-            .history-value { width: 100%; }
-            .history-value .btn { width: 100%; }
-            .year-group { padding-left: 12px; margin-bottom: 18px; }
-            .info-box { flex-direction: column; align-items: flex-start; padding: 14px; gap: 10px; }
-        }
-
-        /* Direct dark-mode overrides for semester page */
-        html.dark-mode body {
-            background-color: #0B1120 !important;
-        }
-        html.dark-mode .current-year-card {
-            background: linear-gradient(135deg, #1E293B, #0F172A) !important;
-            border-color: #F59E0B !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
-        }
-        html.dark-mode .year-info h2 {
-            color: #FCD34D !important;
-        }
-        html.dark-mode .year-info p {
-            color: #CBD5E1 !important;
-        }
-        html.dark-mode .semester-card {
-            background-color: #1E293B !important;
-            border-color: #334155 !important;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3) !important;
-            color: #F1F5F9 !important;
-        }
-        html.dark-mode .semester-card:hover {
-            border-color: #F59E0B !important;
-        }
-        html.dark-mode .semester-number {
-            color: #FCD34D !important;
-            border-bottom-color: #334155 !important;
-        }
-        html.dark-mode .semester-card p {
-            color: #CBD5E1 !important;
-        }
-        html.dark-mode .semester-card p strong {
-            color: #FCD34D !important;
-        }
-        html.dark-mode .semester-card p small {
-            color: #94A3B8 !important;
-        }
-        html.dark-mode .semester-status.badge-active {
-            background-color: #064E3B !important;
-            color: #A7F3D0 !important;
-            border: 1px solid #059669 !important;
-        }
-        html.dark-mode .semester-status.badge-closed {
-            background-color: #7F1D1D !important;
-            color: #FECACA !important;
-            border: 1px solid #DC2626 !important;
-        }
-        html.dark-mode .semester-status.badge-warning {
-            background-color: #78350F !important;
-            color: #FDE68A !important;
-            border: 1px solid #D97706 !important;
-        }
-        html.dark-mode .warning-box {
-            background-color: #1E293B !important;
-            border: 1px solid #334155 !important;
-            border-left: 4px solid #F59E0B !important;
-            color: #FDE68A !important;
-        }
-        html.dark-mode .warning-box strong {
-            color: #FCD34D !important;
-        }
-        html.dark-mode .history-section {
-            background-color: #1E293B !important;
-            border: 1px solid #334155 !important;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
-            color: #F1F5F9 !important;
-        }
-        html.dark-mode .history-header {
-            border-bottom-color: #334155 !important;
-        }
-        html.dark-mode .history-header h2 {
-            color: #FCD34D !important;
-        }
-        html.dark-mode .year-group {
-            border-left-color: #F59E0B !important;
-        }
-        html.dark-mode .year-title {
-            color: #F8FAFC !important;
-        }
-        html.dark-mode .year-badge {
-            background: #D97706 !important;
-            color: #FFFFFF !important;
-        }
-        html.dark-mode .history-row {
-            background-color: #0F172A !important;
-            border: 1px solid #334155 !important;
-            color: #E2E8F0 !important;
-        }
-        html.dark-mode .history-label {
-            color: #FCD34D !important;
-        }
-        html.dark-mode .history-value {
-            color: #CBD5E1 !important;
-        }
-        html.dark-mode .info-box {
-            background-color: #1E293B !important;
-            border: 1px solid #334155 !important;
-            border-left: 4px solid #3B82F6 !important;
-            color: #BFDBFE !important;
-        }
-        html.dark-mode .info-box strong {
-            color: #FCD34D !important;
+            .main-container { padding: 0 10px 40px; margin: 12px auto; }
+            .page-header-card { padding: 18px 16px; }
+            .semesters-grid { grid-template-columns: 1fr; gap: 14px; }
+            .content-card { padding: 16px 14px; border-radius: 14px; }
+            .sem-actions { flex-direction: column; }
+            .btn-open-sem, .btn-close-sem, .btn-history-link { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -709,202 +402,193 @@ $nav_active = 'semester';
     <?php include 'mobile_nav.php'; ?>
 
     <div class="main-container">
-        <?php if($message): ?>
-        <div class="message success">
-            <span>✅</span>
-            <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
+        <!-- Header -->
+        <div class="page-header-card">
+            <div class="header-info">
+                <h1>📅 የትምህርት ዘመን እና ሴሚስተር አስተዳደር</h1>
+                <p>ሴሚስተሮችን ይክፈቱ፣ ይዝጉ እና ያለፉ ዓመታት የውጤት መዝገቦችን በታሪክ ይገምግሙ።</p>
+            </div>
+            <div class="year-pill">
+                <span>⛪</span> <?php echo $current_ethiopian_year; ?> ዓ.ም (አሁን ያለው ዓመት)
+            </div>
         </div>
+
+        <?php if($message): ?>
+        <div class="message success">✅ <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
         <?php if($error): ?>
-        <div class="message error">
-            <span>⚠️</span>
-            <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
-        </div>
+        <div class="message error">⚠️ <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php endif; ?>
 
-        <!-- Current Year Card with Gregorian Date -->
-        <div class="current-year-card">
-            <div class="year-info">
-                <h2>2018 ዓ.ም የትምህርት ዘመን</h2>
-               
-                <p style="margin-top: 10px; font-size: 16px;">
-                    <?php if($sem1 && $sem1['status'] == 'active'): ?>
-                        <strong style="color: var(--success-green);">✅ መጀመሪያ ሴሚስተር ክፍት ነው</strong>
-                    <?php elseif($sem2 && $sem2['status'] == 'active'): ?>
-                        <strong style="color: var(--success-green);">✅ ሁለተኛ ሴሚስተር ክፍት ነው</strong>
-                    <?php else: ?>
-                        <strong style="color: var(--warning-yellow);">⚠️ ምንም ክፍት ሴሚስተር የለም</strong>
-                    <?php endif; ?>
-                </p>
-            </div>
-        </div>
-
-        <!-- Important Note with Current Time -->
-        
-
-        <!-- Semester Controls -->
-        <div class="semester-grid">
-            <!-- Semester 1 Card -->
-            <div class="semester-card">
-                <div class="semester-number">መጀመሪያ ሴሚስተር</div>
-                <?php if($sem1): ?>
-                    <div class="semester-status <?php echo $sem1['status'] == 'active' ? 'badge-active' : 'badge-closed'; ?>">
-                        <?php echo $sem1['status'] == 'active' ? '✅ ክፍት ነው' : '🔒 ዝግ ነው'; ?>
-                    </div>
-                    <p style="color: #666; font-size: 14px; margin: 10px 0;">
-                        <strong><?php echo htmlspecialchars($sem1['name']); ?></strong><br>
-                        <small>የተከፈተበት: <?php echo $sem1['start_date'] ? date('M d, Y - h:i A', strtotime($sem1['start_date'])) : 'N/A'; ?></small>
-                        <?php if($sem1['end_date']): ?>
-                            <br><small>የተዘጋበት: <?php echo date('M d, Y - h:i A', strtotime($sem1['end_date'])); ?></small>
-                        <?php endif; ?>
-                    </p>
-                    <?php if($sem1['status'] == 'active'): ?>
-                    <form method="POST" onsubmit="return confirm('እርግጠኛ ነህ ሴሚስተሩን መዝጋት ትፈልጋለህ?');">
-                        <?php echo csrfField(); ?>
-                        <input type="hidden" name="semester_id" value="<?php echo $sem1['id']; ?>">
-                        <button type="submit" name="close_semester" class="btn btn-danger" style="width: 100%;">
-                            🔒 ሴሚስተር ዝጋ
-                        </button>
-                    </form>
-                    <?php else: ?>
-                    <form method="POST">
-                        <?php echo csrfField(); ?>
-                        <input type="hidden" name="semester_number" value="1">
-                        <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
-                            ➕ ሴሚስተር ክፈት
-                        </button>
-                    </form>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <div class="semester-status badge-warning">⏳ አልተከፈተም</div>
-                    <form method="POST">
-                        <?php echo csrfField(); ?>
-                        <input type="hidden" name="semester_number" value="1">
-                        <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
-                            ➕ ሴሚስተር ክፈት
-                        </button>
-                    </form>
-                <?php endif; ?>
-            </div>
-
-            <!-- Semester 2 Card -->
-            <div class="semester-card">
-                <div class="semester-number">ሁለተኛ ሴሚስተር</div>
-                <?php if($sem2): ?>
-                    <div class="semester-status <?php echo $sem2['status'] == 'active' ? 'badge-active' : 'badge-closed'; ?>">
-                        <?php echo $sem2['status'] == 'active' ? '✅ ክፍት ነው' : '🔒 ዝግ ነው'; ?>
-                    </div>
-                    <p style="color: #666; font-size: 14px; margin: 10px 0;">
-                        <strong><?php echo htmlspecialchars($sem2['name']); ?></strong><br>
-                        <small>የተከፈተበት: <?php echo $sem2['start_date'] ? date('M d, Y - h:i A', strtotime($sem2['start_date'])) : 'N/A'; ?></small>
-                        <?php if($sem2['end_date']): ?>
-                            <br><small>የተዘጋበት: <?php echo date('M d, Y - h:i A', strtotime($sem2['end_date'])); ?></small>
-                        <?php endif; ?>
-                    </p>
-                    <?php if($sem2['status'] == 'active'): ?>
-                    <form method="POST" onsubmit="return confirm('እርግጠኛ ነህ ሴሚስተሩን መዝጋት ትፈልጋለህ?');">
-                        <?php echo csrfField(); ?>
-                        <input type="hidden" name="semester_id" value="<?php echo $sem2['id']; ?>">
-                        <button type="submit" name="close_semester" class="btn btn-danger" style="width: 100%;">
-                            🔒 ሴሚስተር ዝጋ
-                        </button>
-                    </form>
-                    <?php else: ?>
-                    <form method="POST">
-                        <?php echo csrfField(); ?>
-                        <input type="hidden" name="semester_number" value="2">
-                        <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
-                            ➕ ሴሚስተር ክፈት
-                        </button>
-                    </form>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <div class="semester-status badge-warning">⏳ አልተከፈተም</div>
-                    <form method="POST">
-                        <?php echo csrfField(); ?>
-                        <input type="hidden" name="semester_number" value="2">
-                        <button type="submit" name="open_semester" class="btn btn-primary" style="width: 100%;">
-                            ➕ ሴሚስተር ክፈት
-                        </button>
-                    </form>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- How it works -->
-        <div class="warning-box">
-            <p style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 24px;">🔑</span>
-                <strong>አስተዳዳሪ ብቻ ሴሚስተር መክፈት እና መዝጋት ይችላሉ።</strong>
-            </p>
-        </div>
-
-        <!-- Semester History -->
-        <div class="history-section">
-            <div class="history-header">
-                <h2><span>📜</span> የሴሚስተር ታሪክ</h2>
-            </div>
-
-            <?php if(!empty($history_by_year)): ?>
-                <?php foreach($history_by_year as $year => $semesters): ?>
-                <div class="year-group">
-                    <div class="year-title">
-                        <?php echo $year; ?> ዓ.ም
-                        <?php if($year == 2018): ?>
-                        <span class="year-badge">ንቁ</span>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <?php if($semesters['semester1']): ?>
-                    <div class="history-row">
-                        <span class="history-label">መጀመሪያ ሴሚስተር:</span>
-                        <div class="history-value">
-                            <span class="status-badge <?php echo $semesters['semester1']['status'] == 'active' ? 'badge-active' : 'badge-closed'; ?>">
-                                <?php echo $semesters['semester1']['status'] == 'active' ? 'ክፍት' : 'ዝግ'; ?>
-                            </span>
-                            <span>
-                                🗓️ የተከፈተበት: <?php echo formatTime12Hour($semesters['semester1']['start_date']); ?>
-                                <?php if($semesters['semester1']['end_date']): ?>
-                                    | የተዘጋበት: <?php echo formatTime12Hour($semesters['semester1']['end_date']); ?>
-                                <?php endif; ?>
-                            </span>
+        <!-- Semesters Grid for Current Year -->
+        <div class="semesters-grid">
+            <!-- Semester 1 -->
+            <?php 
+                $s1_active = $sem1 && $sem1['status'] === 'active';
+                $s1_closed = $sem1 && $sem1['status'] === 'closed';
+            ?>
+            <div class="sem-card <?php echo $s1_active ? 'active' : ''; ?>">
+                <div>
+                    <div class="sem-header">
+                        <div class="sem-title">
+                            📖 1ኛ ሴሚስተር
                         </div>
+                        <?php if($s1_active): ?>
+                            <span class="status-pill active">🟢 ንቁ ሴሚስተር</span>
+                        <?php elseif($s1_closed): ?>
+                            <span class="status-pill closed">🔴 የተዘጋ</span>
+                        <?php else: ?>
+                            <span class="status-pill pending">⚪ ያልተጀመረ</span>
+                        <?php endif; ?>
                     </div>
+
+                    <div class="sem-dates">
+                        <div>📅 የተጀመረበት፦ <?php echo $sem1 && $sem1['start_date'] ? date('Y-m-d', strtotime($sem1['start_date'])) : 'አልተጀመረም'; ?></div>
+                        <div>🏁 የተዘጋበት፦ <?php echo $sem1 && $sem1['end_date'] ? date('Y-m-d', strtotime($sem1['end_date'])) : 'አልተዘጋም'; ?></div>
+                    </div>
+                </div>
+
+                <div class="sem-actions">
+                    <?php if($s1_active): ?>
+                        <form method="POST" style="flex:1;" onsubmit="return confirm('1ኛ ሴሚስተርን መዝጋት እርግጠኛ ነዎት? መምህራን ውጤት ማስተካከል አይችሉም!')">
+                            <?php echo csrfField(); ?>
+                            <input type="hidden" name="semester_id" value="<?php echo $sem1['id']; ?>">
+                            <button type="submit" name="close_semester" class="btn-close-sem">
+                                🔒 ሴሚስተሩን ዝጋ
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <form method="POST" style="flex:1;" onsubmit="return confirm('1ኛ ሴሚስተርን መክፈት እርግጠኛ ነዎት? ሌላ ንቁ ሴሚስተር ካለ ይዘጋል!')">
+                            <?php echo csrfField(); ?>
+                            <input type="hidden" name="semester_number" value="1">
+                            <button type="submit" name="open_semester" class="btn-open-sem">
+                                🔓 1ኛ ሴሚስተር ክፈት
+                            </button>
+                        </form>
                     <?php endif; ?>
 
-                    <?php if($semesters['semester2']): ?>
-                    <div class="history-row">
-                        <span class="history-label">ሁለተኛ ሴሚስተር:</span>
-                        <div class="history-value">
-                            <span class="status-badge <?php echo $semesters['semester2']['status'] == 'active' ? 'badge-active' : 'badge-closed'; ?>">
-                                <?php echo $semesters['semester2']['status'] == 'active' ? 'ክፍት' : 'ዝግ'; ?>
-                            </span>
-                            <span>
-                                🗓️ የተከፈተበት: <?php echo formatTime12Hour($semesters['semester2']['start_date']); ?>
-                                <?php if($semesters['semester2']['end_date']): ?>
-                                    | የተዘጋበት: <?php echo formatTime12Hour($semesters['semester2']['end_date']); ?>
-                                <?php endif; ?>
-                            </span>
-                        </div>
-                    </div>
+                    <?php if($sem1): ?>
+                        <a href="semester_history.php?id=<?php echo $sem1['id']; ?>" class="btn-history-link">
+                            📊 ዝርዝር
+                        </a>
                     <?php endif; ?>
                 </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <p style="text-align: center; color: #999; padding: 40px;">ምንም ሴሚስተር ታሪክ የለም</p>
-            <?php endif; ?>
+            </div>
+
+            <!-- Semester 2 -->
+            <?php 
+                $s2_active = $sem2 && $sem2['status'] === 'active';
+                $s2_closed = $sem2 && $sem2['status'] === 'closed';
+            ?>
+            <div class="sem-card <?php echo $s2_active ? 'active' : ''; ?>">
+                <div>
+                    <div class="sem-header">
+                        <div class="sem-title">
+                            📖 2ኛ ሴሚስተር
+                        </div>
+                        <?php if($s2_active): ?>
+                            <span class="status-pill active">🟢 ንቁ ሴሚስተር</span>
+                        <?php elseif($s2_closed): ?>
+                            <span class="status-pill closed">🔴 የተዘጋ</span>
+                        <?php else: ?>
+                            <span class="status-pill pending">⚪ ያልተጀመረ</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="sem-dates">
+                        <div>📅 የተጀመረበት፦ <?php echo $sem2 && $sem2['start_date'] ? date('Y-m-d', strtotime($sem2['start_date'])) : 'አልተጀመረም'; ?></div>
+                        <div>🏁 የተዘጋበት፦ <?php echo $sem2 && $sem2['end_date'] ? date('Y-m-d', strtotime($sem2['end_date'])) : 'አልተዘጋም'; ?></div>
+                    </div>
+                </div>
+
+                <div class="sem-actions">
+                    <?php if($s2_active): ?>
+                        <form method="POST" style="flex:1;" onsubmit="return confirm('2ኛ ሴሚስተርን መዝጋት እርግጠኛ ነዎት? መምህራን ውጤት ማስተካከል አይችሉም!')">
+                            <?php echo csrfField(); ?>
+                            <input type="hidden" name="semester_id" value="<?php echo $sem2['id']; ?>">
+                            <button type="submit" name="close_semester" class="btn-close-sem">
+                                🔒 ሴሚስተሩን ዝጋ
+                            </button>
+                        </form>
+                    <?php else: ?>
+                        <form method="POST" style="flex:1;" onsubmit="return confirm('2ኛ ሴሚስተርን መክፈት እርግጠኛ ነዎት? ሌላ ንቁ ሴሚስተር ካለ ይዘጋል!')">
+                            <?php echo csrfField(); ?>
+                            <input type="hidden" name="semester_number" value="2">
+                            <button type="submit" name="open_semester" class="btn-open-sem">
+                                🔓 2ኛ ሴሚስተር ክፈት
+                            </button>
+                        </form>
+                    <?php endif; ?>
+
+                    <?php if($sem2): ?>
+                        <a href="semester_history.php?id=<?php echo $sem2['id']; ?>" class="btn-history-link">
+                            📊 ዝርዝር
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><span>📜</span> የዓመታት ሴሚስተር ታሪክ</h2>
+            </div>
+
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>የትምህርት ዘመን</th>
+                            <th>1ኛ ሴሚስተር</th>
+                            <th>2ኛ ሴሚስተር</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($history_by_year as $yr => $sems): ?>
+                        <tr>
+                            <td>
+                                <strong>📅 <?php echo $yr; ?> ዓ.ም</strong>
+                                <?php if($yr == $current_ethiopian_year): ?>
+                                    <span style="font-size:11px; background:var(--gold-pale); color:var(--brown-dark); padding:2px 8px; border-radius:10px; font-weight:700; margin-left:6px;">አሁን</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if($sems['semester1']): 
+                                    $st = $sems['semester1']['status'];
+                                ?>
+                                    <span class="status-pill <?php echo $st==='active'?'active':'closed'; ?>">
+                                        <?php echo $st==='active'?'🟢 ንቁ':'🔴 የተዘጋ'; ?>
+                                    </span>
+                                    <a href="semester_history.php?id=<?php echo $sems['semester1']['id']; ?>" style="font-size:12px; margin-left:8px; color:#2563EB; font-weight:600;">
+                                        ዝርዝር ይመልከቱ
+                                    </a>
+                                <?php else: ?>
+                                    <span style="color:#999;">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if($sems['semester2']): 
+                                    $st2 = $sems['semester2']['status'];
+                                ?>
+                                    <span class="status-pill <?php echo $st2==='active'?'active':'closed'; ?>">
+                                        <?php echo $st2==='active'?'🟢 ንቁ':'🔴 የተዘጋ'; ?>
+                                    </span>
+                                    <a href="semester_history.php?id=<?php echo $sems['semester2']['id']; ?>" style="font-size:12px; margin-left:8px; color:#2563EB; font-weight:600;">
+                                        ዝርዝር ይመልከቱ
+                                    </a>
+                                <?php else: ?>
+                                    <span style="color:#999;">—</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-
-    <script>
-        // Add confirmation before closing
-        document.querySelectorAll('form[onsubmit]').forEach(form => {
-            form.onsubmit = function() {
-                return confirm('እርግጠኛ ነህ ሴሚስተሩን መዝጋት ትፈልጋለህ?');
-            };
-        });
-    </script>
 </body>
 </html>
 <?php mysqli_close($conn); ?>
