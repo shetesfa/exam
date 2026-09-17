@@ -12,6 +12,11 @@ html[data-theme="dark"] {
   --bg-page: #0B1120 !important;
   --bg: #0B1120 !important;
   --white: #1E293B !important;
+  --card-bg: #1E293B !important;
+  --bg-light: #0B1120 !important;
+  --text-main: #F1F5F9 !important;
+  --text-muted: #94A3B8 !important;
+  --border-color: #334155 !important;
   --brown-dark: #FCD34D !important;
   --brown-medium: #FBBF24 !important;
   --brown-light: #F59E0B !important;
@@ -2604,3 +2609,166 @@ body.dark-mode tr,
 }
 
 
+
+
+/* ── MODERN SYSTEM COMPONENTS DARK OVERRIDES ── */
+html.dark-mode .content-card,
+body.dark-mode .content-card,
+[data-theme="dark"] .content-card,
+html.dark-mode .stat-box,
+body.dark-mode .stat-box,
+[data-theme="dark"] .stat-box,
+html.dark-mode .stat-card,
+body.dark-mode .stat-card,
+[data-theme="dark"] .stat-card,
+html.dark-mode .church-card,
+body.dark-mode .church-card,
+[data-theme="dark"] .church-card,
+html.dark-mode .class-card,
+body.dark-mode .class-card,
+[data-theme="dark"] .class-card,
+html.dark-mode .student-card,
+body.dark-mode .student-card,
+[data-theme="dark"] .student-card,
+html.dark-mode .teacher-card,
+body.dark-mode .teacher-card,
+[data-theme="dark"] .teacher-card,
+html.dark-mode .user-card,
+body.dark-mode .user-card,
+[data-theme="dark"] .user-card,
+html.dark-mode .scheme-card,
+body.dark-mode .scheme-card,
+[data-theme="dark"] .scheme-card,
+html.dark-mode .promotion-box,
+body.dark-mode .promotion-box,
+[data-theme="dark"] .promotion-box,
+html.dark-mode .sim-summary,
+body.dark-mode .sim-summary,
+[data-theme="dark"] .sim-summary,
+html.dark-mode .page-hero,
+body.dark-mode .page-hero,
+[data-theme="dark"] .page-hero,
+html.dark-mode .backup-item,
+body.dark-mode .backup-item,
+[data-theme="dark"] .backup-item,
+html.dark-mode .history-card,
+body.dark-mode .history-card,
+[data-theme="dark"] .history-card,
+html.dark-mode .semester-banner,
+body.dark-mode .semester-banner,
+[data-theme="dark"] .semester-banner,
+html.dark-mode .total-summary-card,
+body.dark-mode .total-summary-card,
+[data-theme="dark"] .total-summary-card,
+html.dark-mode .component-item,
+body.dark-mode .component-item,
+[data-theme="dark"] .component-item,
+html.dark-mode .class-heading,
+body.dark-mode .class-heading,
+[data-theme="dark"] .class-heading,
+html.dark-mode .rules-guide,
+body.dark-mode .rules-guide,
+[data-theme="dark"] .rules-guide,
+html.dark-mode .lock-card,
+body.dark-mode .lock-card,
+[data-theme="dark"] .lock-card,
+html.dark-mode .filter-bar,
+body.dark-mode .filter-bar,
+[data-theme="dark"] .filter-bar,
+html.dark-mode .table-wrapper,
+body.dark-mode .table-wrapper,
+[data-theme="dark"] .table-wrapper,
+html.dark-mode .modal-card,
+body.dark-mode .modal-card,
+[data-theme="dark"] .modal-card,
+html.dark-mode .modal-content,
+body.dark-mode .modal-content,
+[data-theme="dark"] .modal-content {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+html.dark-mode .form-input,
+body.dark-mode .form-input,
+[data-theme="dark"] .form-input,
+html.dark-mode .filter-input,
+body.dark-mode .filter-input,
+[data-theme="dark"] .filter-input,
+html.dark-mode .search-input,
+body.dark-mode .search-input,
+[data-theme="dark"] .search-input,
+html.dark-mode .passmark-input,
+body.dark-mode .passmark-input,
+[data-theme="dark"] .passmark-input,
+html.dark-mode .filter-select,
+body.dark-mode .filter-select,
+[data-theme="dark"] .filter-select {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+  border: 1.5px solid #475569 !important;
+}
+
+html.dark-mode .preset-chip,
+body.dark-mode .preset-chip,
+[data-theme="dark"] .preset-chip,
+html.dark-mode .class-tab,
+body.dark-mode .class-tab,
+[data-theme="dark"] .class-tab,
+html.dark-mode .page-btn,
+body.dark-mode .page-btn,
+[data-theme="dark"] .page-btn,
+html.dark-mode .back-link,
+body.dark-mode .back-link,
+[data-theme="dark"] .back-link {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .stat-val,
+body.dark-mode .stat-val,
+[data-theme="dark"] .stat-val,
+html.dark-mode .stat-value,
+body.dark-mode .stat-value,
+[data-theme="dark"] .stat-value,
+html.dark-mode .stat-num,
+body.dark-mode .stat-num,
+[data-theme="dark"] .stat-num {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .stat-lbl,
+body.dark-mode .stat-lbl,
+[data-theme="dark"] .stat-lbl,
+html.dark-mode .stat-label,
+body.dark-mode .stat-label,
+[data-theme="dark"] .stat-label {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode th,
+body.dark-mode th,
+[data-theme="dark"] th {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode td,
+body.dark-mode td,
+[data-theme="dark"] td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode tr:hover td,
+body.dark-mode tr:hover td,
+[data-theme="dark"] tr:hover td {
+  background-color: #26354A !important;
+}

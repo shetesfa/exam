@@ -134,16 +134,174 @@ $latest_backup_time = !empty($backups) ? date('Y-m-d h:i A', filemtime($backups[
     --error: #EF4444;
 }
 
+        html.dark-mode,
+        html[data-theme="dark"],
+        body.dark-mode {
+            --bg-cream: #0B1120 !important;
+            --bg-light: #0B1120 !important;
+            --card-bg: #1E293B !important;
+            --card-bg-subtle: #162032 !important;
+            --text-main: #F1F5F9 !important;
+            --text-muted: #94A3B8 !important;
+            --border-color: #334155 !important;
+            --border-subtle: #243247 !important;
+            --gold-pale: rgba(245, 158, 11, 0.15) !important;
+        }
+
+        html.dark-mode body,
+        body.dark-mode,
+        html[data-theme="dark"] body {
+            background-color: #0B1120 !important;
+            background: #0B1120 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .content-card,
+        html.dark-mode .stat-box,
+        html.dark-mode .stat-card,
+        html.dark-mode .church-card,
+        html.dark-mode .class-card,
+        html.dark-mode .student-card,
+        html.dark-mode .teacher-card,
+        html.dark-mode .user-card,
+        html.dark-mode .scheme-card,
+        html.dark-mode .promotion-box,
+        html.dark-mode .sim-summary,
+        html.dark-mode .page-hero,
+        html.dark-mode .backup-item,
+        html.dark-mode .history-card,
+        html.dark-mode .semester-banner,
+        html.dark-mode .total-summary-card,
+        html.dark-mode .table-wrapper,
+        html.dark-mode .modal-card,
+        html.dark-mode .modal-content,
+        body.dark-mode .content-card,
+        body.dark-mode .stat-box,
+        body.dark-mode .stat-card,
+        body.dark-mode .church-card,
+        body.dark-mode .class-card,
+        body.dark-mode .student-card,
+        body.dark-mode .teacher-card,
+        body.dark-mode .user-card,
+        body.dark-mode .scheme-card,
+        body.dark-mode .promotion-box,
+        body.dark-mode .sim-summary,
+        body.dark-mode .page-hero,
+        body.dark-mode .backup-item,
+        body.dark-mode .history-card,
+        body.dark-mode .semester-banner,
+        body.dark-mode .total-summary-card,
+        body.dark-mode .table-wrapper,
+        body.dark-mode .modal-card,
+        body.dark-mode .modal-content,
+        [data-theme="dark"] .content-card,
+        [data-theme="dark"] .stat-box,
+        [data-theme="dark"] .stat-card,
+        [data-theme="dark"] .church-card,
+        [data-theme="dark"] .class-card,
+        [data-theme="dark"] .student-card,
+        [data-theme="dark"] .teacher-card,
+        [data-theme="dark"] .user-card,
+        [data-theme="dark"] .scheme-card,
+        [data-theme="dark"] .promotion-box,
+        [data-theme="dark"] .sim-summary,
+        [data-theme="dark"] .page-hero,
+        [data-theme="dark"] .backup-item,
+        [data-theme="dark"] .history-card,
+        [data-theme="dark"] .semester-banner,
+        [data-theme="dark"] .total-summary-card,
+        [data-theme="dark"] .table-wrapper,
+        [data-theme="dark"] .modal-card,
+        [data-theme="dark"] .modal-content {
+            background-color: #1E293B !important;
+            background: #1E293B !important;
+            color: #F1F5F9 !important;
+            border-color: #334155 !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        html.dark-mode .form-input,
+        html.dark-mode .filter-input,
+        html.dark-mode .form-control,
+        html.dark-mode .search-input,
+        html.dark-mode .passmark-input,
+        html.dark-mode .filter-select,
+        html.dark-mode select,
+        body.dark-mode .form-input,
+        body.dark-mode .filter-input,
+        body.dark-mode .form-control,
+        body.dark-mode .search-input,
+        body.dark-mode .passmark-input,
+        body.dark-mode .filter-select,
+        body.dark-mode select,
+        [data-theme="dark"] .form-input,
+        [data-theme="dark"] .filter-input,
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .search-input,
+        [data-theme="dark"] .passmark-input,
+        [data-theme="dark"] .filter-select,
+        [data-theme="dark"] select {
+            background-color: #0F172A !important;
+            background: #0F172A !important;
+            color: #F8FAFC !important;
+            border-color: #475569 !important;
+        }
+
+        html.dark-mode th,
+        body.dark-mode th,
+        [data-theme="dark"] th {
+            background-color: #0F172A !important;
+            background: #0F172A !important;
+            color: #FCD34D !important;
+            border-color: #334155 !important;
+        }
+
+        html.dark-mode td,
+        body.dark-mode td,
+        [data-theme="dark"] td {
+            background-color: #1E293B !important;
+            color: #E2E8F0 !important;
+            border-color: #334155 !important;
+        }
+
+        html.dark-mode tr:hover td,
+        body.dark-mode tr:hover td,
+        [data-theme="dark"] tr:hover td {
+            background-color: #26354A !important;
+        }
+
+        html.dark-mode .stat-val,
+        html.dark-mode .stat-value,
+        html.dark-mode .stat-num,
+        body.dark-mode .stat-val,
+        body.dark-mode .stat-value,
+        body.dark-mode .stat-num,
+        [data-theme="dark"] .stat-val,
+        [data-theme="dark"] .stat-value,
+        [data-theme="dark"] .stat-num {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .stat-lbl,
+        html.dark-mode .stat-label,
+        body.dark-mode .stat-lbl,
+        body.dark-mode .stat-label,
+        [data-theme="dark"] .stat-lbl,
+        [data-theme="dark"] .stat-label {
+            color: #94A3B8 !important;
+        }
+
+
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
 
-.main-container { max-width: 1000px; margin: 24px auto; padding: 0 16px 80px; }
+.main-container { max-width: 1000px; margin: 12px auto; padding: 0 10px 40px; }
 
 /* Page Header Card */
 .page-header-card {
     background: linear-gradient(135deg, #8B4513 0%, #A52A2A 100%);
     border-radius: 16px;
-    padding: 24px 28px;
+    padding: 18px 16px;
     color: white;
     margin-bottom: 24px;
     box-shadow: 0 8px 24px rgba(139, 69, 19, 0.18);
@@ -245,7 +403,7 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
     box-shadow: 0 4px 14px rgba(0,0,0,0.05);
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: stretch;
     flex-wrap: wrap;
     gap: 20px;
 }
@@ -315,11 +473,11 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
 .backup-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 16px 24px;
     border-bottom: 1px solid #F3F4F6;
     transition: background 0.15s ease;
-    gap: 14px;
+    gap: 12px;
 }
 .backup-item:last-child { border-bottom: none; }
 .backup-item:hover { background: rgba(255, 215, 0, 0.03); }
@@ -416,7 +574,7 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
     opacity: 0.7;
 }
 
-@media (max-width: 650px) {
+@media (min-width: 651px) {
     .main-container { padding: 0 10px 40px; margin: 12px auto; }
     .page-header-card { padding: 18px 16px; }
     .action-card { flex-direction: column; align-items: stretch; text-align: center; }
