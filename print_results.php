@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -157,7 +157,7 @@ $nav_active = 'print_results';
 
         .print-container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 10px auto;
         }
 
         /* Header */
@@ -189,7 +189,7 @@ $nav_active = 'print_results';
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
             position: relative;
             z-index: 1;
         }
@@ -267,19 +267,19 @@ $nav_active = 'print_results';
         /* Controls */
         .controls {
             background: white;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
             margin-bottom: 20px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             display: flex;
-            gap: 15px;
+            gap: 10px;
             flex-wrap: wrap;
-            align-items: flex-end;
+            align-items: stretch;
         }
 
         .control-group {
             flex: 1;
-            min-width: 180px;
+            min-width: 100%;
         }
 
         .control-group label {
@@ -376,7 +376,7 @@ $nav_active = 'print_results';
             padding: 12px 15px;
             margin-bottom: 20px;
             display: flex;
-            gap: 20px;
+            gap: 8px;
             flex-wrap: wrap;
             border-left: 4px solid #FFD700;
             font-size: 14px;

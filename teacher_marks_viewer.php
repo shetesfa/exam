@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireLogin();
 if (!isAdmin() && !isTeacher()) {
@@ -322,7 +322,7 @@ $nav_active = 'teacher_marks_viewer';
 
         .filter-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: 1fr;
             gap: 20px;
             margin-bottom: 20px;
         }
@@ -449,6 +449,8 @@ $nav_active = 'teacher_marks_viewer';
 
         .results-header {
             display: flex;
+            flex-direction: column;
+            text-align: center;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
@@ -611,12 +613,12 @@ $nav_active = 'teacher_marks_viewer';
             }
             
             .teachers-grid {
-                justify-content: center;
+                justify-content: flex-start;
             }
             
             .results-header {
-                flex-direction: column;
-                text-align: center;
+                flex-direction: row;
+                text-align: left;
             }
         }
 

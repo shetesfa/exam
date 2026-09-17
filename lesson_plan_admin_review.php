@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -222,12 +222,12 @@ $nav_active = 'lesson_plan_admin_review';
 
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: var(--bg-cream); color: #333; min-height: 100vh; }
-        .main-container { max-width: 1400px; margin: 20px auto; padding: 0 20px 60px; }
+        .main-container { max-width: 1400px; margin: 12px auto; padding: 0 10px 40px; }
 
         /* KPI Cards */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
             margin-bottom: 22px;
         }
@@ -266,7 +266,7 @@ $nav_active = 'lesson_plan_admin_review';
         .filter-panel {
             background: white;
             border-radius: 16px;
-            padding: 20px 24px;
+            padding: 16px;
             margin-bottom: 24px;
             border: 2px solid var(--gold-primary);
             box-shadow: 0 6px 20px rgba(0,0,0,0.05);
@@ -289,7 +289,7 @@ $nav_active = 'lesson_plan_admin_review';
         }
         .filter-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: 1fr;
             gap: 14px;
             align-items: end;
         }
@@ -548,7 +548,7 @@ $nav_active = 'lesson_plan_admin_review';
             .no-print, .site-header, .mobile-nav-bar, .filter-panel, .kpi-grid, .btn-print, .btn-excel, .table-toolbar .btn, th:last-child, td:last-child {
                 display: none !important;
             }
-            body, .main-container { background: white !important; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+            body, .main-container { background: white !important; padding: 0 10px 40px; margin: 12px auto; max-width: 100% !important; }
             .table-card { border: none !important; box-shadow: none !important; }
             table.plans-table { min-width: 100% !important; font-size: 10px !important; }
             table.plans-table th { background: #eee !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

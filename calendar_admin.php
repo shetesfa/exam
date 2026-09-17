@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -148,22 +148,22 @@ $nav_active = 'calendar_admin';
 :root { --brown-dark:#8B4513; --gold-primary:#FFD700; --gold-pale:#FFF8DC; --success:#10B981; --error:#EF4444; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
 body { background:#FAF9F6; }
-.main-container { max-width:1100px; margin:20px auto; padding:0 15px 60px; }
-.card { background:white; border-radius:14px; padding:20px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.main-container { max-width:1100px; margin:12px auto; padding:0 10px 40px; }
+.card { background:white; border-radius:14px; padding:15px 12px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
 .card h2 { color:var(--brown-dark); margin-bottom:15px; font-size:18px; }
 .message { padding:12px 15px; border-radius:8px; margin-bottom:15px; }
 .success { background:#D1FAE5; color:var(--success); }
 .error { background:#FEE2E2; color:var(--error); }
-.form-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px; margin-bottom:12px; }
+.form-grid { display:grid; grid-template-columns:1fr; gap:8px; margin-bottom:12px; }
 label { display:block; font-size:13px; font-weight:600; color:#555; margin-bottom:4px; }
 input, select, textarea { width:100%; padding:9px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
 .btn { background:var(--gold-primary); color:var(--brown-dark); border:none; padding:10px 20px; border-radius:8px; font-weight:700; cursor:pointer; }
 .scope-radios { display:flex; gap:15px; flex-wrap:wrap; margin-bottom:10px; }
 .scope-radios label { display:flex; align-items:center; gap:5px; font-weight:500; }
-.event-row { display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #eee; gap:10px; flex-wrap:wrap; }
+.event-row { display:flex; justify-content:space-between; align-items:flex-start; padding:12px; border-bottom:1px solid #eee; gap:8px; flex-wrap:wrap; }
 .event-row:last-child { border-bottom:none; }
 .badge { font-size:11px; font-weight:700; padding:3px 10px; border-radius:12px; background:var(--gold-pale); color:var(--brown-dark); white-space:nowrap; }
-.eth-date { font-weight:700; color:var(--brown-dark); min-width:110px; }
+.eth-date { font-weight:700; color:var(--brown-dark); min-width:unset; }
 .del-btn { background:none; border:none; color:var(--error); cursor:pointer; font-size:16px; }
 @media (max-width: 600px) {
     .main-container { padding: 0 10px 40px; margin: 12px auto; }

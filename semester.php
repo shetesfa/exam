@@ -546,7 +546,7 @@ $nav_active = 'semester';
             background: rgba(255, 215, 0, 0.03);
         }
 
-        @media (min-width: 769px) {
+        @media (max-width: 768px) {
             .main-container { padding: 0 10px 40px; margin: 12px auto; }
             .page-header-card { padding: 18px 16px; }
             .semesters-grid { grid-template-columns: 1fr; gap: 14px; }

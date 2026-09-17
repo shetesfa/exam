@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 
 if (!isLoggedIn() && !isStudent()) {
@@ -49,9 +49,9 @@ $nav_active = 'notifications';
 :root { --brown-dark:#8B4513; --gold-primary:#FFD700; --success:#10B981; --error:#EF4444; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
 body { background:#FAF9F6; }
-.main-container { max-width:700px; margin:20px auto; padding:0 15px 60px; }
-.card { background:white; border-radius:14px; padding:15px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-.top-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; }
+.main-container { max-width:700px; margin:12px auto; padding:0 10px 40px; }
+.card { background:white; border-radius:14px; padding:12px 10px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.top-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; }
 .top-row h2 { color:var(--brown-dark); font-size:18px; }
 .btn-mark { background:none; border:1px solid var(--gold-primary); color:var(--brown-dark); padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer; font-weight:600; }
 .notif { padding:14px 10px; border-bottom:1px solid #eee; display:flex; gap:10px; align-items:flex-start; }
@@ -65,11 +65,11 @@ body { background:#FAF9F6; }
 .empty { text-align:center; color:#999; padding:40px 20px; }
 .priority-high { border-left:3px solid var(--error); }
 @media (max-width: 500px) {
-    .main-container { padding: 0 10px 40px; margin: 12px auto; }
-    .card { padding: 12px 10px; }
-    .top-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-    .top-row form { width: 100%; }
-    .top-row .btn-mark { width: 100%; text-align: center; }
+    .main-container { padding: 0 15px 60px; margin: 20px auto; }
+    .card { padding: 15px; }
+    .top-row { flex-direction: row; align-items: center; gap: 0; }
+    .top-row form { width: auto; }
+    .top-row .btn-mark { width: auto; text-align: left; }
 }
 </style>
 </head>

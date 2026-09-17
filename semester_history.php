@@ -607,7 +607,7 @@ $nav_active = 'semester';
             opacity: 0.7;
         }
 
-        @media (min-width: 769px) {
+        @media (max-width: 768px) {
             .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .semester-banner {
                 padding: 18px;

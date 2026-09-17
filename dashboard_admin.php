@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -179,27 +179,27 @@ $nav_active = 'dashboard_admin';
         .container { max-width: 1400px; margin: 30px auto; padding: 0 30px; }
 
         .warning-message {
-            background: #FEF3C7; color: #D97706; padding: 20px; border-radius: 12px;
-            margin-bottom: 30px; display: flex; align-items: center; gap: 15px; border-left: 5px solid #D97706;
+            background: #FEF3C7; color: #D97706; padding: 14px; border-radius: 12px;
+            margin-bottom: 30px; display: flex; align-items: center; gap: 10px; border-left: 5px solid #D97706;
         }
         .warning-message span { font-size: 24px; }
 
         .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px; margin-bottom: 40px;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 8px; margin-bottom: 24px;
         }
         .stat-card {
-            background: white; border-radius: 15px; padding: 25px;
+            background: white; border-radius: 12px; padding: 12px 8px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-left: 5px solid var(--gold-primary);
             transition: transform 0.3s;
         }
         .stat-card:hover { transform: translateY(-5px); }
-        .stat-icon { font-size: 30px; color: var(--gold-dark); margin-bottom: 15px; }
-        .stat-value { font-size: 32px; font-weight: bold; color: var(--brown-dark); margin-bottom: 5px; }
-        .stat-label { color: #666; font-size: 14px; }
+        .stat-icon { font-size: 24px; color: var(--gold-dark); margin-bottom: 8px; }
+        .stat-value { font-size: 20px; font-weight: bold; color: var(--brown-dark); margin-bottom: 5px; }
+        .stat-label { color: #666; font-size: 11px; }
 
         .section {
-            background: white; border-radius: 15px; padding: 25px; margin-bottom: 30px;
+            background: white; border-radius: 12px; padding: 16px 12px; margin-bottom: 20px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         .section-header {
@@ -207,7 +207,7 @@ $nav_active = 'dashboard_admin';
             margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--gold-pale);
             flex-wrap: wrap; gap: 15px;
         }
-        .section-header h2 { color: var(--brown-dark); font-size: 20px; display: flex; align-items: center; gap: 10px; }
+        .section-header h2 { color: var(--brown-dark); font-size: 17px; display: flex; align-items: center; gap: 10px; }
 
         .semester-badge {
             background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
@@ -244,11 +244,11 @@ $nav_active = 'dashboard_admin';
             .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .section { padding: 16px 12px; border-radius: 12px; margin-bottom: 20px; }
             .section-header h2 { font-size: 17px; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
-            .stat-card { padding: 14px 12px; border-radius: 12px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+            .stat-card { padding: 12px 8px; border-radius: 12px; }
             .stat-icon { font-size: 24px; margin-bottom: 8px; }
-            .stat-value { font-size: 24px; }
-            .stat-label { font-size: 12px; }
+            .stat-value { font-size: 20px; }
+            .stat-label { font-size: 11px; }
             .table-responsive table { min-width: 560px; }
             th, td { padding: 10px 8px; font-size: 13px; }
             .warning-message { padding: 14px; gap: 10px; font-size: 13px; }

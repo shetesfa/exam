@@ -574,7 +574,7 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
     opacity: 0.7;
 }
 
-@media (min-width: 651px) {
+@media (max-width: 650px) {
     .main-container { padding: 0 10px 40px; margin: 12px auto; }
     .page-header-card { padding: 18px 16px; }
     .action-card { flex-direction: column; align-items: stretch; text-align: center; }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireLogin();
 
@@ -363,7 +363,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
 
         /* Navigation Buttons */
         .top-nav-bar {
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; justify-content: space-between; align-items: stretch;
             margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
         }
         .btn-action {

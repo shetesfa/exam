@@ -436,17 +436,17 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'student_logout') {
         .developer-footer .dev-telegram { color: #93C5FD; text-decoration: none; font-weight: 600; transition: color 0.2s; }
         .developer-footer .dev-telegram:hover { color: #FFD700; text-decoration: underline; }
 
-        @media (max-width: 480px) {
-            body { padding: 14px 10px; }
-            .welcome-card { padding: 26px 20px; border-radius: 20px; }
-            .logo { width: 80px; height: 80px; margin-bottom: 12px; }
-            .logo img { width: 64px; height: 64px; }
-            .welcome-title { font-size: 18px; }
-            .welcome-subtitle { font-size: 12.5px; }
-            .amharic { font-size: 12px; padding: 3px 10px; }
-            .btn-login { height: 46px; font-size: 15px; }
-            .student-portal-link a { padding: 11px 16px; font-size: 13.5px; }
-            .developer-footer { font-size: 11px; padding: 8px 12px; }
+        @media (min-width: 481px) {
+            body { padding: 20px; }
+            .welcome-card { padding: 40px 35px; border-radius: 28px; }
+            .logo { width: 100px; height: 100px; margin-bottom: 16px; }
+            .logo img { width: 80px; height: 80px; }
+            .welcome-title { font-size: 22px; }
+            .welcome-subtitle { font-size: 14px; }
+            .amharic { font-size: 13px; padding: 4px 14px; }
+            .btn-login { height: 48px; font-size: 16px; }
+            .student-portal-link a { padding: 12px 20px; font-size: 14.5px; }
+            .developer-footer { font-size: 12px; padding: 11px 16px; }
         }
     </style>
 </head>

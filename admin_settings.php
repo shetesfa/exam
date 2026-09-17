@@ -93,8 +93,8 @@ $nav_active = 'admin_settings';
 
         .main-container {
             max-width: 850px;
-            margin: 20px auto;
-            padding: 0 16px 60px;
+            margin: 12px auto;
+            padding: 0 10px 40px;
         }
 
         .message {
@@ -121,16 +121,16 @@ $nav_active = 'admin_settings';
 
         .settings-card {
             background: white;
-            border-radius: 18px;
-            padding: 28px 24px;
+            border-radius: 14px;
+            padding: 18px 14px;
             border: 2px solid var(--gold-primary);
             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
 
         .settings-title {
             color: var(--brown-dark);
-            font-size: 20px;
-            margin-bottom: 22px;
+            font-size: 17px;
+            margin-bottom: 16px;
             padding-bottom: 12px;
             border-bottom: 2px solid var(--gold-pale);
             display: flex;
@@ -170,8 +170,8 @@ $nav_active = 'admin_settings';
 
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            grid-template-columns: 1fr;
+            gap: 0;
         }
 
         .btn-save {
@@ -182,7 +182,7 @@ $nav_active = 'admin_settings';
             color: #8B4513;
             border: none;
             border-radius: 10px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.25s;
@@ -227,23 +227,23 @@ $nav_active = 'admin_settings';
 
         @media (max-width: 600px) {
             .main-container {
-                padding: 0 10px 40px;
-                margin: 12px auto;
+                padding: 0 16px 60px;
+                margin: 20px auto;
             }
             .settings-card {
-                padding: 18px 14px;
-                border-radius: 14px;
+                padding: 28px 24px;
+                border-radius: 18px;
             }
             .settings-title {
-                font-size: 17px;
-                margin-bottom: 16px;
+                font-size: 20px;
+                margin-bottom: 22px;
             }
             .form-row {
-                grid-template-columns: 1fr;
-                gap: 0;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
             }
             .btn-save {
-                font-size: 14px;
+                font-size: 15px;
             }
         }
     </style>

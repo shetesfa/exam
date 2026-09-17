@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * exam_reminder_run.php
  *
@@ -115,9 +115,9 @@ $nav_active = 'exam_reminder_run';
 :root { --brown-dark:#8B4513; --gold-primary:#FFD700; --success:#10B981; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
 body { background:#FAF9F6; }
-.main-container { max-width:600px; margin:30px auto; padding:0 15px; }
-.card { background:white; border-radius:14px; padding:25px; box-shadow:0 4px 12px rgba(0,0,0,0.08); text-align:center; }
-.btn { background:var(--gold-primary); color:var(--brown-dark); border:none; padding:12px 28px; border-radius:10px; font-weight:700; cursor:pointer; font-size:15px; }
+.main-container { max-width:600px; margin:15px auto; padding:0 12px 30px; }
+.card { background:white; border-radius:10px; padding:18px 14px; box-shadow:0 4px 12px rgba(0,0,0,0.08); text-align:center; }
+.btn { background:var(--gold-primary); color:var(--brown-dark); border:none; padding:12px 28px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px; }
 .result { text-align:left; background:#F0FDF4; border-radius:8px; padding:12px; margin-top:15px; font-size:13px; }
 @media (max-width: 480px) {
     .main-container { padding: 0 12px 30px; margin: 15px auto; }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -259,26 +259,26 @@ $nav_active = 'attendance_controller';
         .logo h2 { font-size: 16px; color: var(--gold); }
         .logo span { font-size: 10px; opacity: 0.8; display: block; }
         .btn-back { color: var(--primary); background: var(--gold); padding: 6px 14px; border-radius: 20px; text-decoration: none; font-size: 12px; font-weight: 600; }
-        .btn-excel { background: #217346; color: white; padding: 8px 18px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-excel { background: #217346; color: white; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 
-        .container { padding: 10px; max-width: 100%; }
+        .container { padding: 10px; max-width: 1400px; }
         
-        .filter-card { background: var(--white); border-radius: 12px; padding: 15px; margin-bottom: 10px; border: 2px solid var(--gold); }
+        .filter-card { background: var(--white); border-radius: 12px; padding: 10px; margin-bottom: 10px; border: 2px solid var(--gold); }
         .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { flex: 1; min-width: 120px; }
         .filter-group label { display: block; font-size: 11px; color: var(--primary); font-weight: 600; margin-bottom: 4px; }
         .filter-group select { width: 100%; padding: 10px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 13px; }
         .btn-filter { padding: 10px 16px; background: var(--gold); color: var(--primary); border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; }
 
-        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
-        .stat-card { background: var(--white); border-radius: 10px; padding: 12px 8px; text-align: center; border-left: 3px solid var(--gold); }
-        .stat-val { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px; }
+        .stat-card { background: var(--white); border-radius: 10px; padding: 8px 6px; text-align: center; border-left: 3px solid var(--gold); }
+        .stat-val { font-size: 18px; font-weight: bold; color: var(--primary); }
         .stat-lbl { font-size: 9px; color: #666; }
 
-        .month-card { background: var(--white); border-radius: 16px; padding: 15px; margin-bottom: 10px; border: 2px solid var(--gold); }
-        .month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
-        .month-nav a { padding: 10px 16px; background: var(--gold); color: var(--primary); border-radius: 25px; text-decoration: none; font-weight: 600; font-size: 13px; min-width: 80px; text-align: center; }
-        .month-title { text-align: center; font-size: 20px; font-weight: bold; color: var(--primary); flex: 1; }
+        .month-card { background: var(--white); border-radius: 16px; padding: 12px 10px; margin-bottom: 10px; border: 2px solid var(--gold); }
+        .month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 4px; }
+        .month-nav a { padding: 6px 8px; background: var(--gold); color: var(--primary); border-radius: 25px; text-decoration: none; font-weight: 600; font-size: 10px; min-width: 50px; text-align: center; }
+        .month-title { text-align: center; font-size: 14px; font-weight: bold; color: var(--primary); flex: 1; }
         .month-title .greg { font-size: 12px; color: #A52A2A; display: block; font-weight: normal; }
 
         .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: 11px; padding: 10px; background: #F3F4F6; border-radius: 8px; }
@@ -294,13 +294,13 @@ $nav_active = 'attendance_controller';
         .table-scroll table { width: 100%; border-collapse: collapse; min-width: 600px; }
         .table-scroll thead th { background: var(--primary); color: white; padding: 8px 4px; text-align: center; border: 1px solid var(--gold-dark); font-size: 10px; position: sticky; top: 0; z-index: 3; white-space: nowrap; }
         .table-scroll th:first-child, .table-scroll td:first-child { position: sticky; left: 0; background: white; z-index: 2; min-width: 32px; }
-        .table-scroll th:nth-child(2), .table-scroll td:nth-child(2) { position: sticky; left: 32px; background: white; z-index: 2; min-width: 120px; text-align: left; }
+        .table-scroll th:nth-child(2), .table-scroll td:nth-child(2) { position: sticky; left: 32px; background: white; z-index: 2; min-width: 90px; text-align: left; }
         .table-scroll thead th:first-child, .table-scroll thead th:nth-child(2) { z-index: 4; background: var(--primary); }
         .table-scroll tbody td { padding: 6px 3px; text-align: center; border-bottom: 1px solid #E5E7EB; font-size: 10px; }
         .table-scroll tbody tr:hover { background: #FFF8DC; }
         .table-scroll tbody tr:hover td:first-child, .table-scroll tbody tr:hover td:nth-child(2) { background: #FFF8DC; }
         .student-name { font-weight: 600; color: var(--primary); font-size: 11px; }
-        .day-col { min-width: 42px; }
+        .day-col { min-width: 48px; }
         .day-col.weekend { background: #F0FDF4; }
         .day-col.today { background: #FFFBEB !important; }
         .day-col.future { background: #FEF2F2; opacity: 0.4; }
@@ -321,14 +321,14 @@ $nav_active = 'attendance_controller';
         
         .empty-state { text-align: center; padding: 50px 20px; color: #999; background: white; border-radius: 16px; }
 
-        @media (min-width: 768px) { .container { max-width: 1400px; margin: 15px auto; } .day-col { min-width: 48px; } .stats-row { grid-template-columns: repeat(4, 1fr); } }
+        @media (min-width: 768px) { .container { max-width: 1400px; margin: 15px auto; } .day-col { min-width: 48px; } .stats-row { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 768px) {
             .stats-row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
             .stat-card { padding: 8px 6px; }
             .stat-val { font-size: 18px; }
             .month-card { padding: 12px 10px; }
-            .month-title { font-size: 16px; }
-            .month-nav a { padding: 8px 10px; font-size: 11px; min-width: 60px; }
+            .month-title { font-size: 14px; }
+            .month-nav a { padding: 6px 8px; font-size: 10px; min-width: 50px; }
             .filter-card { padding: 10px; }
             .btn-excel { font-size: 11px; padding: 6px 12px; }
         }

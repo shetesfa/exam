@@ -671,7 +671,7 @@ $nav_active = 'class_locks';
             margin-left: 10px;
         }
 
-        @media (min-width: 769px) {
+        @media (max-width: 768px) {
             .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
             .stat-card { padding: 12px 10px; border-radius: 10px; }

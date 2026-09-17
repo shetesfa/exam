@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -446,7 +446,7 @@ $nav_active = 'dashboard_teacher';
         .student-number { background: #8B4513; color: #FFD700; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
         .student-phone { font-size: 10px; color: #666; margin-left: 5px; font-weight: normal; }
         .total-score { background: #FFD700; color: #8B4513; padding: 6px 14px; border-radius: 30px; font-weight: bold; font-size: 14px; white-space: nowrap; }
-        .marks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .marks-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px; }
         .mark-item { background: #FFF8DC; border-radius: 12px; padding: 8px 10px; }
         .mark-label { font-size: 10px; color: #8B4513; font-weight: 600; margin-bottom: 4px; }
         .mark-label small { color: #A52A2A; font-size: 9px; }
@@ -534,7 +534,7 @@ $nav_active = 'dashboard_teacher';
             color: #8B4513; border: none; border-radius: 25px; font-weight: bold; font-size: 14px; cursor: pointer;
         }
 
-        @media (max-width: 380px) { .marks-grid { grid-template-columns: 1fr; } }
+        /* marks-grid: 1 column by default (mobile-first), 5 columns on larger screens */
         @media (min-width: 600px) { .marks-grid { grid-template-columns: repeat(5, 1fr); } }
     </style>
 </head>

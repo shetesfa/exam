@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -251,11 +251,11 @@ $nav_active = 'attendance_submitter_assign';
         .error { background: #FEE2E2; color: #991B1B; border: 2px solid var(--error-red); }
 
         .card {
-            background: white; border-radius: 20px; padding: 25px; margin-bottom: 25px;
+            background: white; border-radius: 12px; padding: 16px 12px; margin-bottom: 18px;
             border: 2px solid var(--gold-primary); box-shadow: 0 5px 20px rgba(0,0,0,0.08);
         }
         .card-title {
-            color: var(--brown-dark); font-size: 20px; margin-bottom: 20px;
+            color: var(--brown-dark); font-size: 17px; margin-bottom: 20px;
             padding-bottom: 10px; border-bottom: 2px solid var(--gold-pale);
             display: flex; align-items: center; gap: 10px;
         }
@@ -271,8 +271,8 @@ $nav_active = 'attendance_submitter_assign';
         .btn-add { background: var(--purple); color: white; }
         .btn-primary { background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%); color: #8B4513; }
 
-        .form-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
-        .form-group { flex: 1; min-width: 200px; }
+        .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 0; }
         .form-group label { display: block; margin-bottom: 5px; color: var(--brown-dark); font-weight: 600; font-size: 13px; }
         .form-group select, .form-group input {
             width: 100%; padding: 12px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 14px;
@@ -288,7 +288,7 @@ $nav_active = 'attendance_submitter_assign';
         td { padding: 10px 12px; border-bottom: 1px solid #E2E8F0; }
 
         .class-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
+            display: grid; grid-template-columns: 1fr; gap: 12px;
         }
         .class-card-item {
             background: #F8F9FA; border-radius: 12px; padding: 15px;
@@ -304,8 +304,8 @@ $nav_active = 'attendance_submitter_assign';
         .no-assignment { color: #999; font-style: italic; font-size: 13px; padding: 10px 0; }
 
         .add-submitter-form {
-            background: #F8F9FA; border: 2px dashed var(--purple); border-radius: 12px;
-            padding: 20px; margin-top: 20px;
+            background: #F8F9FA; border: 2px dashed var(--purple); border-radius: 10px;
+            padding: 15px 10px; margin-top: 20px;
         }
         .add-submitter-form h4 { color: var(--purple); margin-bottom: 15px; }
 

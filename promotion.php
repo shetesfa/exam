@@ -856,7 +856,7 @@ $nav_active = 'promotion';
             font-weight: 700;
         }
 
-        @media (min-width: 769px) {
+        @media (max-width: 768px) {
             .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .page-hero { padding: 18px; }
             .hero-title { font-size: 19px; }

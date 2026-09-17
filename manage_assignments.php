@@ -744,7 +744,7 @@ $nav_active = 'manage_assignments';
             margin-bottom: 20px;
         }
 
-        @media (min-width: 769px) {
+        @media (max-width: 768px) {
             .section {
                 padding: 16px 12px;
                 border-radius: 14px;

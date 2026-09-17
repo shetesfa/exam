@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -220,35 +220,35 @@ $nav_active = 'attendance_days_control';
         .success { background: #D1FAE5; color: #065F46; border-left: 4px solid var(--success); }
         
         .card {
-            background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px;
+            background: white; border-radius: 12px; padding: 16px 12px; margin-bottom: 15px;
             border: 2px solid var(--gold-primary); box-shadow: 0 5px 15px rgba(0,0,0,0.08);
         }
         
-        .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
-        .filter-group { flex: 1; min-width: 150px; }
+        .filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
+        .filter-group { flex: 1; min-width: 0; }
         .filter-group label { display: block; font-size: 11px; color: var(--brown-dark); font-weight: 600; margin-bottom: 4px; }
         .filter-group select { width: 100%; padding: 10px; border: 2px solid #E2E8F0; border-radius: 8px; font-size: 14px; }
         
-        .month-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; }
+        .month-nav { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; gap: 8px; }
         .month-nav a {
-            padding: 10px 16px; background: var(--gold-primary); color: var(--brown-dark);
-            border-radius: 25px; text-decoration: none; font-weight: 600; font-size: 13px;
+            padding: 8px 12px; background: var(--gold-primary); color: var(--brown-dark);
+            border-radius: 25px; text-decoration: none; font-weight: 600; font-size: 12px;
             cursor: pointer; transition: all 0.2s; border: 2px solid var(--gold-dark);
         }
         .month-nav a:hover { background: var(--gold-dark); color: white; transform: translateY(-2px); }
         .month-nav .btn-today { background: #F59E0B; color: white; border-color: #F59E0B; }
         .month-nav .btn-today:hover { background: #D97706; }
-        .month-title { text-align: center; font-size: 18px; font-weight: bold; color: var(--brown-dark); flex: 1; }
+        .month-title { text-align: center; font-size: 15px; font-weight: bold; color: var(--brown-dark); flex: 1; }
         .month-title small { display: block; color: #666; font-size: 12px; font-weight: normal; }
         
         .days-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
-            gap: 10px; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 8px; 
         }
         
         .day-card {
-            padding: 15px 10px; border-radius: 12px; text-align: center; cursor: pointer;
+            padding: 12px 8px; border-radius: 12px; text-align: center; cursor: pointer;
             transition: all 0.3s; border: 2px solid #E2E7EF; background: white;
             font-family: inherit; font-size: inherit; position: relative; overflow: hidden;
         }
@@ -267,20 +267,20 @@ $nav_active = 'attendance_days_control';
         .badge-future { background: #F3F0FF; color: #7C3AED; }
         
         .day-name { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 5px; }
-        .day-num { font-size: 28px; font-weight: bold; color: var(--brown-dark); }
+        .day-num { font-size: 22px; font-weight: bold; color: var(--brown-dark); }
         .day-date { font-size: 11px; color: #666; margin-top: 3px; }
         .day-status { font-size: 11px; font-weight: 600; margin-top: 8px; padding: 4px 10px; border-radius: 15px; display: inline-block; }
         .status-open { background: #D1FAE5; color: #065F46; }
         .status-closed { background: #FEE2E2; color: #991B1B; }
         
-        .legend { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; padding: 12px; background: #F3F4F6; border-radius: 8px; font-size: 12px; }
+        .legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; padding: 10px; background: #F3F4F6; border-radius: 8px; font-size: 11px; }
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-dot { width: 16px; height: 16px; border-radius: 4px; }
         
-        .info-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+        .info-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 12px; display: flex; align-items: center; gap: 10px; }
 
-        .stats-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
-        .stat-mini { background: white; border-radius: 8px; padding: 10px 15px; border: 1px solid var(--gold-pale); text-align: center; flex: 1; min-width: 80px; }
+        .stats-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+        .stat-mini { background: white; border-radius: 8px; padding: 8px 6px; border: 1px solid var(--gold-pale); text-align: center; flex: 1; min-width: 80px; }
         .stat-mini .num { font-size: 20px; font-weight: bold; color: var(--brown-dark); }
         .stat-mini .lbl { font-size: 10px; color: #666; }
         

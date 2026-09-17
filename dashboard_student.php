@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireStudent();
 
@@ -306,7 +306,7 @@ foreach ($history_rows as $row) {
         }
 
         .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            display: grid; grid-template-columns: repeat(2, 1fr);
             gap: 12px; margin-bottom: 15px;
         }
         .stat-card {

@@ -544,7 +544,7 @@ table.log-table tbody tr:hover {
     opacity: 0.7;
 }
 
-@media (min-width: 769px) {
+@media (max-width: 768px) {
     .main-container { padding: 0 10px 40px; margin: 12px auto; }
     .page-header-card { padding: 18px 16px; }
     .page-header-card h1 { font-size: 19px; }

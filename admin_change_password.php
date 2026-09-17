@@ -40,14 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <style>
         :root { --brown-dark: #8B4513; --gold: #FFD700; --gold-dark: #DAA520; --success: #10B981; --error: #EF4444; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { min-height: 100vh; background: linear-gradient(135deg, #8B4513, #A52A2A, #DAA520); display: flex; align-items: center; justify-content: center; padding: 16px; }
-        .card { background: white; border-radius: 20px; padding: 36px 30px; max-width: 440px; width: 100%; border: 2.5px solid var(--gold); box-shadow: 0 15px 35px rgba(0,0,0,0.25); }
-        h1 { color: var(--brown-dark); text-align: center; margin-bottom: 22px; font-size: 20px; }
+        body { min-height: 100vh; background: linear-gradient(135deg, #8B4513, #A52A2A, #DAA520); display: flex; align-items: center; justify-content: center; padding: 12px 8px; }
+        .card { background: white; border-radius: 16px; padding: 24px 16px; max-width: 440px; width: 100%; border: 2.5px solid var(--gold); box-shadow: 0 15px 35px rgba(0,0,0,0.25); }
+        h1 { color: var(--brown-dark); text-align: center; margin-bottom: 16px; font-size: 18px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; color: var(--brown-dark); font-weight: 600; margin-bottom: 6px; font-size: 13.5px; }
-        .form-control { width: 100%; height: 46px; padding: 10px 14px; border: 2px solid #E2E8F0; border-radius: 10px; font-size: 14px; }
+        .form-control { width: 100%; height: 44px; padding: 10px 14px; border: 2px solid #E2E8F0; border-radius: 10px; font-size: 13.5px; }
         .form-control:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,215,0,0.2); }
-        .btn { width: 100%; height: 48px; background: linear-gradient(135deg, #FFD700, #DAA520); color: #8B4513; border: none; border-radius: 10px; font-weight: bold; font-size: 15px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn { width: 100%; height: 46px; background: linear-gradient(135deg, #FFD700, #DAA520); color: #8B4513; border: none; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(218,165,32,0.3); }
         .message { padding: 12px 14px; border-radius: 8px; margin-bottom: 15px; font-size: 13.5px; }
         .success { background: #D1FAE5; color: #065F46; border: 1px solid var(--success); }
@@ -56,11 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .back-link:hover { text-decoration: underline; }
 
         @media (max-width: 480px) {
-            body { padding: 12px 8px; }
-            .card { padding: 24px 16px; border-radius: 16px; }
-            h1 { font-size: 18px; margin-bottom: 16px; }
-            .form-control { height: 44px; font-size: 13.5px; }
-            .btn { height: 46px; font-size: 14px; }
+            body { padding: 16px; }
+            .card { padding: 36px 30px; border-radius: 20px; }
+            h1 { font-size: 20px; margin-bottom: 22px; }
+            .form-control { height: 46px; font-size: 14px; }
+            .btn { height: 48px; font-size: 15px; }
         }
 
         /* Dark Mode Overrides */

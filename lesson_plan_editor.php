@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'db.php';
 requireTeacher();
 
@@ -222,8 +222,8 @@ $todayEth = getCurrentEthiopianDate();
 }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
 body { background:#FAF9F6; color:#333; }
-.main-container { max-width:1150px; margin:20px auto; padding:0 15px 60px; }
-.card { background:white; border-radius:14px; padding:20px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.main-container { max-width:1150px; margin:10px auto; padding:0 10px 40px; }
+.card { background:white; border-radius:12px; padding:16px 12px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
 .message { padding:12px 15px; border-radius:8px; margin-bottom:15px; }
 .success { background:#D1FAE5; color:var(--success); font-weight:600; }
 .error { background:#FEE2E2; color:var(--error); font-weight:600; }
@@ -234,19 +234,19 @@ body { background:#FAF9F6; color:#333; }
 
 /* OCR Capture Box */
 .ocr-banner { background:linear-gradient(135deg, #FFF8DC, #FEF3C7); border:2px dashed #D97706; border-radius:12px; padding:16px; margin-bottom:20px; }
-.ocr-btn-group { display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; }
-.btn-ocr { background:#D97706; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; font-size:14px; display:inline-flex; align-items:center; gap:6px; }
+.ocr-btn-group { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.btn-ocr { background:#D97706; color:white; border:none; padding:12px 16px; border-radius:8px; font-weight:700; cursor:pointer; font-size:15px; display:inline-flex; align-items:center; gap:6px; }
 .btn-ocr:hover { background:#B45309; }
 .btn-ocr-secondary { background:white; color:#8B4513; border:1px solid #D97706; }
 
 /* Workspace split */
-.workspace-grid { display:grid; grid-template-columns:300px 1fr; gap:20px; }
+.workspace-grid { display:grid; grid-template-columns:1fr; gap:20px; }
 @media (max-width: 860px) {
     .workspace-grid { grid-template-columns:1fr; }
 }
 
 .photo-preview-card { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:12px; text-align:center; position:sticky; top:15px; }
-.photo-preview-card img { max-width:100%; max-height:420px; object-fit:contain; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+.photo-preview-card img { max-width:100%; max-height:220px; object-fit:contain; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
 .confidence-pill { display:inline-block; font-size:12px; font-weight:700; padding:4px 10px; border-radius:12px; margin-top:8px; background:#E0F2FE; color:var(--blue); }
 
 .form-grid-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:12px; }
@@ -290,7 +290,7 @@ textarea { resize:vertical; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 /* Mobile Cards for Lesson Plans */
-.plans-mobile-cards { display:none; }
+.plans-mobile-cards { display:flex; }
 
 @media (max-width: 768px) {
     .main-container { padding: 0 10px 40px; margin: 10px auto; }

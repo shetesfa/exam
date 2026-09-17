@@ -711,7 +711,7 @@ $nav_active = 'teacher_marking_scheme';
             color: var(--text-muted);
         }
 
-        @media (min-width: 651px) {
+        @media (max-width: 650px) {
             .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .page-hero { padding: 18px; }
             .hero-title { font-size: 19px; }

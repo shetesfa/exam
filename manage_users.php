@@ -683,7 +683,7 @@ $nav_active = 'manage_users';
             color: var(--text-muted);
         }
 
-        @media (min-width: 769px) {
+        @media (max-width: 768px) {
             .main-container { padding: 0 10px 40px; margin: 12px auto; }
             .page-header-card { padding: 18px 16px; }
             .content-card { padding: 16px 14px; border-radius: 14px; }
