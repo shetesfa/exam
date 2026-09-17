@@ -25,6 +25,7 @@ if ($nav_role === 'admin') {
         ['url' => 'manage_assignments.php',           'icon' => '📋', 'label' => 'ክፍል ምደባ',             'key' => 'manage_assignments',           'category' => 'ተማሪዎችና መምህራን'],
         ['url' => 'semester.php',                     'icon' => '📅', 'label' => 'ሴሚስተር',                'key' => 'semester',                     'category' => 'የትምህርት ሂደት'],
         ['url' => 'class_locks.php',                  'icon' => '🔒', 'label' => 'ክፍል መቆለፊያ',          'key' => 'class_locks',                  'category' => 'የትምህርት ሂደት'],
+        ['url' => 'manage_curriculum.php',            'icon' => '📖', 'label' => 'መጻሕፍትና ምዕራፎች',      'key' => 'manage_curriculum',            'category' => 'የትምህርት ሂደት'],
         ['url' => 'attendance_submitter_assign.php',  'icon' => '📋', 'label' => 'የክፍል አቴንዳንስ አባላት', 'key' => 'attendance_submitter_assign',  'category' => 'አቴንዳንስና ክትትል'],
         ['url' => 'attendance_days_control.php',      'icon' => '📅', 'label' => 'የትምህርት ቀናት',         'key' => 'attendance_days_control',      'category' => 'አቴንዳንስና ክትትል'],
         ['url' => 'attendance_controller.php',        'icon' => '📊', 'label' => 'የአቴንዳንስ መቆጣጠሪያ',     'key' => 'attendance_controller',        'category' => 'አቴንዳንስና ክትትል'],
