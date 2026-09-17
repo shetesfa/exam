@@ -219,6 +219,16 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
                 'token' => $bridgeToken,
                 'expiresAt' => date('Y-m-d H:i:s', strtotime('+30 days'))
             ];
+            if ($bridgeRole === 'teacher') {
+                $assignedClassIds = [];
+                $currSem = function_exists('getCurrentSemester') ? getCurrentSemester($conn) : null;
+                $semId = $currSem ? (int)$currSem['id'] : 0;
+                $tClasses = dbFetchAll($conn, "SELECT class_id FROM teacher_class WHERE teacher_id = ?" . ($semId ? " AND semester_id = $semId" : ""), "i", [$bridgeUserId]);
+                foreach ($tClasses as $tc) {
+                    $assignedClassIds[] = (int)$tc['class_id'];
+                }
+                $clientUserData['class_ids'] = $assignedClassIds;
+            }
             echo '<script>
             window.CURRENT_USER = ' . json_encode($clientUserData, JSON_UNESCAPED_UNICODE) . ';
             document.addEventListener("DOMContentLoaded", () => {

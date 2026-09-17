@@ -376,8 +376,8 @@ $nav_active = 'teacher_attendance_view';
         <div class="empty-state"><span class="icon">📚</span><h3>ምንም የተመደቡ ክፍሎች የሉም</h3></div>
         <?php endif; ?>
     </div>
-    <script src="exam-main/assets/js/offline-db.js"></script>
-    <script src="exam-main/assets/js/sync-manager.js"></script>
+    <script src="/exam/assets/js/offline-db.js"></script>
+    <script src="/exam/assets/js/sync-manager.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

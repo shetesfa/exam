@@ -2,18 +2,17 @@
  * sw.js - Service Worker for PWA (v4)
  * Provides offline application shell, safe caching, and Web Push notifications.
  */
-const CACHE_NAME = 'exam-pwa-v5';
+const CACHE_NAME = 'exam-pwa-v6';
 const SHELL_URLS = [
-    '/exam/offline.html',
     '/exam/manifest.json',
     '/exam/images/icon.png',
     '/exam/assets/css/mobile.css',
+    '/exam/assets/css/dark-mode.css',
     '/exam/assets/js/offline-db.js',
     '/exam/assets/js/sync-manager.js',
     '/exam/assets/js/push-notifications.js',
-    '/exam/exam-main/assets/js/offline-db.js',
-    '/exam/exam-main/assets/js/sync-manager.js',
-    '/exam/exam-main/assets/js/push-notifications.js'
+    '/exam/assets/js/offline-calendar-alerts.js',
+    '/exam/offline.html'
 ];
 
 self.addEventListener('install', (event) => {
@@ -48,13 +47,23 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Navigation requests (HTML / PHP): Network first, fallback to offline.html
+    // Navigation requests (HTML / PHP): Network first, with dynamic page caching!
+    // When online: fetch and cache the exact page.
+    // When offline: serve the EXACT cached page so the view is 100% identical to online!
     if (event.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.pathname.endsWith('/')) {
         event.respondWith(
             fetch(event.request)
+                .then((resp) => {
+                    if (resp && resp.status === 200) {
+                        const clone = resp.clone();
+                        caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+                    }
+                    return resp;
+                })
                 .catch(() => {
-                    return caches.match('/exam/offline.html').then((cachedOffline) => {
-                        return cachedOffline || caches.match(event.request);
+                    return caches.match(event.request).then((cachedPage) => {
+                        if (cachedPage) return cachedPage;
+                        return caches.match('/exam/offline.html');
                     });
                 })
         );

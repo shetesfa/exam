@@ -55,6 +55,16 @@ async function tx(storeName, mode, fn) {
 const OfflineDB = {
     // ---- Auth (offline login) ----
     async saveAuth(user, token, expiresAt) {
+        try {
+            const prev = await this.getAuth();
+            if (prev && prev.user && user && (prev.user.id !== user.id || prev.user.role !== user.role)) {
+                // User switch: clear classes and students to guarantee 0% data leakage across accounts
+                await tx('classes', 'readwrite', (s) => s.clear());
+                await tx('students', 'readwrite', (s) => s.clear());
+            }
+        } catch (e) {
+            console.warn('saveAuth cleanup notice:', e);
+        }
         return tx('auth', 'readwrite', (store) => {
             store.put({ id: 'current', user, token, expiresAt });
         });
@@ -99,13 +109,19 @@ const OfflineDB = {
             });
         });
     },
-    async getAllClasses() {
+    async getAllClasses(forUser) {
         const db = await openDB();
-        return new Promise((resolve) => {
+        const allClasses = await new Promise((resolve) => {
             const req = db.transaction('classes', 'readonly').objectStore('classes').getAll();
             req.onsuccess = () => resolve(req.result || []);
             req.onerror = () => resolve([]);
         });
+        const user = forUser || (await this.getAuth())?.user || window.CURRENT_USER;
+        if (user && user.role === 'teacher' && Array.isArray(user.class_ids)) {
+            const allowed = user.class_ids.map(id => parseInt(id));
+            return allClasses.filter(c => allowed.includes(parseInt(c.id)));
+        }
+        return allClasses;
     },
     async cacheStudents(students) {
         return tx('students', 'readwrite', (store) => {
@@ -124,9 +140,16 @@ const OfflineDB = {
             req.onerror = () => resolve([]);
         });
     },
-    async getStudentsByClass(classId) {
-        const all = await this.getAllStudents();
+    async getStudentsByClass(classId, forUser) {
         const cid = parseInt(classId);
+        const user = forUser || (await this.getAuth())?.user || window.CURRENT_USER;
+        if (user && user.role === 'teacher' && Array.isArray(user.class_ids)) {
+            const allowed = user.class_ids.map(id => parseInt(id));
+            if (!allowed.includes(cid)) {
+                return []; // Strictly isolated
+            }
+        }
+        const all = await this.getAllStudents();
         return all.filter((s) => s.class_id === cid && !s.is_deleted);
     },
 

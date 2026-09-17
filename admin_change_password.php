@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>የይለፍ ቃል ቀይር | Admin</title>
+    <title>የይለፍ ቃል ቀይር | ትምህርት ክፍል</title>
     <?php include 'pwa_head.php'; ?>
     <style>
         :root { --brown-dark: #8B4513; --gold: #FFD700; --gold-dark: #DAA520; --success: #10B981; --error: #EF4444; }

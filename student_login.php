@@ -524,8 +524,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
     </script>
-    <script src="exam-main/assets/js/offline-db.js"></script>
-    <script src="exam-main/assets/js/sync-manager.js"></script>
+    <script src="/exam/assets/js/offline-db.js"></script>
+    <script src="/exam/assets/js/sync-manager.js"></script>
     <script>
         // Register Service Worker
         if ('serviceWorker' in navigator) {

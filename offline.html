@@ -172,7 +172,7 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
 <header class="offline-header">
     <div class="brand-title">
         <span>⛪</span>
-        <span>አጸደ ትጉሃን (ከመስመር ውጭ)</span>
+        <span>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</span>
     </div>
     <div style="display:flex; align-items:center; gap:8px;">
         <button type="button" id="offlineDarkToggle" class="btn btn-sm" onclick="toggleOfflineDarkMode()" style="padding:4px 10px; font-size:12px; background:rgba(255,255,255,0.2); color:white; border:none; border-radius:20px; cursor:pointer;" title="የገጽ ገጽታ ቀይር">
@@ -408,7 +408,7 @@ function switchTab(tabId, el) {
 }
 
 async function loadClasses() {
-    currentClasses = await OfflineDB.getAllClasses();
+    currentClasses = await OfflineDB.getAllClasses(currentUser);
     const sel = document.getElementById('classSelector');
     sel.innerHTML = '';
 
@@ -431,7 +431,7 @@ async function onClassChanged() {
     const classId = parseInt(document.getElementById('classSelector').value);
     if (!classId) return;
 
-    currentStudents = await OfflineDB.getStudentsByClass(classId);
+    currentStudents = await OfflineDB.getStudentsByClass(classId, currentUser);
     document.getElementById('attCountBadge').textContent = currentStudents.length + ' ተማሪዎች';
     document.getElementById('marksCountBadge').textContent = currentStudents.length + ' ተማሪዎች';
 

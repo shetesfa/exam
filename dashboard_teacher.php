@@ -846,15 +846,6 @@ $nav_active = 'dashboard_teacher';
             }); 
         });
     </script>
-    <script src="exam-main/assets/js/offline-db.js"></script>
-    <script src="exam-main/assets/js/sync-manager.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/exam/sw.js').catch(() => {});
-            });
-        }
-    </script>
 </body>
 </html>
 <?php mysqli_close($conn); ?>

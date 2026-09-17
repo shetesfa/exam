@@ -995,7 +995,7 @@ $nav_active = 'print_results';
         <!-- Footer with signature -->
         <div style="margin-top: 30px; display: flex; justify-content: space-between; padding: 0 20px; font-size: 12px; color: #666;">
             <div>የታተመበት ቀን: <?php echo date('d/m/Y'); ?></div>
-            <div>የአስተዳዳሪ ፊርማ: _________________</div>
+            <div>የትምህርት ክፍል ፊርማ: _________________</div>
         </div>
     </div>
 

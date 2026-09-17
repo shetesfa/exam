@@ -263,7 +263,7 @@ $nav_active = 'admin_settings';
         <div class="settings-card">
             <div class="settings-title">
                 <span>⚙️</span>
-                የአስተዳዳሪ መረጃ ማስተካከያ
+                የትምህርት ክፍል ኃላፊዎች መረጃ
             </div>
 
             <form method="POST">
@@ -277,13 +277,13 @@ $nav_active = 'admin_settings';
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 1 ሙሉ ስም</label>
+                        <label>የትምህርት ክፍል ኃላፊ 1 ሙሉ ስም</label>
                         <input type="text" name="admin_name_1" class="form-control" 
                                value="<?php echo htmlspecialchars($admin1); ?>"
                                placeholder="ዲ/ን ኪብረአብ ዘለለም">
                     </div>
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 1 ስልክ ቁጥር</label>
+                        <label>የትምህርት ክፍል ኃላፊ 1 ስልክ ቁጥር</label>
                         <input type="text" name="admin_phone_1" class="form-control" 
                                value="<?php echo htmlspecialchars($phone1); ?>"
                                placeholder="0939883508">
@@ -292,13 +292,13 @@ $nav_active = 'admin_settings';
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 2 ሙሉ ስም</label>
+                        <label>የትምህርት ክፍል ኃላፊ 2 ሙሉ ስም</label>
                         <input type="text" name="admin_name_2" class="form-control" 
                                value="<?php echo htmlspecialchars($admin2); ?>"
                                placeholder="ተስፋሁን ባዬ">
                     </div>
                     <div class="form-group">
-                        <label>የአስተዳዳሪ 2 ስልክ ቁጥር</label>
+                        <label>የትምህርት ክፍል ኃላፊ 2 ስልክ ቁጥር</label>
                         <input type="text" name="admin_phone_2" class="form-control" 
                                value="<?php echo htmlspecialchars($phone2); ?>"
                                placeholder="0943854325">

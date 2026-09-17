@@ -618,8 +618,8 @@ $nav_active = 'dashboard_attendance';
 
     <div id="toast" class="toast"></div>
 
-    <script src="exam-main/assets/js/offline-db.js"></script>
-    <script src="exam-main/assets/js/sync-manager.js"></script>
+    <script src="/exam/assets/js/offline-db.js"></script>
+    <script src="/exam/assets/js/sync-manager.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

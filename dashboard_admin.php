@@ -80,7 +80,7 @@ $nav_active = 'dashboard_admin';
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>የአስተዳዳሪ ዳሽቦርድ | አጸደ ትጉሃን</title>
+    <title>የትምህርት ክፍል ዳሽቦርድ | አጸደ ትጉሃን</title>
     <?php include 'pwa_head.php'; ?>
     <style>
         :root {

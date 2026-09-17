@@ -37,8 +37,8 @@ if ($nav_role === 'admin') {
         ['url' => 'lesson_plan_admin_review.php',     'icon' => '📝', 'label' => 'የዕቅድ ግምገማ',           'key' => 'lesson_plan_admin_review',     'category' => 'የትምህርት ሂደት'],
         ['url' => 'promotion.php',                    'icon' => '📈', 'label' => 'ደረጃ ማሳደግ',            'key' => 'promotion',                    'category' => 'የትምህርት ሂደት'],
         ['url' => 'calendar_admin.php',               'icon' => '📅', 'label' => 'ካሌንደር',                'key' => 'calendar_admin',               'category' => 'ካሌንደር'],
-        ['url' => 'backup_admin.php',                 'icon' => '💾', 'label' => 'ምትኬ',                   'key' => 'backup_admin',                 'category' => 'ስርዓት አስተዳደር'],
-        ['url' => 'audit_log_admin.php',              'icon' => '📜', 'label' => 'የክትትል መዝገብ',           'key' => 'audit_log_admin',              'category' => 'ስርዓት አስተዳደር'],
+        ['url' => 'backup_admin.php',                 'icon' => '💾', 'label' => 'ምትኬ',                   'key' => 'backup_admin',                 'category' => 'የትምህርት ክፍል ስርዓት'],
+        ['url' => 'audit_log_admin.php',              'icon' => '📜', 'label' => 'የክትትል መዝገብ',           'key' => 'audit_log_admin',              'category' => 'የትምህርት ክፍል ስርዓት'],
     ];
     $logout_url = 'logout.php';
     $pwd_url = 'admin_change_password.php';
@@ -76,7 +76,6 @@ if ($nav_role === 'admin') {
 
     $nav_items = [
         ['url' => 'dashboard_teacher.php',        'icon' => '🏠', 'label' => 'ዳሽቦርድ',      'key' => 'dashboard_teacher'],
-        ['url' => 'teacher_marks_viewer.php',     'icon' => '📊', 'label' => 'ውጤቶች',        'key' => 'teacher_marks_viewer'],
         $attendance_item,
         ['url' => 'teacher_marking_scheme.php',   'icon' => '📐', 'label' => 'የውጤት መስፈርት',   'key' => 'teacher_marking_scheme'],
         ['url' => 'teacher_profile.php',          'icon' => '👤', 'label' => 'መረጃዬ',        'key' => 'teacher_profile'],
@@ -117,7 +116,7 @@ if ($nav_role === 'admin') {
       <div class="site-title">
         <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>
         <p><?php echo htmlspecialchars($nav_name); ?> | <?php
-          echo $nav_role === 'admin' ? 'አስተዳዳሪ' :
+          echo $nav_role === 'admin' ? 'ትምህርት ክፍል' :
                ($nav_role === 'teacher' ? 'መምህር' :
                ($nav_role === 'attendance_submitter' ? 'ጸሐፊ' :
                ($nav_student ? 'ተማሪ' : '')));
@@ -194,12 +193,6 @@ if ($nav_role === 'admin') {
       </a>
       <?php endforeach; ?>
       <hr style="border-color:var(--gold-pale);margin:6px 0;">
-      <?php if ($pwd_url): ?>
-      <a href="<?php echo $pwd_url; ?>" class="nav-link">🔒 የይለፍ ቃል ቀይር</a>
-      <?php endif; ?>
-      <button type="button" class="nav-link btn-drawer-dark-toggle" onclick="toggleDarkMode()" style="width:100%; text-align:left; border:none; background:none; cursor:pointer; font-family:inherit;">
-        <span id="drawerDarkIcon">🌙</span> <span id="drawerDarkText">የጨለማ ገጽታ</span>
-      </button>
       <a href="<?php echo $logout_url; ?>" class="nav-link" style="color:var(--error-red); display:flex; align-items:center; gap:8px;">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
         <span>ይውጡ</span>
