@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             [$new_student_id, $hashed_pin]
                         );
                         
-                        $message = "ተማሪው በተሳካ ሁኔታ ተመዝግቧል! የመግቢያ ፒን: $default_pin";
+                        $message = "ተማሪው በትክክል ተመዝግቧል! የመግቢያ ፒን: $default_pin";
                     } else {
                         $error = "ስህተት ተከስቷል! " . mysqli_stmt_error($stmt);
                         mysqli_stmt_close($stmt);
@@ -167,13 +167,17 @@ if ($class_filter > 0) {
 
 $where_sql = implode(" AND ", $where_clauses);
 
-// Count
+// Count (filtered — for pagination)
 if (!empty($types)) {
     $count_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id WHERE $where_sql", $types, $params);
 } else {
     $count_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students s JOIN classes c ON s.class_id = c.id WHERE $where_sql");
 }
 $total_students = $count_row ? (int)$count_row['cnt'] : 0;
+
+// True global total (unfiltered) — for the stat card
+$global_total_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students WHERE (is_deleted = 0 OR is_deleted IS NULL)");
+$global_students = $global_total_row ? (int)$global_total_row['cnt'] : 0;
 
 // Portal active count
 $active_portal_row = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students WHERE (is_deleted = 0 OR is_deleted IS NULL) AND student_portal_enabled = 1");
@@ -382,6 +386,211 @@ $nav_active = 'manage_students';
             color: #94A3B8 !important;
         }
 
+        /* Direct Dark Mode Overrides for Student Components */
+        html.dark-mode .portal-tip-card,
+        body.dark-mode .portal-tip-card,
+        [data-theme="dark"] .portal-tip-card {
+            background-color: #0F172A !important;
+            border: 1.5px solid #2563EB !important;
+            color: #93C5FD !important;
+        }
+
+        html.dark-mode .tip-content,
+        body.dark-mode .tip-content,
+        [data-theme="dark"] .tip-content {
+            color: #93C5FD !important;
+        }
+
+        html.dark-mode .tip-content strong,
+        body.dark-mode .tip-content strong,
+        [data-theme="dark"] .tip-content strong {
+            color: #BFDBFE !important;
+        }
+
+        html.dark-mode .tip-content a,
+        body.dark-mode .tip-content a,
+        [data-theme="dark"] .tip-content a {
+            color: #60A5FA !important;
+        }
+
+        html.dark-mode table.student-table th,
+        body.dark-mode table.student-table th,
+        [data-theme="dark"] table.student-table th {
+            background-color: #0F172A !important;
+            color: #FCD34D !important;
+            border-bottom: 2px solid #334155 !important;
+        }
+
+        html.dark-mode table.student-table td,
+        body.dark-mode table.student-table td,
+        [data-theme="dark"] table.student-table td {
+            background-color: #1E293B !important;
+            color: #E2E8F0 !important;
+            border-bottom: 1px solid #334155 !important;
+        }
+
+        html.dark-mode table.student-table tbody tr:hover td,
+        body.dark-mode table.student-table tbody tr:hover td,
+        [data-theme="dark"] table.student-table tbody tr:hover td {
+            background-color: #26354A !important;
+        }
+
+        html.dark-mode .student-name-text,
+        body.dark-mode .student-name-text,
+        [data-theme="dark"] .student-name-text {
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .class-badge,
+        body.dark-mode .class-badge,
+        [data-theme="dark"] .class-badge {
+            background-color: #0F172A !important;
+            color: #FCD34D !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .phone-link,
+        body.dark-mode .phone-link,
+        [data-theme="dark"] .phone-link {
+            color: #60A5FA !important;
+        }
+
+        html.dark-mode .btn-clear,
+        body.dark-mode .btn-clear,
+        [data-theme="dark"] .btn-clear {
+            background-color: #334155 !important;
+            color: #F1F5F9 !important;
+            border: 1px solid #475569 !important;
+        }
+
+        html.dark-mode .btn-clear:hover,
+        body.dark-mode .btn-clear:hover,
+        [data-theme="dark"] .btn-clear:hover {
+            background-color: #475569 !important;
+        }
+
+        html.dark-mode .btn-portal-status.active,
+        body.dark-mode .btn-portal-status.active,
+        [data-theme="dark"] .btn-portal-status.active {
+            background-color: #064E3B !important;
+            color: #6EE7B7 !important;
+            border: 1px solid #059669 !important;
+        }
+
+        html.dark-mode .btn-portal-status.inactive,
+        body.dark-mode .btn-portal-status.inactive,
+        [data-theme="dark"] .btn-portal-status.inactive {
+            background-color: #1E293B !important;
+            color: #94A3B8 !important;
+            border: 1px solid #475569 !important;
+        }
+
+        html.dark-mode .pin-pill.new,
+        body.dark-mode .pin-pill.new,
+        [data-theme="dark"] .pin-pill.new {
+            background-color: #3B2A0F !important;
+            color: #FCD34D !important;
+            border: 1px solid #78350F !important;
+        }
+
+        html.dark-mode .pin-pill.active,
+        body.dark-mode .pin-pill.active,
+        [data-theme="dark"] .pin-pill.active {
+            background-color: #064E3B !important;
+            color: #6EE7B7 !important;
+            border: 1px solid #059669 !important;
+        }
+
+        html.dark-mode .btn-st-edit,
+        body.dark-mode .btn-st-edit,
+        [data-theme="dark"] .btn-st-edit {
+            background-color: #3B2A0F !important;
+            color: #FCD34D !important;
+            border: 1px solid #78350F !important;
+        }
+
+        html.dark-mode .btn-st-edit:hover,
+        body.dark-mode .btn-st-edit:hover,
+        [data-theme="dark"] .btn-st-edit:hover {
+            background-color: #4D3814 !important;
+        }
+
+        html.dark-mode .btn-st-reset,
+        body.dark-mode .btn-st-reset,
+        [data-theme="dark"] .btn-st-reset {
+            background-color: #1E1B4B !important;
+            color: #A5B4FC !important;
+            border: 1px solid #3730A3 !important;
+        }
+
+        html.dark-mode .btn-st-reset:hover,
+        body.dark-mode .btn-st-reset:hover,
+        [data-theme="dark"] .btn-st-reset:hover {
+            background-color: #2D2766 !important;
+        }
+
+        html.dark-mode .btn-st-del,
+        body.dark-mode .btn-st-del,
+        [data-theme="dark"] .btn-st-del {
+            background-color: #3B1212 !important;
+            color: #FCA5A5 !important;
+            border: 1px solid #991B1B !important;
+        }
+
+        html.dark-mode .btn-st-del:hover,
+        body.dark-mode .btn-st-del:hover,
+        [data-theme="dark"] .btn-st-del:hover {
+            background-color: #501A1A !important;
+        }
+
+        html.dark-mode .pager-container,
+        body.dark-mode .pager-container,
+        [data-theme="dark"] .pager-container {
+            background-color: #0F172A !important;
+            border-top: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .pager-controls a,
+        body.dark-mode .pager-controls a,
+        [data-theme="dark"] .pager-controls a {
+            background-color: #1E293B !important;
+            color: #F1F5F9 !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .pager-controls a:hover,
+        body.dark-mode .pager-controls a:hover,
+        [data-theme="dark"] .pager-controls a:hover {
+            background-color: #334155 !important;
+            color: #FCD34D !important;
+            border-color: #F59E0B !important;
+        }
+
+        html.dark-mode .pager-controls span.current,
+        body.dark-mode .pager-controls span.current,
+        [data-theme="dark"] .pager-controls span.current {
+            background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+            color: #0F172A !important;
+            font-weight: 800 !important;
+        }
+
+        html.dark-mode .content-card-header h2,
+        body.dark-mode .content-card-header h2,
+        [data-theme="dark"] .content-card-header h2 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .content-card-header,
+        body.dark-mode .content-card-header,
+        [data-theme="dark"] .content-card-header {
+            border-bottom-color: #334155 !important;
+        }
+
+        html.dark-mode .form-group label,
+        body.dark-mode .form-group label,
+        [data-theme="dark"] .form-group label {
+            color: #CBD5E1 !important;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
         body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
@@ -913,8 +1122,8 @@ $nav_active = 'manage_students';
             <div class="stat-box">
                 <div class="stat-icon">👥</div>
                 <div class="stat-data">
-                    <div class="stat-val"><?php echo number_format($total_students); ?></div>
-                    <div class="stat-lbl">ጠቅላላ ተማሪዎች</div>
+                    <div class="stat-val"><?php echo number_format($global_students); ?></div>
+                    <div class="stat-lbl">ጠቅላላ ተማሪዎች<?php if($total_students !== $global_students): ?> <small style="font-size:10px;opacity:0.7;">(<?php echo number_format($total_students); ?> ተጣርቷል)</small><?php endif; ?></div>
                 </div>
             </div>
             <div class="stat-box">
@@ -982,7 +1191,7 @@ $nav_active = 'manage_students';
         <div class="content-card">
             <div class="content-card-header">
                 <h2><span>📋</span> የተማሪዎች ዝርዝር</h2>
-                <span class="header-badge"><?php echo number_format($total_students); ?> ተማሪዎች</span>
+                <span class="header-badge"><?php echo number_format($global_students); ?> ተማሪዎች<?php if($total_students !== $global_students): ?> (<?php echo number_format($total_students); ?> ተጣርቷል)<?php endif; ?></span>
             </div>
 
             <!-- Search & Filters Toolbar -->

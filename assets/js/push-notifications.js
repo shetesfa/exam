@@ -110,7 +110,7 @@ const PushNotifications = {
             if (saveData.success) {
                 this._subscribed = true;
                 this.updateUI('subscribed');
-                alert('✅ የቀጥታ የስልክ ማሳወቂያ በተሳካ ሁኔታ በርቷል!');
+                alert('✅ የቀጥታ የስልክ ማሳወቂያ በትክክል በርቷል!');
                 return true;
             } else {
                 throw new Error(saveData.error || 'Failed to register subscription');

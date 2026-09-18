@@ -38,7 +38,7 @@ if ($nav_role === 'admin') {
         ['url' => 'lesson_plan_admin_review.php',     'icon' => '📝', 'label' => 'የዕቅድ ግምገማ',           'key' => 'lesson_plan_admin_review',     'category' => 'የትምህርት ሂደት'],
         ['url' => 'promotion.php',                    'icon' => '📈', 'label' => 'ደረጃ ማሳደግ',            'key' => 'promotion',                    'category' => 'የትምህርት ሂደት'],
         ['url' => 'calendar_admin.php',               'icon' => '📅', 'label' => 'ካሌንደር',                'key' => 'calendar_admin',               'category' => 'ካሌንደር'],
-        ['url' => 'backup_admin.php',                 'icon' => '💾', 'label' => 'ምትኬ',                   'key' => 'backup_admin',                 'category' => 'የትምህርት ክፍል ስርዓት'],
+        ['url' => 'backup_admin.php',                 'icon' => '💾', 'label' => 'Backup',                 'key' => 'backup_admin',                 'category' => 'የትምህርት ክፍል ስርዓት'],
         ['url' => 'audit_log_admin.php',              'icon' => '📜', 'label' => 'የክትትል መዝገብ',           'key' => 'audit_log_admin',              'category' => 'የትምህርት ክፍል ስርዓት'],
     ];
     $logout_url = 'logout.php';

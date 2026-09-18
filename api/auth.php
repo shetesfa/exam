@@ -112,8 +112,8 @@ json_out([
     'expires_at' => $expiresAt,
     'user' => [
         'id' => (int)$user['id'],
-        'name' => $user['name'],
-        'username' => $user['username'],
+        'name' => trim($user['name'] ?? ''),
+        'username' => trim($user['username'] ?? ''),
         'role' => $user['role'],
         'first_login' => (int)$user['first_login'],
         'can_edit_marks' => (int)$user['can_edit_marks'],

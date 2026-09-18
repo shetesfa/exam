@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -808,11 +808,11 @@ $nav_active = 'print_results';
                     <th rowspan="2">ደረጃ</th>
                 </tr>
                 <tr>
-                    <th>ቤት (10)</th>
-                    <th>ተሳት (20)</th>
-                    <th>መገ (10)</th>
-                    <th>መካ (30)</th>
-                    <th>መጨ (30)</th>
+                    <th>የቤት ሥራ</th>
+                    <th>የክፍል ተሳትፎ</th>
+                    <th>የክፍል ክትትል</th>
+                    <th>የአጋማሽ ፈተና</th>
+                    <th>የማጠቃለያ ፈተና</th>
                 </tr>
             </thead>
             <tbody>
@@ -854,10 +854,10 @@ $nav_active = 'print_results';
                     <td>
                         <?php if($row['total']): 
                             $grade = getGradeStatus($row['total']);
-                            $grade_class = '';
-                            if(strpos($grade, 'Excellent') !== false) $grade_class = 'grade-excellent';
-                            elseif(strpos($grade, 'Good') !== false) $grade_class = 'grade-good';
-                            elseif(strpos($grade, 'Satisfactory') !== false) $grade_class = 'grade-satisfactory';
+                            $t = floatval($row['total']);
+                            if($t >= 85) $grade_class = 'grade-excellent';
+                            elseif($t >= 70) $grade_class = 'grade-good';
+                            elseif($t >= 50) $grade_class = 'grade-satisfactory';
                             else $grade_class = 'grade-poor';
                         ?>
                             <span class="grade-badge <?php echo $grade_class; ?>">
@@ -888,10 +888,10 @@ $nav_active = 'print_results';
                     <td>
                         <?php if($row['total']): 
                             $grade = getGradeStatus($row['total']);
-                            $grade_class = '';
-                            if(strpos($grade, 'Excellent') !== false) $grade_class = 'grade-excellent';
-                            elseif(strpos($grade, 'Good') !== false) $grade_class = 'grade-good';
-                            elseif(strpos($grade, 'Satisfactory') !== false) $grade_class = 'grade-satisfactory';
+                            $t = floatval($row['total']);
+                            if($t >= 85) $grade_class = 'grade-excellent';
+                            elseif($t >= 70) $grade_class = 'grade-good';
+                            elseif($t >= 50) $grade_class = 'grade-satisfactory';
                             else $grade_class = 'grade-poor';
                         ?>
                             <span class="grade-badge <?php echo $grade_class; ?>">

@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hashed = hashPassword($new);
             dbExecute($conn, "UPDATE users SET password = ?, first_login = 0 WHERE id = ?", "si", [$hashed, $user_id]);
-            $message = "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል!";
+            $message = "የይለፍ ቃል በትክክል ተቀይሯል!";
         }
     }
 }
@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="password" name="new_password" class="form-control" required minlength="4">
             </div>
             <div class="form-group">
-                <label>አዲስ የይለፍ ቃል ያረጋግጡ</label>
+                <label>የይለፍ ቃሉን በድጋሚ ያስገቡ</label>
                 <input type="password" name="confirm_password" class="form-control" required minlength="4">
             </div>
             <button type="submit" class="btn">💾 አስቀምጥ</button>

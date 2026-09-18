@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         [$name, $username, $phone, $role, $password]
                     );
                     if ($saved) {
-                        $message = "ተጠቃሚ በተሳካ ሁኔታ ተፈጥሯል! የይለፍ ቃል: 123";
+                        $message = "ተጠቃሚ በትክክል ተመዝግቧል! የይለፍ ቃል: 123";
                     } else {
                         $error = "ስህተት ተከስቷል!";
                     }
@@ -326,6 +326,118 @@ $nav_active = 'manage_users';
             color: #94A3B8 !important;
         }
 
+        /* Direct Dark Mode Overrides for User Management Components */
+        html.dark-mode table.users-table th,
+        body.dark-mode table.users-table th,
+        [data-theme="dark"] table.users-table th {
+            background-color: #0F172A !important;
+            color: #FCD34D !important;
+            border-bottom: 2px solid #334155 !important;
+        }
+
+        html.dark-mode table.users-table td,
+        body.dark-mode table.users-table td,
+        [data-theme="dark"] table.users-table td {
+            background-color: #1E293B !important;
+            color: #E2E8F0 !important;
+            border-bottom: 1px solid #334155 !important;
+        }
+
+        html.dark-mode table.users-table tbody tr:hover td,
+        body.dark-mode table.users-table tbody tr:hover td,
+        [data-theme="dark"] table.users-table tbody tr:hover td {
+            background-color: #26354A !important;
+        }
+
+        html.dark-mode .user-name-text,
+        body.dark-mode .user-name-text,
+        [data-theme="dark"] .user-name-text {
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .role-badge.admin,
+        body.dark-mode .role-badge.admin,
+        [data-theme="dark"] .role-badge.admin {
+            background-color: #3B0764 !important;
+            color: #D8B4FE !important;
+            border: 1px solid #7E22CE !important;
+        }
+
+        html.dark-mode .role-badge.teacher,
+        body.dark-mode .role-badge.teacher,
+        [data-theme="dark"] .role-badge.teacher {
+            background-color: #1E3A8A !important;
+            color: #93C5FD !important;
+            border: 1px solid #3B82F6 !important;
+        }
+
+        html.dark-mode .role-badge.submitter,
+        body.dark-mode .role-badge.submitter,
+        [data-theme="dark"] .role-badge.submitter {
+            background-color: #064E3B !important;
+            color: #6EE7B7 !important;
+            border: 1px solid #059669 !important;
+        }
+
+        html.dark-mode .btn-u-edit,
+        body.dark-mode .btn-u-edit,
+        [data-theme="dark"] .btn-u-edit {
+            background-color: #3B2A0F !important;
+            color: #FCD34D !important;
+            border: 1px solid #78350F !important;
+        }
+
+        html.dark-mode .btn-u-edit:hover,
+        body.dark-mode .btn-u-edit:hover,
+        [data-theme="dark"] .btn-u-edit:hover {
+            background-color: #4D3814 !important;
+        }
+
+        html.dark-mode .btn-u-reset,
+        body.dark-mode .btn-u-reset,
+        [data-theme="dark"] .btn-u-reset {
+            background-color: #1E1B4B !important;
+            color: #A5B4FC !important;
+            border: 1px solid #3730A3 !important;
+        }
+
+        html.dark-mode .btn-u-reset:hover,
+        body.dark-mode .btn-u-reset:hover,
+        [data-theme="dark"] .btn-u-reset:hover {
+            background-color: #2D2766 !important;
+        }
+
+        html.dark-mode .btn-u-del,
+        body.dark-mode .btn-u-del,
+        [data-theme="dark"] .btn-u-del {
+            background-color: #3B1212 !important;
+            color: #FCA5A5 !important;
+            border: 1px solid #991B1B !important;
+        }
+
+        html.dark-mode .btn-u-del:hover,
+        body.dark-mode .btn-u-del:hover,
+        [data-theme="dark"] .btn-u-del:hover {
+            background-color: #501A1A !important;
+        }
+
+        html.dark-mode .content-card-header h2,
+        body.dark-mode .content-card-header h2,
+        [data-theme="dark"] .content-card-header h2 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .content-card-header,
+        body.dark-mode .content-card-header,
+        [data-theme="dark"] .content-card-header {
+            border-bottom-color: #334155 !important;
+        }
+
+        html.dark-mode .form-group label,
+        body.dark-mode .form-group label,
+        [data-theme="dark"] .form-group label {
+            color: #CBD5E1 !important;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
         body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
@@ -726,7 +838,7 @@ $nav_active = 'manage_users';
                 <div class="stat-icon" style="background:#F3E8FF; color:#7C3AED;">👑</div>
                 <div class="stat-data">
                     <div class="stat-val" style="color:#7C3AED;"><?php echo $admin_count; ?></div>
-                    <div class="stat-lbl">የትምህርት ክፍል (አስተዳዳሪ)</div>
+                    <div class="stat-lbl">ትምህርት ክፍል</div>
                 </div>
             </div>
             <div class="stat-box">
@@ -770,7 +882,7 @@ $nav_active = 'manage_users';
                         <select name="role" class="form-control" required>
                             <option value="teacher">👨‍🏫 መምህር</option>
                             <option value="attendance_submitter">✍️ የክፍል ጸሐፊ (Attendance Submitter)</option>
-                            <option value="admin">👑 ትምህርት ክፍል (አስተዳዳሪ)</option>
+                            <option value="admin">👑 ትምህርት ክፍል (Admin)</option>
                         </select>
                     </div>
                 </div>
@@ -910,7 +1022,7 @@ $nav_active = 'manage_users';
                     <select name="role" id="edit_role" class="form-control" required>
                         <option value="teacher">👨‍🏫 መምህር</option>
                         <option value="attendance_submitter">✍️ የክፍል ጸሐፊ</option>
-                        <option value="admin">👑 ትምህርት ክፍል (አስተዳዳሪ)</option>
+                        <option value="admin">👑 ትምህርት ክፍል (Admin)</option>
                     </select>
                 </div>
                 <button type="submit" name="edit_user" class="btn-primary-action" style="width:100%; justify-content:center;">

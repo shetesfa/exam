@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             [$teacher_id, $class_id, $subject_id, $subject_name, $semester_id]
                         );
                         if ($saved) {
-                            $message = "መምህር በተሳካ ሁኔታ ለክፍል ({$subject_name}) ተመድቧል!";
+                            $message = "መምህር በትክክል ለክፍል ({$subject_name}) ተመድቧል!";
                         } else {
                             $error = "ስህተት ተከስቷል!";
                         }

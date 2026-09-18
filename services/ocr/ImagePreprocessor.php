@@ -13,7 +13,7 @@ class ImagePreprocessor {
     public static function validate(array $file): array {
         $isUploaded = isset($file['tmp_name']) && (is_uploaded_file($file['tmp_name']) || (php_sapi_name() === 'cli' && file_exists($file['tmp_name'])));
         if (!$isUploaded) {
-            return ['valid' => false, 'error' => 'ምንም ፋይል አልተሰቀለም!'];
+            return ['valid' => false, 'error' => 'ምንም ፋይል አልተጫነም!'];
         }
 
         if ($file['size'] > self::MAX_FILE_SIZE) {

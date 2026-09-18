@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireLogin();
 if (!isAdmin() && !isTeacher()) {
@@ -117,19 +117,24 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'get_marks') {
     );
     
     if ($scheme_row) {
+        $scheme_row['component1_name'] = getChurchComponentName($scheme_row['component1_name'] ?? '', 'የቤት ሥራ');
+        $scheme_row['component2_name'] = getChurchComponentName($scheme_row['component2_name'] ?? '', 'የክፍል ተሳትፎ');
+        $scheme_row['component3_name'] = getChurchComponentName($scheme_row['component3_name'] ?? '', 'የክፍል ክትትል');
+        $scheme_row['component4_name'] = getChurchComponentName($scheme_row['component4_name'] ?? '', 'የአጋማሽ ፈተና');
+        $scheme_row['component5_name'] = getChurchComponentName($scheme_row['component5_name'] ?? '', 'የማጠቃለያ ፈተና');
         $scheme = $scheme_row;
     } else {
-        // Default scheme
+        // Default church scheme
         $scheme = [
-            'component1_name' => 'Assignment',
+            'component1_name' => 'የቤት ሥራ',
             'component1_percentage' => 20,
-            'component2_name' => 'Participation',
+            'component2_name' => 'የክፍል ተሳትፎ',
             'component2_percentage' => 20,
-            'component3_name' => 'Attendance',
+            'component3_name' => 'የክፍል ክትትል',
             'component3_percentage' => 10,
-            'component4_name' => 'Mid Exam',
+            'component4_name' => 'የአጋማሽ ፈተና',
             'component4_percentage' => 25,
-            'component5_name' => 'Final Exam',
+            'component5_name' => 'የማጠቃለያ ፈተና',
             'component5_percentage' => 25
         ];
     }
@@ -682,7 +687,7 @@ $nav_active = 'teacher_marks_viewer';
             <div class="no-data class-direct-card" style="border-radius: 20px; padding: 40px; text-align: center; margin-bottom: 25px;">
                 <span style="font-size: 48px; display: block; margin-bottom: 12px;">📚</span>
                 <h3 style="color: var(--brown-dark); margin-bottom: 8px;">ለዚህ ሴሚስተር የተመደቡበት ክፍል የለም</h3>
-                <p style="color: #666; font-size: 14px;">እባክዎ ከአስተዳዳሪው ጋር ይገናኙ። (No assigned classes found for this semester.)</p>
+                <p style="color: #666; font-size: 14px;">እባክዎ ከትምህርት ክፍል ጋር ይገናኙ። (No assigned classes found for this semester.)</p>
             </div>
         <?php elseif (count($teacher_classes) === 1): ?>
             <div class="class-direct-card" style="border-radius: 16px; padding: 18px 25px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
@@ -909,6 +914,16 @@ $nav_active = 'teacher_marks_viewer';
                 return;
             }
             
+            const activeComps = [
+                { name: scheme.component1_name, perc: parseFloat(scheme.component1_percentage || 0), field: 'assignment' },
+                { name: scheme.component2_name, perc: parseFloat(scheme.component2_percentage || 0), field: 'participation' },
+                { name: scheme.component3_name, perc: parseFloat(scheme.component3_percentage || 0), field: 'attendance' },
+                { name: scheme.component4_name, perc: parseFloat(scheme.component4_percentage || 0), field: 'mid' },
+                { name: scheme.component5_name, perc: parseFloat(scheme.component5_percentage || 0), field: 'final' }
+            ].filter(c => c.perc > 0);
+
+            const compHeaderThs = activeComps.map(c => `<th>${escapeHtml(c.name)}<br><small>(${c.perc}%)</small></th>`).join('');
+
             let html = `
                 <div class="table-responsive">
                     <table id="marksTable">
@@ -917,11 +932,7 @@ $nav_active = 'teacher_marks_viewer';
                                 <th>#</th>
                                 <th>የተማሪ ስም</th>
                                 <th>ስልክ</th>
-                                <th>${escapeHtml(scheme.component1_name)}<br><small>(${scheme.component1_percentage}%)</small></th>
-                                <th>${escapeHtml(scheme.component2_name)}<br><small>(${scheme.component2_percentage}%)</small></th>
-                                <th>${escapeHtml(scheme.component3_name)}<br><small>(${scheme.component3_percentage}%)</small></th>
-                                <th>${escapeHtml(scheme.component4_name)}<br><small>(${scheme.component4_percentage}%)</small></th>
-                                <th>${escapeHtml(scheme.component5_name)}<br><small>(${scheme.component5_percentage}%)</small></th>
+                                ${compHeaderThs}
                                 <th>ጠቅላላ ድምር</th>
                             </tr>
                         </thead>
@@ -929,16 +940,13 @@ $nav_active = 'teacher_marks_viewer';
             `;
             
             students.forEach((student, index) => {
+                const compRowTds = activeComps.map(c => `<td>${parseFloat(student[c.field] || 0).toFixed(1)}</td>`).join('');
                 html += `
                     <tr>
                         <td>${index + 1}</td>
                         <td class="student-name">${escapeHtml(student.name)}</td>
-                        <td>${student.parent_phone || '-'}</td>
-                        <td>${parseFloat(student.assignment).toFixed(1)}</td>
-                        <td>${parseFloat(student.participation).toFixed(1)}</td>
-                        <td>${parseFloat(student.attendance).toFixed(1)}</td>
-                        <td>${parseFloat(student.mid).toFixed(1)}</td>
-                        <td>${parseFloat(student.final).toFixed(1)}</td>
+                        <td>${escapeHtml(student.parent_phone || '-')}</td>
+                        ${compRowTds}
                         <td class="total-cell"><strong>${parseFloat(student.total).toFixed(1)}</strong></td>
                     </tr>
                 `;
@@ -966,6 +974,16 @@ $nav_active = 'teacher_marks_viewer';
                 alert('እባክዎ መጀመሪያ መምህር እና ክፍል ይምረጡ');
                 return;
             }
+
+            const activeExportComps = [
+                { name: currentScheme.component1_name, perc: parseFloat(currentScheme.component1_percentage || 0), field: 'assignment' },
+                { name: currentScheme.component2_name, perc: parseFloat(currentScheme.component2_percentage || 0), field: 'participation' },
+                { name: currentScheme.component3_name, perc: parseFloat(currentScheme.component3_percentage || 0), field: 'attendance' },
+                { name: currentScheme.component4_name, perc: parseFloat(currentScheme.component4_percentage || 0), field: 'mid' },
+                { name: currentScheme.component5_name, perc: parseFloat(currentScheme.component5_percentage || 0), field: 'final' }
+            ].filter(c => c.perc > 0);
+
+            const exportHeaderThs = activeExportComps.map(c => `<th>${escapeHtml(c.name)} (${c.perc}%)</th>`).join('');
             
             let excelContent = `
                 <html>
@@ -994,11 +1012,7 @@ $nav_active = 'teacher_marks_viewer';
                                 <th>#</th>
                                 <th>የተማሪ ስም</th>
                                 <th>ስልክ</th>
-                                <th>${escapeHtml(currentScheme.component1_name)}</th>
-                                <th>${escapeHtml(currentScheme.component2_name)}</th>
-                                <th>${escapeHtml(currentScheme.component3_name)}</th>
-                                <th>${escapeHtml(currentScheme.component4_name)}</th>
-                                <th>${escapeHtml(currentScheme.component5_name)}</th>
+                                ${exportHeaderThs}
                                 <th>ድምር</th>
                             </tr>
                         </thead>
@@ -1006,16 +1020,13 @@ $nav_active = 'teacher_marks_viewer';
             `;
             
             currentMarksData.forEach((student, index) => {
+                const exportRowTds = activeExportComps.map(c => `<td>${parseFloat(student[c.field] || 0).toFixed(1)}</td>`).join('');
                 excelContent += `
                     <tr>
                         <td>${index + 1}</td>
                         <td>${escapeHtml(student.name)}</td>
                         <td>${student.parent_phone || '-'}</td>
-                        <td>${parseFloat(student.assignment).toFixed(1)}</td>
-                        <td>${parseFloat(student.participation).toFixed(1)}</td>
-                        <td>${parseFloat(student.attendance).toFixed(1)}</td>
-                        <td>${parseFloat(student.mid).toFixed(1)}</td>
-                        <td>${parseFloat(student.final).toFixed(1)}</td>
+                        ${exportRowTds}
                         <td><strong>${parseFloat(student.total).toFixed(1)}</strong></td>
                     </tr>
                 `;

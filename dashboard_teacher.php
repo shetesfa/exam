@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         } else {
             $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
             dbExecute($conn, "UPDATE users SET password = ?, first_login = 0 WHERE id = ?", "si", [$hashed, $teacher_id]);
-            $password_message = "የይለፍ ቃሉ በተሳካ ሁኔታ ተቀይሯል!";
+            $password_message = "የይለፍ ቃሉ በትክክል ተቀይሯል!";
         }
     }
 }
@@ -117,14 +117,19 @@ if ($selected_class_id > 0) {
             [$teacher_id, intval($selected_class['class_id']), $semester_id]
         );
         if ($scheme_row) {
+            $scheme_row['component1_name'] = getChurchComponentName($scheme_row['component1_name'] ?? '', 'የቤት ሥራ');
+            $scheme_row['component2_name'] = getChurchComponentName($scheme_row['component2_name'] ?? '', 'የክፍል ተሳትፎ');
+            $scheme_row['component3_name'] = getChurchComponentName($scheme_row['component3_name'] ?? '', 'የክፍል ክትትል');
+            $scheme_row['component4_name'] = getChurchComponentName($scheme_row['component4_name'] ?? '', 'የአጋማሽ ፈተና');
+            $scheme_row['component5_name'] = getChurchComponentName($scheme_row['component5_name'] ?? '', 'የማጠቃለያ ፈተና');
             $marking_scheme = $scheme_row;
         } else {
             $marking_scheme = [
-                'component1_name' => 'Assignment', 'component1_percentage' => 20,
-                'component2_name' => 'Participation', 'component2_percentage' => 20,
-                'component3_name' => 'Attendance', 'component3_percentage' => 10,
-                'component4_name' => 'Mid Exam', 'component4_percentage' => 25,
-                'component5_name' => 'Final Exam', 'component5_percentage' => 25
+                'component1_name' => 'የቤት ሥራ', 'component1_percentage' => 20,
+                'component2_name' => 'የክፍል ተሳትፎ', 'component2_percentage' => 20,
+                'component3_name' => 'የክፍል ክትትል', 'component3_percentage' => 10,
+                'component4_name' => 'የአጋማሽ ፈተና', 'component4_percentage' => 25,
+                'component5_name' => 'የማጠቃለያ ፈተና', 'component5_percentage' => 25
             ];
         }
         
@@ -277,11 +282,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_scheme'])) {
         if (abs($total - 100) > 0.01) {
             $_SESSION['error'] = "ጠቅላላ መቶኛ 100% መሆን አለበት! አሁን: " . $total . "%";
         } else {
-            $c1_name = trim($_POST['c1_name'] ?? 'Assignment');
-            $c2_name = trim($_POST['c2_name'] ?? 'Participation');
-            $c3_name = trim($_POST['c3_name'] ?? 'Attendance');
-            $c4_name = trim($_POST['c4_name'] ?? 'Mid Exam');
-            $c5_name = trim($_POST['c5_name'] ?? 'Final Exam');
+            $c1_name = getChurchComponentName(trim($_POST['c1_name'] ?? 'የቤት ሥራ'), 'የቤት ሥራ');
+            $c2_name = getChurchComponentName(trim($_POST['c2_name'] ?? 'የክፍል ተሳትፎ'), 'የክፍል ተሳትፎ');
+            $c3_name = getChurchComponentName(trim($_POST['c3_name'] ?? 'የክፍል ክትትል'), 'የክፍል ክትትል');
+            $c4_name = getChurchComponentName(trim($_POST['c4_name'] ?? 'የአጋማሽ ፈተና'), 'የአጋማሽ ፈተና');
+            $c5_name = getChurchComponentName(trim($_POST['c5_name'] ?? 'የማጠቃለያ ፈተና'), 'የማጠቃለያ ፈተና');
             
             $saved = dbExecute(
                 $conn,
@@ -534,8 +539,8 @@ $nav_active = 'dashboard_teacher';
             color: #8B4513; border: none; border-radius: 25px; font-weight: bold; font-size: 14px; cursor: pointer;
         }
 
-        /* marks-grid: 1 column by default (mobile-first), 5 columns on larger screens */
-        @media (min-width: 600px) { .marks-grid { grid-template-columns: repeat(5, 1fr); } }
+        /* marks-grid: 1 column by default (mobile-first), auto-fit dynamic columns on larger screens */
+        @media (min-width: 600px) { .marks-grid { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); } }
     </style>
 </head>
 <body>
@@ -621,14 +626,16 @@ $nav_active = 'dashboard_teacher';
                         <?php 
                         $fields = ['assignment', 'participation', 'attendance', 'mid', 'final'];
                         foreach($fields as $idx => $field):
+                            $comp_perc = floatval($marking_scheme["component".($idx+1)."_percentage"] ?? 0);
+                            if ($comp_perc <= 0) continue;
                             $fval = $field == 'assignment' ? $assignment : ($field == 'participation' ? $participation : ($field == 'attendance' ? $attendance : ($field == 'mid' ? $mid : $final)));
                         ?>
                         <div class="mark-item">
-                            <div class="mark-label"><?php echo htmlspecialchars($marking_scheme["component".($idx+1)."_name"]); ?> <small>(<?php echo $marking_scheme["component".($idx+1)."_percentage"]; ?>%)</small></div>
-                            <input type="number" step="1" min="0" max="<?php echo $marking_scheme["component".($idx+1)."_percentage"]; ?>" 
+                            <div class="mark-label"><?php echo htmlspecialchars($marking_scheme["component".($idx+1)."_name"]); ?> <small>(<?php echo $comp_perc; ?>%)</small></div>
+                            <input type="number" step="1" min="0" max="<?php echo $comp_perc; ?>" 
                                    value="<?php echo $fval > 0 ? $fval : ''; ?>" class="mark-input" 
                                    data-student="<?php echo $student['id']; ?>" data-field="<?php echo $field; ?>"
-                                   data-max="<?php echo $marking_scheme["component".($idx+1)."_percentage"]; ?>"
+                                   data-max="<?php echo $comp_perc; ?>"
                                    <?php echo $is_locked ? 'readonly' : ''; ?>>
                         </div>
                         <?php endforeach; ?>
@@ -701,7 +708,7 @@ $nav_active = 'dashboard_teacher';
                 <?php echo csrfField(); ?>
                 <input type="password" name="current_password" class="pass-input" placeholder="የአሁኑ የይለፍ ቃል" required>
                 <input type="password" name="new_password" class="pass-input" placeholder="አዲስ የይለፍ ቃል" required minlength="3">
-                <input type="password" name="confirm_password" class="pass-input" placeholder="አዲስ የይለፍ ቃል ያረጋግጡ" required minlength="3">
+                <input type="password" name="confirm_password" class="pass-input" placeholder="የይለፍ ቃሉን በድጋሚ ያስገቡ" required minlength="3">
                 <div class="pass-message <?php echo $password_error ? 'error' : ''; ?> <?php echo $password_message ? 'success' : ''; ?>" style="<?php echo ($password_error || $password_message) ? 'display:block;' : ''; ?>">
                     <?php echo $password_error ?: $password_message; ?>
                 </div>
@@ -746,21 +753,32 @@ $nav_active = 'dashboard_teacher';
             return confirm('ማስጠንቀቂያ! የውጤት አሰጣጥ ዘዴ መቀየር ቀደም ሲል የገቡ ውጤቶች ላይ ተጽዕኖ ሊኖረው ይችላል። መቀጠል እርግጠኛ ነዎት?');
         }
 
-        document.querySelectorAll('.mark-input').forEach(input => {
-            input.addEventListener('input', function() {
-                if(isLocked) { showLockModal(); this.value = this.defaultValue; return; }
-                const studentId = this.dataset.student;
-                const field = this.dataset.field;
-                const max = parseFloat(this.dataset.max);
-                let value = parseFloat(this.value) || 0;
-                if(value > max) { this.value = max; value = max; }
-                if(value < 0) { this.value = 0; value = 0; }
-                updateStudentTotal(studentId);
-                if(saveTimeouts[studentId]) clearTimeout(saveTimeouts[studentId]);
-                document.getElementById('saveIndicator').classList.add('show');
-                saveTimeouts[studentId] = setTimeout(() => saveMark(studentId, field, value), 800);
+        window.MARKING_SCHEME = <?php echo json_encode($marking_scheme, JSON_UNESCAPED_UNICODE); ?>;
+        const currentClassId = <?php echo $selected_class_id ?: 0; ?>;
+
+        function attachMarkInputListeners() {
+            document.querySelectorAll('.mark-input').forEach(input => {
+                input.removeEventListener('input', onMarkInputChange);
+                input.addEventListener('input', onMarkInputChange);
             });
-        });
+        }
+
+        function onMarkInputChange() {
+            if(isLocked) { showLockModal(); this.value = this.defaultValue; return; }
+            const studentId = this.dataset.student;
+            const field = this.dataset.field;
+            const max = parseFloat(this.dataset.max);
+            let value = parseFloat(this.value) || 0;
+            if(value > max) { this.value = max; value = max; }
+            if(value < 0) { this.value = 0; value = 0; }
+            updateStudentTotal(studentId);
+            if(saveTimeouts[studentId]) clearTimeout(saveTimeouts[studentId]);
+            const ind = document.getElementById('saveIndicator');
+            if(ind) ind.classList.add('show');
+            saveTimeouts[studentId] = setTimeout(() => saveMark(studentId, field, value), 800);
+        }
+
+        attachMarkInputListeners();
 
         function updateStudentTotal(studentId) {
             const card = document.querySelector(`.student-card[data-student-id="${studentId}"]`);
@@ -779,17 +797,30 @@ $nav_active = 'dashboard_teacher';
             ind.querySelector('span').textContent = 'በማስቀመጥ ላይ...';
 
             function saveOfflineFallback() {
+                const card = document.querySelector(`.student-card[data-student-id="${studentId}"]`);
+                const assignment = card ? (parseFloat(card.querySelector('.mark-input[data-field="assignment"]')?.value) || 0) : 0;
+                const participation = card ? (parseFloat(card.querySelector('.mark-input[data-field="participation"]')?.value) || 0) : 0;
+                const attendance = card ? (parseFloat(card.querySelector('.mark-input[data-field="attendance"]')?.value) || 0) : 0;
+                const mid = card ? (parseFloat(card.querySelector('.mark-input[data-field="mid"]')?.value) || 0) : 0;
+                const final = card ? (parseFloat(card.querySelector('.mark-input[data-field="final"]')?.value) || 0) : 0;
+                const tot = assignment + participation + attendance + mid + final;
+
                 const localUuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'mark_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 const markObj = {
                     local_uuid: localUuid,
                     student_id: parseInt(studentId),
                     class_id: <?php echo $selected_class_id ?: 0; ?>,
                     semester_id: <?php echo $semester_id ?: 0; ?>,
-                    [field]: parseFloat(value) || 0,
+                    assignment: assignment,
+                    participation: participation,
+                    attendance: attendance,
+                    mid: mid,
+                    final: final,
+                    total: tot,
                     updated_at: new Date().toISOString()
                 };
                 OfflineDB.saveMarksLocal(markObj).then(() => {
-                    ind.querySelector('span').textContent = 'ከመስመር ውጭ ተቀምጧል! 💾';
+                    ind.querySelector('span').textContent = 'Offline ተቀምጧል! 💾';
                     setTimeout(() => ind.classList.remove('show'), 1500);
                 }).catch(err => {
                     ind.querySelector('span').textContent = 'ስህተት! ❌';
@@ -837,9 +868,142 @@ $nav_active = 'dashboard_teacher';
             if(e.target == document.getElementById('passwordModal')) closePasswordModal();
             if(e.target == document.getElementById('lockModal')) closeLockModal();
         };
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        async function checkOfflineClassSwitch() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const reqCid = parseInt(urlParams.get('class_id'));
+            const curCid = <?php echo $selected_class_id ?: 0; ?>;
+            if (!reqCid || reqCid === curCid) return;
+            if (navigator.onLine) return;
+
+            // Highlight the clicked class button
+            document.querySelectorAll('.btn-class').forEach(b => {
+                b.classList.toggle('active', b.href.includes('class_id=' + reqCid));
+            });
+
+            if (!window.OfflineDB) return;
+            try {
+                const [classes, students, marks] = await Promise.all([
+                    OfflineDB.getAllClasses(),
+                    OfflineDB.getStudentsByClass(reqCid),
+                    OfflineDB.getMarksByClass(reqCid, <?php echo $semester_id ?: 0; ?>)
+                ]);
+
+                const targetClass = classes.find(c => parseInt(c.id) === reqCid);
+                if (targetClass) {
+                    const headerTitle = document.querySelector('.class-info-card .class-details h2');
+                    if (headerTitle) headerTitle.textContent = targetClass.name;
+                    const headerSub = document.querySelector('.class-info-card .class-details p');
+                    if (headerSub) headerSub.innerHTML = '👨‍🏫 <?php echo addslashes($user_name); ?> | 👥 ' + students.length + ' ተማሪዎች';
+                }
+
+                const container = document.querySelector('.students-container');
+                if (!container) return;
+
+                if (students.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><span>👥</span><p>ምንም ተማሪዎች የሉም</p></div>';
+                    return;
+                }
+
+                const marksMap = {};
+                marks.forEach(m => { marksMap[m.student_id] = m; });
+
+                const scheme = window.MARKING_SCHEME || {
+                    component1_name: 'የቤት ሥራ', component1_percentage: 20,
+                    component2_name: 'የክፍል ተሳትፎ', component2_percentage: 20,
+                    component3_name: 'የክፍል ክትትል', component3_percentage: 10,
+                    component4_name: 'የአጋማሽ ፈተና', component4_percentage: 25,
+                    component5_name: 'የማጠቃለያ ፈተና', component5_percentage: 25
+                };
+
+                const fields = ['assignment', 'participation', 'attendance', 'mid', 'final'];
+                let html = '';
+                students.forEach((s, idx) => {
+                    const m = marksMap[s.id] || {};
+                    const as = parseFloat(m.assignment) || 0;
+                    const pa = parseFloat(m.participation) || 0;
+                    const at = parseFloat(m.attendance) || 0;
+                    const mi = parseFloat(m.mid) || 0;
+                    const fi = parseFloat(m.final) || 0;
+                    const tot = as + pa + at + mi + fi;
+
+                    html += `
+                    <div class="student-card" data-student-id="${s.id}">
+                        <div class="student-card-header">
+                            <div class="student-name">
+                                <span class="student-number">${idx + 1}</span>
+                                ${escapeHtml(s.name)}
+                                <span class="student-phone">${escapeHtml(s.parent_phone || '')}</span>
+                            </div>
+                            <div class="total-score" id="total-${s.id}">${tot > 0 ? tot.toFixed(1) : '0.0'}</div>
+                        </div>
+                        <div class="marks-grid">`;
+
+                    fields.forEach((f, fidx) => {
+                        const perc = parseFloat(scheme['component' + (fidx + 1) + '_percentage'] || 0);
+                        if (perc <= 0) return;
+                        const cname = scheme['component' + (fidx + 1) + '_name'] || f;
+                        const val = m[f] !== undefined && m[f] !== null && m[f] > 0 ? m[f] : '';
+                        html += `
+                            <div class="mark-item">
+                                <div class="mark-label">${escapeHtml(cname)} <small>(${perc}%)</small></div>
+                                <input type="number" step="1" min="0" max="${perc}"
+                                       value="${val}" class="mark-input"
+                                       data-student="${s.id}" data-field="${f}"
+                                       data-max="${perc}">
+                            </div>`;
+                    });
+
+                    html += `
+                        </div>
+                        <div class="student-status">
+                            ${tot > 0 ? '<span class="status-badge status-success">✅ ውጤት ገብቷል</span>' : '<span class="status-badge status-warning">⏳ አልገባም</span>'}
+                        </div>
+                    </div>`;
+                });
+
+                container.innerHTML = html;
+                attachMarkInputListeners();
+            } catch(e) {
+                console.warn('Offline class render notice:', e);
+            }
+        }
         
-        document.addEventListener('DOMContentLoaded', () => { 
+        document.addEventListener('DOMContentLoaded', async () => { 
             updateTotal(); 
+
+            // If user clicked another class while offline, render that class!
+            await checkOfflineClassSwitch();
+
+            // Restore any offline pending marks from IndexedDB
+            const activeCid = parseInt(new URLSearchParams(window.location.search).get('class_id')) || (<?php echo $selected_class_id ?: 0; ?>);
+            if (window.OfflineDB && OfflineDB.getMarksByClass) {
+                try {
+                    const localMarks = await OfflineDB.getMarksByClass(activeCid, <?php echo $semester_id ?: 0; ?>);
+                    localMarks.forEach(lm => {
+                        const card = document.querySelector(`.student-card[data-student-id="${lm.student_id}"]`);
+                        if (card) {
+                            ['assignment', 'participation', 'attendance', 'mid', 'final'].forEach(f => {
+                                if (lm[f] !== undefined && lm[f] !== null) {
+                                    const inp = card.querySelector(`.mark-input[data-field="${f}"]`);
+                                    if (inp && (!inp.value || lm.dirty)) {
+                                        inp.value = lm[f];
+                                    }
+                                }
+                            });
+                            updateStudentTotal(lm.student_id);
+                        }
+                    });
+                } catch(e) {
+                    console.debug('Offline marks load notice:', e);
+                }
+            }
             document.querySelectorAll('.student-card').forEach(c => { 
                 const sid = c.dataset.studentId; 
                 if(sid) updateStudentTotal(sid); 

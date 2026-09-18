@@ -30,7 +30,7 @@ $user_name = $_SESSION['user_name'] ?? 'የክፍል ጸሐፊ';
 
 // Get admin contact
 $admin1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_name_1'");
-$admin1 = $admin1_row ? $admin1_row['setting_value'] : 'አስተዳዳሪ';
+$admin1 = $admin1_row ? $admin1_row['setting_value'] : 'ትምህርት ክፍል';
 $phone1_row = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'admin_phone_1'");
 $phone1 = $phone1_row ? $phone1_row['setting_value'] : '';
 
@@ -197,14 +197,14 @@ if ($selected_class_id > 0) {
 
 // Get existing attendance
 $attendance_data = [];
-if (!empty($students) && !empty($teachers) && !empty($eth_month_days)) {
+if (!empty($students) && !empty($eth_month_days)) {
     $first_date = $eth_month_days[0]['greg_date'];
     $last_date = $eth_month_days[count($eth_month_days)-1]['greg_date'];
     
     $records = dbFetchAll(
         $conn,
         "SELECT student_id, attendance_date, status FROM attendance_records 
-         WHERE class_id = ? AND attendance_date BETWEEN ? AND ?",
+         WHERE class_id = ? AND attendance_date BETWEEN ? AND ? AND (is_deleted = 0 OR is_deleted IS NULL)",
         "iss",
         [$selected_class_id, $first_date, $last_date]
     );
@@ -242,8 +242,8 @@ if (isset($_POST['ajax_save_attendance'])) {
         exit();
     }
 
-    // Validate status
-    if (!in_array($status, ['present', 'absent', 'permission'])) {
+    // Validate status (includes remove / uncheck)
+    if (!in_array($status, ['present', 'absent', 'permission', 'remove', 'uncheck'])) {
         echo json_encode(['success' => false, 'message' => 'invalid_status']);
         exit();
     }
@@ -281,6 +281,13 @@ if (isset($_POST['ajax_save_attendance'])) {
     
     if (strtotime($date) > strtotime(date('Y-m-d'))) {
         echo json_encode(['success' => false, 'message' => 'future']);
+        exit();
+    }
+    
+    // Handle Removal / Uncheck
+    if ($status === 'remove' || $status === 'uncheck') {
+        $success = deleteAttendanceRecord($conn, $student_id, $class_id, $date);
+        echo json_encode(['success' => (bool)$success, 'status' => 'removed', 'action' => 'removed']);
         exit();
     }
     
@@ -455,22 +462,24 @@ $nav_active = 'dashboard_attendance';
         .day-name { font-size: 9px; line-height: 1.1; color: #333; font-weight: 600; }
         .day-name.sat { color: #059669; font-weight: 700; }
 
-        .att-cell { display: flex; gap: 2px; justify-content: center; }
+        .att-cell { display: flex; gap: 2px; justify-content: center; user-select: none; }
         .att-dot {
             width: 16px; height: 16px; border-radius: 50%; cursor: pointer;
             border: 2px solid transparent; transition: all 0.15s; display: inline-block;
+            -webkit-tap-highlight-color: transparent;
         }
-        .att-dot:active { transform: scale(1.3); }
+        .att-dot:hover { transform: scale(1.2); }
+        .att-dot:active { transform: scale(1.35); }
         .att-dot.present { background: #D1FAE5; border-color: var(--success); }
-        .att-dot.present.active { background: var(--success); }
+        .att-dot.present.active { background: var(--success); box-shadow: 0 0 0 2px rgba(16,185,129,0.4); }
         .att-dot.absent { background: #FEE2E2; border-color: var(--danger); }
-        .att-dot.absent.active { background: var(--danger); }
+        .att-dot.absent.active { background: var(--danger); box-shadow: 0 0 0 2px rgba(239,68,68,0.4); }
         .att-dot.permission { background: #FEF3C7; border-color: var(--warning); }
-        .att-dot.permission.active { background: var(--warning); }
+        .att-dot.permission.active { background: var(--warning); box-shadow: 0 0 0 2px rgba(245,158,11,0.4); }
         .att-dot.late { background: #DBEAFE; border-color: #3B82F6; }
-        .att-dot.late.active { background: #3B82F6; }
+        .att-dot.late.active { background: #3B82F6; box-shadow: 0 0 0 2px rgba(59,130,246,0.4); }
         .att-dot.excused { background: #E9D5FF; border-color: #8B5CF6; }
-        .att-dot.excused.active { background: #8B5CF6; }
+        .att-dot.excused.active { background: #8B5CF6; box-shadow: 0 0 0 2px rgba(139,92,246,0.4); }
         .att-dot.empty { background: #F3F4F6; border-color: #D1D5DB; }
         .no-click { cursor: not-allowed; opacity: 0.3; pointer-events: none; }
         .closed-cell { background: #E5E7EB; text-align:center; padding:5px; font-size:9px; color:#6B7280; }
@@ -537,6 +546,9 @@ $nav_active = 'dashboard_attendance';
                     <div class="legend-item"><span class="legend-dot ld-absent"></span> ❌ አልተገኘም</div>
                     <div class="legend-item"><span class="legend-dot ld-permission"></span> 📝 በፈቃድ</div>
                     <div class="legend-item"><span class="legend-dot ld-closed"></span> 🚫 ትምህርት የለም</div>
+                    <div class="legend-item" style="color:var(--primary); font-weight:600; background:rgba(218,165,32,0.15); padding:3px 10px; border-radius:8px;">
+                        <span>💡</span> የተሳሳተን ለማጥፋት፡ የበራውን ነጥብ ድጋሚ ይጫኑ (ወይም ሁለቴ ይጫኑ)
+                    </div>
                 </div>
             </div>
 
@@ -591,13 +603,21 @@ $nav_active = 'dashboard_attendance';
                                     <?php if($day['is_closed']): ?>
                                     <div class="closed-cell">🚫<br>ዝግ</div>
                                     <?php elseif($day['clickable']): ?>
-                                    <div class="att-cell">
+                                    <div class="att-cell" 
+                                         ondblclick="removeAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>',this,event)"
+                                         title="አቴንዳንስ ለመመዝገብ ይጫኑ፤ ለማጥፋት የበራውን ድጋሚ ወይም ሁለቴ ይጫኑ">
                                         <span class="att-dot present <?php echo $stat == 'present' ? 'active' : ''; ?>"
-                                              onclick="saveAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>','present',this)" title="ተገኝቷል"></span>
+                                              onclick="saveAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>','present',this,event)"
+                                              ondblclick="removeAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>',this,event)"
+                                              title="<?php echo $stat == 'present' ? 'ተገኝቷል (ለማጥፋት ድጋሚ ይጫኑ)' : 'ተገኝቷል'; ?>"></span>
                                         <span class="att-dot absent <?php echo $stat == 'absent' ? 'active' : ''; ?>"
-                                              onclick="saveAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>','absent',this)" title="አልተገኘም"></span>
+                                              onclick="saveAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>','absent',this,event)"
+                                              ondblclick="removeAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>',this,event)"
+                                              title="<?php echo $stat == 'absent' ? 'አልተገኘም (ለማጥፋት ድጋሚ ይጫኑ)' : 'አልተገኘም'; ?>"></span>
                                         <span class="att-dot permission <?php echo $stat == 'permission' ? 'active' : ''; ?>"
-                                              onclick="saveAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>','permission',this)" title="በፈቃድ"></span>
+                                              onclick="saveAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>','permission',this,event)"
+                                              ondblclick="removeAtt(<?php echo $sid; ?>,'<?php echo $day['greg_date']; ?>',this,event)"
+                                              title="<?php echo $stat == 'permission' ? 'በፈቃድ (ለማጥፋት ድጋሚ ይጫኑ)' : 'በፈቃድ'; ?>"></span>
                                     </div>
                                     <?php else: ?>
                                     <div class="att-cell"><span class="att-dot empty no-click"></span></div>
@@ -628,12 +648,95 @@ $nav_active = 'dashboard_attendance';
         }
 
         const classId = <?php echo $selected_class_id ?: 0; ?>;
-        
-        async function saveAtt(studentId, date, status, el) {
-            const cell = el.closest('td');
-            cell.querySelectorAll('.att-dot').forEach(d => d.classList.remove('active'));
+        const lastRemovalTimestamps = {};
+
+        async function removeAtt(studentId, date, cellOrEl, ev) {
+            if (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+            }
+            const cell = (cellOrEl.classList && cellOrEl.classList.contains('att-cell') ? cellOrEl : cellOrEl.closest('.att-cell')) || cellOrEl.closest('td');
+            const key = studentId + '_' + date;
+            lastRemovalTimestamps[key] = Date.now();
+
+            // Visually clear active states
+            cell.querySelectorAll('.att-dot').forEach(d => {
+                d.classList.remove('active');
+                if (d.classList.contains('present')) d.title = 'ተገኝቷል';
+                else if (d.classList.contains('absent')) d.title = 'አልተገኘም';
+                else if (d.classList.contains('permission')) d.title = 'በፈቃድ';
+            });
+
+            const toast = document.getElementById('toast');
+            toast.textContent = '⏳ አቴንዳንሱን በማጥፋት ላይ...';
+            toast.style.background = '#4B5563';
+            toast.classList.add('show');
+
+            // Offline IndexedDB deletion
+            if (window.OfflineDB && OfflineDB.deleteAttendanceLocal) {
+                try {
+                    await OfflineDB.deleteAttendanceLocal(studentId, classId, date);
+                } catch (e) {
+                    console.warn('Local DB remove error:', e);
+                }
+            }
+
+            const fd = new FormData();
+            fd.append('ajax_save_attendance', '1');
+            fd.append('student_id', studentId);
+            fd.append('class_id', classId);
+            fd.append('attendance_date', date);
+            fd.append('status', 'remove');
+
+            fetch(window.location.href, { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    toast.textContent = '🗑️ አቴንዳንሱ ተሰርዟል! (ያልተሞላ ሆነ)';
+                    toast.style.background = '#4B5563';
+                    if (window.SyncManager && SyncManager.pushChanges) {
+                        SyncManager.pushChanges();
+                    }
+                } else {
+                    toast.textContent = '❌ ስህተት ተከስቷል!';
+                    toast.style.background = '#EF4444';
+                }
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            })
+            .catch(() => {
+                toast.textContent = '💾 Offline ተሰርዟል!';
+                toast.style.background = '#3B82F6';
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            });
+        }
+
+        async function saveAtt(studentId, date, status, el, ev) {
+            if (ev) ev.stopPropagation();
+            const cell = el.closest('td') || el.closest('.att-cell');
+            const key = studentId + '_' + date;
+            const now = Date.now();
+
+            // Prevent double-click bounce
+            if (lastRemovalTimestamps[key] && (now - lastRemovalTimestamps[key] < 400)) {
+                return;
+            }
+
+            const isAlreadyActive = el.classList.contains('active');
+
+            // TOGGLE OFF: If user clicks the currently active dot, uncheck and remove it!
+            if (isAlreadyActive) {
+                return removeAtt(studentId, date, el, ev);
+            }
+
+            cell.querySelectorAll('.att-dot').forEach(d => {
+                d.classList.remove('active');
+                if (d.classList.contains('present')) d.title = 'ተገኝቷል';
+                else if (d.classList.contains('absent')) d.title = 'አልተገኘም';
+                else if (d.classList.contains('permission')) d.title = 'በፈቃድ';
+            });
             el.classList.add('active');
-            
+            el.title = (status === 'present' ? 'ተገኝቷል' : (status === 'absent' ? 'አልተገኘም' : 'በፈቃድ')) + ' (ለማጥፋት ድጋሚ ይጫኑ)';
+
             const toast = document.getElementById('toast');
             toast.textContent = '⏳ በማስቀመጥ ላይ...';
             toast.style.background = '#F59E0B';
@@ -649,24 +752,30 @@ $nav_active = 'dashboard_attendance';
             };
 
             // Always store to IndexedDB for seamless offline resilience
-            await OfflineDB.saveAttendanceLocal(attRecord);
-            
-            
-            
+            if (window.OfflineDB && OfflineDB.saveAttendanceLocal) {
+                try {
+                    await OfflineDB.saveAttendanceLocal(attRecord);
+                } catch (e) {
+                    console.warn('Local DB save error:', e);
+                }
+            }
+
             const fd = new FormData();
             fd.append('ajax_save_attendance', '1');
             fd.append('student_id', studentId);
             fd.append('class_id', classId);
             fd.append('attendance_date', date);
             fd.append('status', status);
-            
+
             fetch(window.location.href, { method: 'POST', body: fd })
             .then(r => r.json())
             .then(d => {
                 if(d.success) {
                     toast.textContent = '✅ ተቀምጧል & ተመሳስሏል!';
                     toast.style.background = '#10B981';
-                    SyncManager.pushChanges();
+                    if (window.SyncManager && SyncManager.pushChanges) {
+                        SyncManager.pushChanges();
+                    }
                 } else {
                     toast.textContent = '❌ ስህተት!';
                     toast.style.background = '#EF4444';
@@ -675,11 +784,35 @@ $nav_active = 'dashboard_attendance';
                 setTimeout(() => toast.classList.remove('show'), 2000);
             })
             .catch(() => {
-                toast.textContent = '💾 ከመስመር ውጭ ተቀምጧል!';
+                toast.textContent = '💾 Offline ተቀምጧል!';
                 toast.style.background = '#3B82F6';
                 setTimeout(() => toast.classList.remove('show'), 2000);
             });
         }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.OfflineDB && OfflineDB.getAllAttendance) {
+                try {
+                    const allAtt = await OfflineDB.getAllAttendance();
+                    const classAtt = allAtt.filter(r => parseInt(r.class_id) === classId);
+                    classAtt.forEach(r => {
+                        const row = document.querySelector(`tr[data-student-id="${r.student_id}"]`);
+                        if (!row) return;
+                        const td = row.querySelector(`td[data-date="${r.attendance_date}"]`);
+                        if (!td) return;
+                        const cell = td.querySelector('.att-cell');
+                        if (!cell) return;
+                        cell.querySelectorAll('.att-dot').forEach(d => d.classList.remove('active'));
+                        if (r.status && r.status !== 'remove' && r.status !== 'uncheck' && r.status !== 'deleted') {
+                            const dot = cell.querySelector(`.att-dot.${r.status}`);
+                            if (dot) dot.classList.add('active');
+                        }
+                    });
+                } catch (e) {
+                    console.debug('Offline attendance overlay error:', e);
+                }
+            }
+        });
     </script>
 </body>
 </html>

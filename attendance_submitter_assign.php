@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                     
                     if ($inserted) {
-                        $message = "የክፍል ጸሐፊው በተሳካ ሁኔታ ተመድቧል!";
+                        $message = "የክፍል ጸሐፊው በትክክል ተመድቧል!";
                     } else {
                         $error = "ስህተት ተከስቷል!";
                     }
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         [$name, $username, $phone, $password]
                     );
                     if ($created) {
-                        $message = "አዲስ የክፍል ጸሐፊ በተሳካ ሁኔታ ተመዝግቧል! የመጀመሪያ የይለፍ ቃል: 123";
+                        $message = "አዲስ የክፍል ጸሐፊ በትክክል ተመዝግቧል! የመጀመሪያ የይለፍ ቃል: 123";
                     } else {
                         $error = "ስህተት ተከስቷል!";
                     }
@@ -309,6 +309,155 @@ $nav_active = 'attendance_submitter_assign';
         }
         .add-submitter-form h4 { color: var(--purple); margin-bottom: 15px; }
 
+        /* Dark Mode Direct Page Overrides */
+        html.dark-mode,
+        html[data-theme="dark"],
+        body.dark-mode {
+            --bg-cream: #0B1120 !important;
+            --card-bg: #1E293B !important;
+            --text-main: #F1F5F9 !important;
+            --brown-dark: #FCD34D !important;
+            --gold-pale: rgba(245, 158, 11, 0.15) !important;
+        }
+
+        html.dark-mode body,
+        body.dark-mode,
+        html[data-theme="dark"] body {
+            background: #0B1120 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .nav,
+        body.dark-mode .nav,
+        [data-theme="dark"] .nav {
+            background: #1E293B !important;
+            border-bottom: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .nav-link,
+        body.dark-mode .nav-link,
+        [data-theme="dark"] .nav-link {
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .nav-link:hover,
+        body.dark-mode .nav-link:hover,
+        [data-theme="dark"] .nav-link:hover {
+            background: #334155 !important;
+            color: #FCD34D !important;
+            border-color: #F59E0B !important;
+        }
+
+        html.dark-mode .card,
+        body.dark-mode .card,
+        [data-theme="dark"] .card {
+            background: #1E293B !important;
+            border: 2px solid #334155 !important;
+            color: #F1F5F9 !important;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3) !important;
+        }
+
+        html.dark-mode .card-title,
+        body.dark-mode .card-title,
+        [data-theme="dark"] .card-title {
+            color: #FCD34D !important;
+            border-bottom: 2px solid #334155 !important;
+        }
+
+        html.dark-mode .class-card-item,
+        body.dark-mode .class-card-item,
+        [data-theme="dark"] .class-card-item {
+            background: #162032 !important;
+            border: 1.5px solid #334155 !important;
+            color: #F1F5F9 !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        html.dark-mode .class-card-item:hover,
+        body.dark-mode .class-card-item:hover,
+        [data-theme="dark"] .class-card-item:hover {
+            border-color: #F59E0B !important;
+        }
+
+        html.dark-mode .class-card-item h3,
+        body.dark-mode .class-card-item h3,
+        [data-theme="dark"] .class-card-item h3 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .class-card-item .info,
+        body.dark-mode .class-card-item .info,
+        [data-theme="dark"] .class-card-item .info {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .submitter-tag,
+        body.dark-mode .submitter-tag,
+        [data-theme="dark"] .submitter-tag {
+            background: #0F172A !important;
+            border: 1px solid #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .add-submitter-form,
+        body.dark-mode .add-submitter-form,
+        [data-theme="dark"] .add-submitter-form {
+            background: #162032 !important;
+            border: 2px dashed #8B5CF6 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .add-submitter-form h4,
+        body.dark-mode .add-submitter-form h4,
+        [data-theme="dark"] .add-submitter-form h4 {
+            color: #C4B5FD !important;
+        }
+
+        html.dark-mode .add-submitter-form small,
+        body.dark-mode .add-submitter-form small,
+        [data-theme="dark"] .add-submitter-form small {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .form-group label,
+        body.dark-mode .form-group label,
+        [data-theme="dark"] .form-group label {
+            color: #CBD5E1 !important;
+        }
+
+        html.dark-mode .form-group select,
+        html.dark-mode .form-group input,
+        body.dark-mode .form-group select,
+        body.dark-mode .form-group input,
+        [data-theme="dark"] .form-group select,
+        [data-theme="dark"] .form-group input {
+            background: #0F172A !important;
+            color: #F8FAFC !important;
+            border: 1.5px solid #475569 !important;
+        }
+
+        html.dark-mode th,
+        body.dark-mode th,
+        [data-theme="dark"] th {
+            background: #0F172A !important;
+            color: #FCD34D !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode td,
+        body.dark-mode td,
+        [data-theme="dark"] td {
+            background: #1E293B !important;
+            color: #E2E8F0 !important;
+            border-bottom: 1px solid #334155 !important;
+        }
+
+        html.dark-mode tr:hover td,
+        body.dark-mode tr:hover td,
+        [data-theme="dark"] tr:hover td {
+            background: #26354A !important;
+        }
+
         @media (max-width: 768px) {
             .main-container { padding: 0 12px 30px; margin: 15px auto; }
             .card { padding: 16px 12px; border-radius: 12px; margin-bottom: 18px; }
@@ -499,7 +648,7 @@ $nav_active = 'attendance_submitter_assign';
                         </div>
                     </div>
                     <button type="submit" name="add_submitter" class="btn btn-add" style="margin-top:15px;">
-                        ➕ አዲስ የክፍል ጸሐፊ ፍጠር
+                        ➕ አዲስ የክፍል ጸሐፊ መዝግብ
                     </button>
                     <small style="display:block; margin-top:8px; color:#666;">
                         💡 ነባሪ የይለፍ ቃል: <strong>123</strong> (ተጠቃሚው መጀመሪያ ሲገባ ይቀይረዋል)

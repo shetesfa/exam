@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fix_duplicates'])) {
     <div class="card">
         <div class="icon">🧹</div>
         <h1>ተደጋጋሚ ተማሪዎችን አስተካክል</h1>
-        <p>ይህ በውሂብ ጎታ ውስጥ ያሉ ተደጋጋሚ ተማሪዎችን ያስወግዳል።<br>
+        <p>ይህ በዳታቤዝ ውስጥ ያሉ ተደጋጋሚ ተማሪዎችን ያስወግዳል።<br>
         የመጀመሪያውን መዝገብ በመተው ተደጋጋሚዎቹን ይሰርዛል።</p>
 
         <?php if ($message): ?>

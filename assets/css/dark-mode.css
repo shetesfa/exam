@@ -2772,3 +2772,1078 @@ body.dark-mode tr:hover td,
 [data-theme="dark"] tr:hover td {
   background-color: #26354A !important;
 }
+
+/* ============================================================
+   ADMIN & MANAGEMENT PAGES COMPLETE DARK THEME OVERRIDES
+   attendance_submitter_assign, manage_teachers, manage_students,
+   manage_classes, manage_users, manage_assignments, etc.
+   ============================================================ */
+
+/* ── 1. ATTENDANCE SUBMITTER ASSIGNMENT (attendance_submitter_assign.php) ── */
+html.dark-mode .class-card-item,
+body.dark-mode .class-card-item,
+[data-theme="dark"] .class-card-item {
+  background-color: #162032 !important;
+  background: #162032 !important;
+  border: 1.5px solid #334155 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark-mode .class-card-item:hover,
+body.dark-mode .class-card-item:hover,
+[data-theme="dark"] .class-card-item:hover {
+  border-color: #F59E0B !important;
+  transform: translateY(-2px);
+}
+
+html.dark-mode .class-card-item h3,
+body.dark-mode .class-card-item h3,
+[data-theme="dark"] .class-card-item h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-card-item .info,
+body.dark-mode .class-card-item .info,
+[data-theme="dark"] .class-card-item .info {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .submitter-tag,
+body.dark-mode .submitter-tag,
+[data-theme="dark"] .submitter-tag {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .submitter-tag button,
+body.dark-mode .submitter-tag button,
+[data-theme="dark"] .submitter-tag button {
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .add-submitter-form,
+body.dark-mode .add-submitter-form,
+[data-theme="dark"] .add-submitter-form {
+  background-color: #162032 !important;
+  background: #162032 !important;
+  border: 2px dashed #8B5CF6 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .add-submitter-form h4,
+body.dark-mode .add-submitter-form h4,
+[data-theme="dark"] .add-submitter-form h4 {
+  color: #C4B5FD !important;
+}
+
+html.dark-mode .add-submitter-form small,
+body.dark-mode .add-submitter-form small,
+[data-theme="dark"] .add-submitter-form small {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .add-submitter-form small strong,
+body.dark-mode .add-submitter-form small strong,
+[data-theme="dark"] .add-submitter-form small strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .no-assignment,
+body.dark-mode .no-assignment,
+[data-theme="dark"] .no-assignment {
+  color: #94A3B8 !important;
+}
+
+/* ── 2. TEACHERS MANAGEMENT (manage_teachers.php) ── */
+html.dark-mode .teacher-history-box,
+body.dark-mode .teacher-history-box,
+[data-theme="dark"] .teacher-history-box {
+  background-color: #162032 !important;
+  background: #162032 !important;
+  border: 1px solid #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .history-toggle-title,
+body.dark-mode .history-toggle-title,
+[data-theme="dark"] .history-toggle-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .history-content,
+body.dark-mode .history-content,
+[data-theme="dark"] .history-content {
+  border-top: 1px dashed #334155 !important;
+}
+
+html.dark-mode .history-content strong,
+body.dark-mode .history-content strong,
+[data-theme="dark"] .history-content strong {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-chip,
+body.dark-mode .class-chip,
+[data-theme="dark"] .class-chip {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .class-chip.locked,
+body.dark-mode .class-chip.locked,
+[data-theme="dark"] .class-chip.locked {
+  background-color: #3B1212 !important;
+  background: #3B1212 !important;
+  border-color: #DC2626 !important;
+  color: #FCA5A5 !important;
+}
+
+html.dark-mode .teacher-user-tag,
+body.dark-mode .teacher-user-tag,
+[data-theme="dark"] .teacher-user-tag {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #94A3B8 !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .teacher-phone,
+body.dark-mode .teacher-phone,
+[data-theme="dark"] .teacher-phone {
+  color: #60A5FA !important;
+}
+
+html.dark-mode .requests-card,
+body.dark-mode .requests-card,
+[data-theme="dark"] .requests-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 2px solid #F59E0B !important;
+}
+
+html.dark-mode .requests-card-header,
+body.dark-mode .requests-card-header,
+[data-theme="dark"] .requests-card-header {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .req-item,
+body.dark-mode .req-item,
+[data-theme="dark"] .req-item {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .req-info,
+body.dark-mode .req-info,
+[data-theme="dark"] .req-info {
+  color: #CBD5E1 !important;
+}
+
+html.dark-mode .req-info strong,
+body.dark-mode .req-info strong,
+[data-theme="dark"] .req-info strong {
+  color: #F8FAFC !important;
+}
+
+html.dark-mode .req-info code,
+body.dark-mode .req-info code,
+[data-theme="dark"] .req-info code {
+  background-color: #1E293B !important;
+  color: #FCD34D !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+html.dark-mode .req-info small,
+body.dark-mode .req-info small,
+[data-theme="dark"] .req-info small {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .btn-profile-link,
+body.dark-mode .btn-profile-link,
+[data-theme="dark"] .btn-profile-link {
+  background-color: #243247 !important;
+  background: #243247 !important;
+  color: #FCD34D !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .btn-profile-link:hover,
+body.dark-mode .btn-profile-link:hover,
+[data-theme="dark"] .btn-profile-link:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+}
+
+/* ── 3. MANAGEMENT ACTION BUTTONS (EDIT, RESET, DELETE) ── */
+html.dark-mode .btn-t-edit,
+html.dark-mode .btn-st-edit,
+html.dark-mode .btn-u-edit,
+html.dark-mode .btn-edit-cls,
+body.dark-mode .btn-t-edit,
+body.dark-mode .btn-st-edit,
+body.dark-mode .btn-u-edit,
+body.dark-mode .btn-edit-cls,
+[data-theme="dark"] .btn-t-edit,
+[data-theme="dark"] .btn-st-edit,
+[data-theme="dark"] .btn-u-edit,
+[data-theme="dark"] .btn-edit-cls {
+  background-color: #3B2A0F !important;
+  background: #3B2A0F !important;
+  color: #FCD34D !important;
+  border: 1px solid #78350F !important;
+}
+
+html.dark-mode .btn-t-edit:hover,
+html.dark-mode .btn-st-edit:hover,
+html.dark-mode .btn-u-edit:hover,
+html.dark-mode .btn-edit-cls:hover,
+body.dark-mode .btn-t-edit:hover,
+body.dark-mode .btn-st-edit:hover,
+body.dark-mode .btn-u-edit:hover,
+body.dark-mode .btn-edit-cls:hover,
+[data-theme="dark"] .btn-t-edit:hover,
+[data-theme="dark"] .btn-st-edit:hover,
+[data-theme="dark"] .btn-u-edit:hover,
+[data-theme="dark"] .btn-edit-cls:hover {
+  background-color: #4D3814 !important;
+}
+
+html.dark-mode .btn-t-reset,
+html.dark-mode .btn-st-reset,
+html.dark-mode .btn-u-reset,
+body.dark-mode .btn-t-reset,
+body.dark-mode .btn-st-reset,
+body.dark-mode .btn-u-reset,
+[data-theme="dark"] .btn-t-reset,
+[data-theme="dark"] .btn-st-reset,
+[data-theme="dark"] .btn-u-reset {
+  background-color: #1E1B4B !important;
+  background: #1E1B4B !important;
+  color: #A5B4FC !important;
+  border: 1px solid #3730A3 !important;
+}
+
+html.dark-mode .btn-t-reset:hover,
+html.dark-mode .btn-st-reset:hover,
+html.dark-mode .btn-u-reset:hover,
+body.dark-mode .btn-t-reset:hover,
+body.dark-mode .btn-st-reset:hover,
+body.dark-mode .btn-u-reset:hover,
+[data-theme="dark"] .btn-t-reset:hover,
+[data-theme="dark"] .btn-st-reset:hover,
+[data-theme="dark"] .btn-u-reset:hover {
+  background-color: #2D2766 !important;
+}
+
+html.dark-mode .btn-t-del,
+html.dark-mode .btn-st-del,
+html.dark-mode .btn-u-del,
+html.dark-mode .btn-del-cls,
+body.dark-mode .btn-t-del,
+body.dark-mode .btn-st-del,
+body.dark-mode .btn-u-del,
+body.dark-mode .btn-del-cls,
+[data-theme="dark"] .btn-t-del,
+[data-theme="dark"] .btn-st-del,
+[data-theme="dark"] .btn-u-del,
+[data-theme="dark"] .btn-del-cls {
+  background-color: #3B1212 !important;
+  background: #3B1212 !important;
+  color: #FCA5A5 !important;
+  border: 1px solid #991B1B !important;
+}
+
+html.dark-mode .btn-t-del:hover,
+html.dark-mode .btn-st-del:hover,
+html.dark-mode .btn-u-del:hover,
+html.dark-mode .btn-del-cls:hover,
+body.dark-mode .btn-t-del:hover,
+body.dark-mode .btn-st-del:hover,
+body.dark-mode .btn-u-del:hover,
+body.dark-mode .btn-del-cls:hover,
+[data-theme="dark"] .btn-t-del:hover,
+[data-theme="dark"] .btn-st-del:hover,
+[data-theme="dark"] .btn-u-del:hover,
+[data-theme="dark"] .btn-del-cls:hover {
+  background-color: #501A1A !important;
+}
+
+/* ── 4. STUDENTS MANAGEMENT (manage_students.php) ── */
+html.dark-mode .portal-tip-card,
+body.dark-mode .portal-tip-card,
+[data-theme="dark"] .portal-tip-card {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1.5px solid #2563EB !important;
+  color: #93C5FD !important;
+}
+
+html.dark-mode .tip-content,
+body.dark-mode .tip-content,
+[data-theme="dark"] .tip-content {
+  color: #93C5FD !important;
+}
+
+html.dark-mode .tip-content strong,
+body.dark-mode .tip-content strong,
+[data-theme="dark"] .tip-content strong {
+  color: #BFDBFE !important;
+}
+
+html.dark-mode .tip-content a,
+body.dark-mode .tip-content a,
+[data-theme="dark"] .tip-content a {
+  color: #60A5FA !important;
+}
+
+html.dark-mode table.student-table th,
+body.dark-mode table.student-table th,
+[data-theme="dark"] table.student-table th {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border-bottom: 2px solid #334155 !important;
+}
+
+html.dark-mode table.student-table td,
+body.dark-mode table.student-table td,
+[data-theme="dark"] table.student-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+html.dark-mode table.student-table tbody tr:hover td,
+body.dark-mode table.student-table tbody tr:hover td,
+[data-theme="dark"] table.student-table tbody tr:hover td {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .student-name-text,
+body.dark-mode .student-name-text,
+[data-theme="dark"] .student-name-text {
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .btn-clear,
+body.dark-mode .btn-clear,
+[data-theme="dark"] .btn-clear {
+  background-color: #334155 !important;
+  background: #334155 !important;
+  color: #F1F5F9 !important;
+  border: 1px solid #475569 !important;
+}
+
+html.dark-mode .btn-clear:hover,
+body.dark-mode .btn-clear:hover,
+[data-theme="dark"] .btn-clear:hover {
+  background-color: #475569 !important;
+}
+
+html.dark-mode .pager-container,
+body.dark-mode .pager-container,
+[data-theme="dark"] .pager-container {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-top: 1px solid #334155 !important;
+}
+
+html.dark-mode .pager-controls a,
+body.dark-mode .pager-controls a,
+[data-theme="dark"] .pager-controls a {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  color: #F1F5F9 !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .pager-controls a:hover,
+body.dark-mode .pager-controls a:hover,
+[data-theme="dark"] .pager-controls a:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .pager-controls span.current,
+body.dark-mode .pager-controls span.current,
+[data-theme="dark"] .pager-controls span.current {
+  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+  color: #0F172A !important;
+  font-weight: 800 !important;
+}
+
+html.dark-mode .btn-portal-status.active,
+body.dark-mode .btn-portal-status.active,
+[data-theme="dark"] .btn-portal-status.active {
+  background-color: #064E3B !important;
+  color: #6EE7B7 !important;
+  border: 1px solid #059669 !important;
+}
+
+html.dark-mode .btn-portal-status.inactive,
+body.dark-mode .btn-portal-status.inactive,
+[data-theme="dark"] .btn-portal-status.inactive {
+  background-color: #1E293B !important;
+  color: #94A3B8 !important;
+  border: 1px solid #475569 !important;
+}
+
+html.dark-mode .pin-pill.new,
+body.dark-mode .pin-pill.new,
+[data-theme="dark"] .pin-pill.new {
+  background-color: #3B2A0F !important;
+  color: #FCD34D !important;
+  border: 1px solid #78350F !important;
+}
+
+html.dark-mode .pin-pill.active,
+body.dark-mode .pin-pill.active,
+[data-theme="dark"] .pin-pill.active {
+  background-color: #064E3B !important;
+  color: #6EE7B7 !important;
+  border: 1px solid #059669 !important;
+}
+
+/* ── 5. CLASSES MANAGEMENT (manage_classes.php) ── */
+html.dark-mode .class-metrics,
+body.dark-mode .class-metrics,
+[data-theme="dark"] .class-metrics {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .class-metric-val,
+body.dark-mode .class-metric-val,
+[data-theme="dark"] .class-metric-val {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-metric-lbl,
+body.dark-mode .class-metric-lbl,
+[data-theme="dark"] .class-metric-lbl {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .class-title,
+body.dark-mode .class-title,
+[data-theme="dark"] .class-title {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .class-desc,
+body.dark-mode .class-desc,
+[data-theme="dark"] .class-desc {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .btn-view-st,
+body.dark-mode .btn-view-st,
+[data-theme="dark"] .btn-view-st {
+  background-color: #1E1B4B !important;
+  background: #1E1B4B !important;
+  color: #93C5FD !important;
+  border: 1px solid #2563EB !important;
+}
+
+html.dark-mode .btn-view-st:hover,
+body.dark-mode .btn-view-st:hover,
+[data-theme="dark"] .btn-view-st:hover {
+  background-color: #2D2766 !important;
+}
+
+html.dark-mode .grade-tag.children,
+body.dark-mode .grade-tag.children,
+[data-theme="dark"] .grade-tag.children {
+  background-color: #1E3A8A !important;
+  color: #93C5FD !important;
+  border: 1px solid #3B82F6 !important;
+}
+
+html.dark-mode .grade-tag.youth,
+body.dark-mode .grade-tag.youth,
+[data-theme="dark"] .grade-tag.youth {
+  background-color: #3B2A0F !important;
+  color: #FCD34D !important;
+  border: 1px solid #78350F !important;
+}
+
+html.dark-mode .grade-tag.unassigned,
+body.dark-mode .grade-tag.unassigned,
+[data-theme="dark"] .grade-tag.unassigned {
+  background-color: #0F172A !important;
+  color: #94A3B8 !important;
+  border: 1px solid #334155 !important;
+}
+
+/* ── 6. USERS MANAGEMENT (manage_users.php) ── */
+html.dark-mode table.users-table th,
+body.dark-mode table.users-table th,
+[data-theme="dark"] table.users-table th {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border-bottom: 2px solid #334155 !important;
+}
+
+html.dark-mode table.users-table td,
+body.dark-mode table.users-table td,
+[data-theme="dark"] table.users-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+html.dark-mode table.users-table tbody tr:hover td,
+body.dark-mode table.users-table tbody tr:hover td,
+[data-theme="dark"] table.users-table tbody tr:hover td {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .user-name-text,
+body.dark-mode .user-name-text,
+[data-theme="dark"] .user-name-text {
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .role-badge.admin,
+body.dark-mode .role-badge.admin,
+[data-theme="dark"] .role-badge.admin {
+  background-color: #3B0764 !important;
+  color: #D8B4FE !important;
+  border: 1px solid #7E22CE !important;
+}
+
+html.dark-mode .role-badge.teacher,
+body.dark-mode .role-badge.teacher,
+[data-theme="dark"] .role-badge.teacher {
+  background-color: #1E3A8A !important;
+  color: #93C5FD !important;
+  border: 1px solid #3B82F6 !important;
+}
+
+html.dark-mode .role-badge.submitter,
+body.dark-mode .role-badge.submitter,
+[data-theme="dark"] .role-badge.submitter {
+  background-color: #064E3B !important;
+  color: #6EE7B7 !important;
+  border: 1px solid #059669 !important;
+}
+
+/* ── 7. STICKY NAV BARS & MENUS ── */
+html.dark-mode .nav,
+html.dark-mode .site-nav,
+body.dark-mode .nav,
+body.dark-mode .site-nav,
+[data-theme="dark"] .nav,
+[data-theme="dark"] .site-nav {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-bottom: 1px solid #334155 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark-mode .nav-drawer,
+body.dark-mode .nav-drawer,
+[data-theme="dark"] .nav-drawer {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-top: 2px solid #334155 !important;
+}
+
+html.dark-mode .nav-link,
+body.dark-mode .nav-link,
+[data-theme="dark"] .nav-link {
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .nav-link:hover,
+body.dark-mode .nav-link:hover,
+[data-theme="dark"] .nav-link:hover {
+  background-color: #334155 !important;
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .nav-link.active,
+body.dark-mode .nav-link.active,
+[data-theme="dark"] .nav-link.active {
+  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+  color: #0F172A !important;
+  border-color: #F59E0B !important;
+  font-weight: 700 !important;
+}
+
+/* ── 8. ASSIGNMENTS (manage_assignments.php) ── */
+html.dark-mode .teacher-item,
+body.dark-mode .teacher-item,
+[data-theme="dark"] .teacher-item {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-left: 4px solid #F59E0B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .teacher-item:hover,
+body.dark-mode .teacher-item:hover,
+[data-theme="dark"] .teacher-item:hover {
+  background-color: #162032 !important;
+}
+
+html.dark-mode .teacher-icon,
+body.dark-mode .teacher-icon,
+[data-theme="dark"] .teacher-icon {
+  background-color: #1E293B !important;
+  color: #FCD34D !important;
+  box-shadow: none !important;
+}
+
+html.dark-mode .teacher-table-container,
+body.dark-mode .teacher-table-container,
+[data-theme="dark"] .teacher-table-container {
+  background-color: #1E293B !important;
+  border: 1px solid #334155 !important;
+}
+
+html.dark-mode .teacher-table th,
+body.dark-mode .teacher-table th,
+[data-theme="dark"] .teacher-table th {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #FCD34D !important;
+  border-bottom: 2px solid #334155 !important;
+}
+
+html.dark-mode .teacher-table td,
+body.dark-mode .teacher-table td,
+[data-theme="dark"] .teacher-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+html.dark-mode .teacher-table tbody tr:hover,
+html.dark-mode .teacher-table tbody tr:hover td,
+body.dark-mode .teacher-table tbody tr:hover,
+body.dark-mode .teacher-table tbody tr:hover td,
+[data-theme="dark"] .teacher-table tbody tr:hover,
+[data-theme="dark"] .teacher-table tbody tr:hover td {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .semester-info-card,
+body.dark-mode .semester-info-card,
+[data-theme="dark"] .semester-info-card {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border: 1.5px solid #F59E0B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .semester-details h3,
+body.dark-mode .semester-details h3,
+[data-theme="dark"] .semester-details h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .semester-details p,
+body.dark-mode .semester-details p,
+[data-theme="dark"] .semester-details p {
+  color: #94A3B8 !important;
+}
+
+/* ── 9. ATTENDANCE DAYS & CALENDAR (attendance_days_control.php) ── */
+html.dark-mode .day-card,
+body.dark-mode .day-card,
+[data-theme="dark"] .day-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 2px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .day-card.open,
+body.dark-mode .day-card.open,
+[data-theme="dark"] .day-card.open {
+  background-color: #064E3B !important;
+  border-color: #059669 !important;
+  color: #ECFDF5 !important;
+}
+
+html.dark-mode .day-card.closed,
+body.dark-mode .day-card.closed,
+[data-theme="dark"] .day-card.closed {
+  background-color: #3B1212 !important;
+  border-color: #DC2626 !important;
+  color: #FEE2E2 !important;
+}
+
+html.dark-mode .stat-mini,
+body.dark-mode .stat-mini,
+[data-theme="dark"] .stat-mini {
+  background-color: #162032 !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .legend,
+body.dark-mode .legend,
+[data-theme="dark"] .legend {
+  background-color: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #CBD5E1 !important;
+}
+
+/* ── 10. ATTENDANCE CONTROLLER STICKY COLUMNS ── */
+html.dark-mode .table-scroll th:first-child,
+html.dark-mode .table-scroll td:first-child,
+html.dark-mode .table-scroll th:nth-child(2),
+html.dark-mode .table-scroll td:nth-child(2),
+body.dark-mode .table-scroll th:first-child,
+body.dark-mode .table-scroll td:first-child,
+body.dark-mode .table-scroll th:nth-child(2),
+body.dark-mode .table-scroll td:nth-child(2),
+[data-theme="dark"] .table-scroll th:first-child,
+[data-theme="dark"] .table-scroll td:first-child,
+[data-theme="dark"] .table-scroll th:nth-child(2),
+[data-theme="dark"] .table-scroll td:nth-child(2) {
+  background-color: #1E293B !important;
+  color: #F1F5F9 !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .table-scroll thead th:first-child,
+html.dark-mode .table-scroll thead th:nth-child(2),
+body.dark-mode .table-scroll thead th:first-child,
+body.dark-mode .table-scroll thead th:nth-child(2),
+[data-theme="dark"] .table-scroll thead th:first-child,
+[data-theme="dark"] .table-scroll thead th:nth-child(2) {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .table-scroll tbody tr:hover td:first-child,
+html.dark-mode .table-scroll tbody tr:hover td:nth-child(2),
+body.dark-mode .table-scroll tbody tr:hover td:first-child,
+body.dark-mode .table-scroll tbody tr:hover td:nth-child(2),
+[data-theme="dark"] .table-scroll tbody tr:hover td:first-child,
+[data-theme="dark"] .table-scroll tbody tr:hover td:nth-child(2) {
+  background-color: #26354A !important;
+}
+
+html.dark-mode .table-header-bar,
+body.dark-mode .table-header-bar,
+[data-theme="dark"] .table-header-bar {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-bottom: 2px solid #334155 !important;
+}
+
+/* ── 11. SEMESTER PAGE (semester.php) ── */
+html.dark-mode .sem-card,
+body.dark-mode .sem-card,
+[data-theme="dark"] .sem-card {
+  background-color: #1E293B !important;
+  border: 2px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .sem-card.active,
+body.dark-mode .sem-card.active,
+[data-theme="dark"] .sem-card.active {
+  border-color: #F59E0B !important;
+  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.15) !important;
+}
+
+html.dark-mode table.history-table th,
+body.dark-mode table.history-table th,
+[data-theme="dark"] table.history-table th {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode table.history-table td,
+body.dark-mode table.history-table td,
+[data-theme="dark"] table.history-table td {
+  background-color: #1E293B !important;
+  color: #E2E8F0 !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+html.dark-mode .btn-history-link,
+body.dark-mode .btn-history-link,
+[data-theme="dark"] .btn-history-link {
+  background-color: #334155 !important;
+  color: #F1F5F9 !important;
+  border: 1px solid #475569 !important;
+}
+
+html.dark-mode .btn-close-sem,
+body.dark-mode .btn-close-sem,
+[data-theme="dark"] .btn-close-sem {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+  border: 1px solid #991B1B !important;
+}
+
+/* ── 12. UNIVERSAL FORM CONTROLS & BORDERS RESET (Kills All White Backgrounds) ── */
+html.dark-mode input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+html.dark-mode select,
+html.dark-mode textarea,
+body.dark-mode input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+body.dark-mode select,
+body.dark-mode textarea,
+[data-theme="dark"] input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+  border-color: #475569 !important;
+}
+
+html.dark-mode input:focus,
+html.dark-mode select:focus,
+html.dark-mode textarea:focus,
+body.dark-mode input:focus,
+body.dark-mode select:focus,
+body.dark-mode textarea:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: #F59E0B !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+}
+
+html.dark-mode .badge,
+body.dark-mode .badge,
+[data-theme="dark"] .badge {
+  background-color: #0F172A !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .message.success,
+html.dark-mode .alert-success,
+html.dark-mode .msg-success,
+body.dark-mode .message.success,
+body.dark-mode .alert-success,
+body.dark-mode .msg-success,
+[data-theme="dark"] .message.success,
+[data-theme="dark"] .alert-success,
+[data-theme="dark"] .msg-success {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #6EE7B7 !important;
+  border-left: 4px solid #10B981 !important;
+  border-color: #059669 !important;
+}
+
+html.dark-mode .message.error,
+html.dark-mode .alert-error,
+html.dark-mode .msg-error,
+body.dark-mode .message.error,
+body.dark-mode .alert-error,
+body.dark-mode .msg-error,
+[data-theme="dark"] .message.error,
+[data-theme="dark"] .alert-error,
+[data-theme="dark"] .msg-error {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #FCA5A5 !important;
+  border-left: 4px solid #EF4444 !important;
+  border-color: #DC2626 !important;
+}
+
+/* ── 13. CLASS LOCKS (class_locks.php) ── */
+html.dark-mode .method-card,
+body.dark-mode .method-card,
+[data-theme="dark"] .method-card {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark-mode .method-card:hover,
+body.dark-mode .method-card:hover,
+[data-theme="dark"] .method-card:hover {
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .method-title,
+body.dark-mode .method-title,
+[data-theme="dark"] .method-title {
+  color: #FCD34D !important;
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .method-desc,
+body.dark-mode .method-desc,
+[data-theme="dark"] .method-desc {
+  color: #94A3B8 !important;
+}
+
+html.dark-mode .section,
+body.dark-mode .section,
+[data-theme="dark"] .section {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border: 1px solid #334155 !important;
+  color: #F1F5F9 !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark-mode .section-header,
+body.dark-mode .section-header,
+[data-theme="dark"] .section-header {
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .section-header h2,
+body.dark-mode .section-header h2,
+[data-theme="dark"] .section-header h2 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .lock-badge.badge-locked,
+body.dark-mode .lock-badge.badge-locked,
+[data-theme="dark"] .lock-badge.badge-locked {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+  border: 1px solid #991B1B !important;
+}
+
+html.dark-mode .lock-badge.badge-unlocked,
+body.dark-mode .lock-badge.badge-unlocked,
+[data-theme="dark"] .lock-badge.badge-unlocked {
+  background-color: #064E3B !important;
+  color: #6EE7B7 !important;
+  border: 1px solid #059669 !important;
+}
+
+html.dark-mode .toggle-btn.locked,
+body.dark-mode .toggle-btn.locked,
+[data-theme="dark"] .toggle-btn.locked {
+  background-color: #3B1212 !important;
+  color: #FCA5A5 !important;
+  border-color: #991B1B !important;
+}
+
+html.dark-mode .toggle-btn.unlocked,
+body.dark-mode .toggle-btn.unlocked,
+[data-theme="dark"] .toggle-btn.unlocked {
+  background-color: #064E3B !important;
+  color: #6EE7B7 !important;
+  border-color: #059669 !important;
+}
+
+html.dark-mode .info-box,
+body.dark-mode .info-box,
+[data-theme="dark"] .info-box {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-left-color: #3B82F6 !important;
+  color: #93C5FD !important;
+}
+
+/* ── 14. CURRICULUM MANAGEMENT (manage_curriculum.php) ── */
+html.dark-mode .books-sidebar,
+html.dark-mode .chapters-workspace,
+body.dark-mode .books-sidebar,
+body.dark-mode .chapters-workspace,
+[data-theme="dark"] .books-sidebar,
+[data-theme="dark"] .chapters-workspace {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .sidebar-header,
+body.dark-mode .sidebar-header,
+[data-theme="dark"] .sidebar-header {
+  background-color: #0F172A !important;
+  border-bottom-color: #334155 !important;
+}
+
+html.dark-mode .sidebar-header h3,
+body.dark-mode .sidebar-header h3,
+[data-theme="dark"] .sidebar-header h3 {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .book-item,
+body.dark-mode .book-item,
+[data-theme="dark"] .book-item {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .book-item:hover,
+body.dark-mode .book-item:hover,
+[data-theme="dark"] .book-item:hover {
+  background-color: #162032 !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .book-item.active,
+body.dark-mode .book-item.active,
+[data-theme="dark"] .book-item.active {
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.2), rgba(180, 83, 9, 0.3)) !important;
+  border-color: #F59E0B !important;
+}
+
+html.dark-mode .chapter-accordion,
+body.dark-mode .chapter-accordion,
+[data-theme="dark"] .chapter-accordion {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .subtopic-item,
+body.dark-mode .subtopic-item,
+[data-theme="dark"] .subtopic-item {
+  background-color: #162032 !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+/* ── 15. UNIVERSAL ELIMINATION OF LIGHT/WHITE BACKGROUNDS & BORDERS ── */
+html.dark-mode [class*="-white"],
+html.dark-mode .bg-white,
+html.dark-mode .bg-light,
+body.dark-mode [class*="-white"],
+body.dark-mode .bg-white,
+body.dark-mode .bg-light,
+[data-theme="dark"] [class*="-white"],
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-light {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode [class*="border-white"],
+body.dark-mode [class*="border-white"],
+[data-theme="dark"] [class*="border-white"] {
+  border-color: #334155 !important;
+}
+
+

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireLogin();
 
@@ -53,7 +53,73 @@ if (!is_dir('uploads/profile_requests')) {
     @mkdir('uploads/profile_requests', 0777, true);
 }
 
-// Handle Profile Change Request from Teacher (Teachers cannot directly edit; they submit request to Admin)
+// Helper for localized upload error message
+function getTeacherUploadErrorMessage($errorCode) {
+    switch ($errorCode) {
+        case UPLOAD_ERR_INI_SIZE:
+        case UPLOAD_ERR_FORM_SIZE:
+            return "የተመረጠው ፎቶ መጠን በጣም ትልቅ ነው (ከ 25MB በታች መሆን አለበት)!";
+        case UPLOAD_ERR_PARTIAL:
+            return "ፎቶው በከፊል ብቻ ነው የተጫነው፤ እባክዎ ደግመው ይሞክሩ።";
+        case UPLOAD_ERR_NO_FILE:
+            return "ምንም ፎቶ አልተመረጠም!";
+        case UPLOAD_ERR_NO_TMP_DIR:
+            return "ጊዜያዊ ማከማቻ አቃፊ አልተገኘም (Missing temporary folder)!";
+        case UPLOAD_ERR_CANT_WRITE:
+            return "ፎቶውን መጻፍ አልተቻለም (Failed to write file to disk)!";
+        case UPLOAD_ERR_EXTENSION:
+            return "የፋይል ጭነቱ በሰርቨር ቅጥያ ተቋርጧል (File upload stopped by extension)!";
+        default:
+            return "ያልታወቀ የምስል ጭነት ስህተት ተከስቷል (ስህተት ኮድ: " . intval($errorCode) . ")!";
+    }
+}
+
+// Handle Direct Profile Photo Upload (Admin OR Teacher for their own profile)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile_photo'])) {
+    if (!$is_admin && $logged_user_id !== $teacher_id) {
+        $error = "ይህን ፎቶ የመቀየር ፈቃድ የለዎትም!";
+    } elseif (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = "የደህንነት ማረጋገጫ አልተሳካም!";
+    } else {
+        if (!isset($_FILES['profile_photo']) || $_FILES['profile_photo']['error'] === UPLOAD_ERR_NO_FILE) {
+            $error = "እባክዎ የሚጫን ፎቶ ይምረጡ!";
+        } elseif ($_FILES['profile_photo']['error'] !== UPLOAD_ERR_OK) {
+            $error = getTeacherUploadErrorMessage($_FILES['profile_photo']['error']);
+        } else {
+            $file = $_FILES['profile_photo'];
+            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $isRealImage = @getimagesize($file['tmp_name']) !== false;
+
+            if (!$isRealImage || !in_array($ext, $allowed)) {
+                $error = "እባክዎ ትክክለኛ የምስል ፋይል ይምረጡ (JPG, PNG, WebP)!";
+            } elseif ($file['size'] > 26214400) { // 25MB
+                $error = "የፎቶው መጠን ከ 25MB መብለጥ የለበትም!";
+            } else {
+                $new_name = 'teacher_' . $teacher_id . '_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                $target_path = 'uploads/teachers/' . $new_name;
+
+                if (move_uploaded_file($file['tmp_name'], $target_path)) {
+                    $updated = dbExecute($conn, "UPDATE users SET photo = ? WHERE id = ?", "si", [$target_path, $teacher_id]);
+                    if ($updated) {
+                        $teacher['photo'] = $target_path;
+                        $teacher_photo = $target_path;
+                        if ($logged_user_id === $teacher_id) {
+                            $_SESSION['photo'] = $target_path;
+                        }
+                        $message = "የመገለጫ ፎቶው በትክክል ተቀይሯል!";
+                    } else {
+                        $error = "የዳታቤዝ መረጃ ማሻሻል አልተቻለም!";
+                    }
+                } else {
+                    $error = "ፎቶውን በ uploads/teachers ማከማቻ ማስቀመጥ አልተቻለም! የአቃፊ ፈቃድን ያረጋግጡ።";
+                }
+            }
+        }
+    }
+}
+
+// Handle Profile Change Request from Teacher (Teachers submit request to Admin)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_change_request'])) {
     if (!verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = "የደህንነት ማረጋገጫ አልተሳካም!";
@@ -64,22 +130,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_change_request
         $req_photo_path = null;
 
         // Check if photo is uploaded
-        if (!empty($_FILES['requested_photo']['name']) && $_FILES['requested_photo']['error'] === 0) {
-            $file = $_FILES['requested_photo'];
-            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $isRealImage = @getimagesize($file['tmp_name']) !== false;
-
-            if ($isRealImage && $file['size'] < 5242880 && in_array($ext, $allowed)) {
-                $new_name = 'req_teacher_' . $teacher_id . '_' . time() . '.' . $ext;
-                $target_path = 'uploads/profile_requests/' . $new_name;
-                if (move_uploaded_file($file['tmp_name'], $target_path)) {
-                    $req_photo_path = $target_path;
-                } else {
-                    $error = "ፎቶ መስቀል አልተቻለም!";
-                }
+        if (!empty($_FILES['requested_photo']['name'])) {
+            if ($_FILES['requested_photo']['error'] !== UPLOAD_ERR_OK) {
+                $error = getTeacherUploadErrorMessage($_FILES['requested_photo']['error']);
             } else {
-                $error = "እባክዎ ትክክለኛ የምስል ፋይል ይምረጡ (JPG, PNG - max 5MB)!";
+                $file = $_FILES['requested_photo'];
+                $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $isRealImage = @getimagesize($file['tmp_name']) !== false;
+
+                if ($isRealImage && $file['size'] <= 26214400 && in_array($ext, $allowed)) {
+                    $new_name = 'req_teacher_' . $teacher_id . '_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                    $target_path = 'uploads/profile_requests/' . $new_name;
+                    if (move_uploaded_file($file['tmp_name'], $target_path)) {
+                        $req_photo_path = $target_path;
+                    } else {
+                        $error = "ፎቶ መጫን አልተቻለም! የአቃፊ ፈቃድ ያረጋግጡ።";
+                    }
+                } else {
+                    $error = "እባክዎ ትክክለኛ የምስል ፋይል ይምረጡ (JPG, PNG, WebP - ከ 25MB በታች)!";
+                }
             }
         }
 
@@ -117,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_change_request
                         'manage_teachers.php#requests'
                     );
 
-                    $message = "የመረጃ ለውጥ ጥያቄዎ በተሳካ ሁኔታ ለአስተዳዳሪ ተልኳል! አስተዳዳሪው ሲያጸድቀው መረጃዎ በራስ-ሰር ይሻሻላል።";
+                    $message = "የመረጃ ለውጥ ጥያቄዎ በትክክል ለትምህርት ክፍል ተልኳል! ትምህርት ክፍሉ ሲያጸድቀው መረጃዎ በራስ-ሰር ይሻሻላል።";
                 } else {
                     $error = "ጥያቄውን መላክ አልተቻለም! እባክዎ እንደገና ይሞክሩ።";
                 }
@@ -151,7 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['approve_profile_reque
             createNotification(
                 $conn,
                 "✅ የመረጃ ለውጥ ጥያቄዎ ጸድቋል",
-                "ያቀረቡት የመረጃ ለውጥ ጥያቄ በአስተዳዳሪው ተቀባይነት አግኝቶ መረጃዎ ተሻሽሏል።",
+                "ያቀረቡት የመረጃ ለውጥ ጥያቄ በትምህርት ክፍሉ ተቀባይነት አግኝቶ መረጃዎ ተሻሽሏል።",
                 [['user_id' => $req['teacher_id']]],
                 'normal',
                 null,
@@ -161,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['approve_profile_reque
             $teacher['phone'] = $upPhone;
             $teacher_name = $upName;
             $teacher_phone = $upPhone ?: '---';
-            $message = "የመምህር መረጃ ለውጥ ጥያቄ በተሳካ ሁኔታ ጸድቋል!";
+            $message = "የመምህር መረጃ ለውጥ ጥያቄ በትክክል ጸድቋል!";
         }
     }
 }
@@ -210,19 +280,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_direct_update']
             $teacher_phone = $adm_phone ?: '---';
 
             // Check if photo is uploaded directly
-            if (!empty($_FILES['admin_photo']['name']) && $_FILES['admin_photo']['error'] === 0) {
-                $file = $_FILES['admin_photo'];
-                $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                $isRealImage = @getimagesize($file['tmp_name']) !== false;
+            if (!empty($_FILES['admin_photo']['name'])) {
+                if ($_FILES['admin_photo']['error'] !== UPLOAD_ERR_OK) {
+                    $error = getTeacherUploadErrorMessage($_FILES['admin_photo']['error']);
+                } else {
+                    $file = $_FILES['admin_photo'];
+                    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                    $isRealImage = @getimagesize($file['tmp_name']) !== false;
 
-                if ($isRealImage && $file['size'] < 5242880 && in_array($ext, $allowed)) {
-                    $new_name = 'teacher_' . $teacher_id . '_' . time() . '.' . $ext;
-                    $target_path = 'uploads/teachers/' . $new_name;
-                    if (move_uploaded_file($file['tmp_name'], $target_path)) {
-                        dbExecute($conn, "UPDATE users SET photo = ? WHERE id = ?", "si", [$target_path, $teacher_id]);
-                        $teacher['photo'] = $target_path;
-                        $teacher_photo = $target_path;
+                    if ($isRealImage && $file['size'] <= 26214400 && in_array($ext, $allowed)) {
+                        $new_name = 'teacher_' . $teacher_id . '_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                        $target_path = 'uploads/teachers/' . $new_name;
+                        if (move_uploaded_file($file['tmp_name'], $target_path)) {
+                            dbExecute($conn, "UPDATE users SET photo = ? WHERE id = ?", "si", [$target_path, $teacher_id]);
+                            $teacher['photo'] = $target_path;
+                            $teacher_photo = $target_path;
+                        } else {
+                            $error = "ፎቶውን ማስቀመጥ አልተቻለም! እባክዎ የ uploads/teachers አቃፊ ፈቃድን ያረጋግጡ።";
+                        }
+                    } else {
+                        $error = "እባክዎ ትክክለኛ የምስል ፋይል ይምረጡ (JPG, PNG, WebP - ከ 25MB በታች)!";
                     }
                 }
             }
@@ -233,7 +311,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_direct_update']
                 dbExecute($conn, "UPDATE users SET password = ? WHERE id = ?", "si", [$hashed_pwd, $teacher_id]);
             }
 
-            $message = "የመምህር መረጃ በቀጥታ ተሻሽሏል!";
+            if (empty($error)) {
+                $message = "የመምህር መረጃ በቀጥታ ተሻሽሏል!";
+            }
         } else {
             $error = "እባክዎ የመምህሩን ሙሉ ስም ያስገቡ!";
         }
@@ -274,9 +354,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_doc']) && isse
                     "isss",
                     [$teacher_id, $doc_name, $upload_path, $file_type]
                 );
-                $message = "ሰነዱ በተሳካ ሁኔታ ተሰቅሏል!";
+                $message = "ሰነዱ በትክክል ተጭኗል!";
             } else {
-                $error = "ሰነድ መስቀል አልተቻለም!";
+                $error = "ሰነድ መጫን አልተቻለም!";
             }
         } else {
             $error = "እባክዎ ትክክለኛ ፋይል ይምረጡ (PDF, Word, Excel, Images - max 20MB)!";
@@ -403,10 +483,20 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
         .avatar-box {
             position: relative; width: 110px; height: 110px;
             border-radius: 50%; border: 4px solid var(--gold-primary);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             background: white; flex-shrink: 0;
         }
-        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+        .avatar-edit-btn {
+            position: absolute; bottom: 0; right: 0;
+            width: 34px; height: 34px; border-radius: 50%;
+            background: var(--brown-dark); color: #FFD700;
+            border: 2px solid #FFD700; display: flex; align-items: center;
+            justify-content: center; font-size: 15px; cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4); transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .avatar-edit-btn:hover { transform: scale(1.1); background: #5C2404; color: #FFF; }
         .teacher-meta h1 { font-size: 24px; font-weight: 700; color: #FEF3C7; margin-bottom: 6px; }
         .teacher-meta .badge {
             display: inline-block; background: rgba(254, 243, 199, 0.2);
@@ -468,14 +558,94 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
             border: 1px solid var(--gold-primary); margin: 3px;
         }
 
-        /* Pending Request Notice */
+        /* Pending Request Notice Banner (Teacher View) */
         .request-banner {
             background: #FFFBEB; border: 1.5px solid var(--warning);
             border-radius: 14px; padding: 18px; margin-bottom: 20px;
+            color: #78350F;
         }
         .request-banner-title {
             font-weight: 700; color: #92400E; font-size: 15px;
             display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+        }
+
+        /* Admin Review Pending Card */
+        .pending-review-card {
+            border: 2px solid #F59E0B;
+            background: #FFFBEB;
+        }
+        .pending-review-card .card-header {
+            border-color: #FDE68A;
+        }
+        .pending-review-card .card-title {
+            color: #92400E;
+        }
+
+        /* Admin Direct Edit Card */
+        .admin-edit-card {
+            border: 2px solid #0284C7;
+            background: #F0F9FF;
+        }
+        .admin-edit-card .card-header {
+            border-color: #BAE6FD;
+        }
+        .admin-edit-card .card-title {
+            color: #0369A1;
+        }
+
+        /* Admin Reject Box */
+        .admin-reject-box {
+            display: none;
+            margin-top: 12px;
+            padding: 14px;
+            background: #FFF1F2;
+            border-radius: 10px;
+            border: 1px solid #FECACA;
+        }
+
+        /* Past Requests History Cards */
+        .req-history-card {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+        .req-history-card.approved {
+            background: #ECFDF5;
+            border: 1px solid #A7F3D0;
+            color: #065F46;
+        }
+        .req-history-card.rejected {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+            color: #991B1B;
+        }
+        .req-history-card .req-date {
+            color: #6B7280;
+            font-size: 11.5px;
+        }
+        .req-history-card .req-details {
+            margin-top: 6px;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        /* Rejection Admin Note / Feedback */
+        .req-admin-note {
+            margin-top: 8px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: #FEE2E2;
+            border-left: 4px solid #DC2626;
+            color: #7F1D1D;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .req-admin-note strong {
+            color: #991B1B;
+            display: inline-block;
+            margin-bottom: 2px;
         }
 
         /* Form Inputs */
@@ -484,6 +654,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
         .form-control {
             width: 100%; padding: 11px 14px; border: 1.5px solid #D1D5DB;
             border-radius: 10px; font-size: 14px; transition: all 0.2s;
+            background: #FFFFFF; color: #1F2937;
         }
         .form-control:focus { outline: none; border-color: var(--gold-dark); box-shadow: 0 0 0 3px rgba(218,165,32,0.15); }
         .form-text { font-size: 12px; color: #6B7280; margin-top: 4px; }
@@ -508,61 +679,275 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
             .hero-content { flex-direction: column; text-align: center; }
             .top-nav-bar { flex-direction: column; align-items: stretch; }
             .btn-action { justify-content: center; }
-        /* Dark Mode Support */
+        }
+
+        /* ============================================================
+           GLOBAL HIGH-CONTRAST DARK MODE SUPPORT
+           Matches html.dark-mode, html[data-theme="dark"], and body.dark-mode
+           ============================================================ */
+        html.dark-mode body,
+        html[data-theme="dark"] body,
         body.dark-mode {
-            background: #121212 !important;
-            color: #E0E0E0 !important;
+            background-color: #0B1120 !important;
+            color: #E2E8F0 !important;
         }
+
+        html.dark-mode .card,
+        html[data-theme="dark"] .card,
         body.dark-mode .card,
+        html.dark-mode .stat-card,
+        html[data-theme="dark"] .stat-card,
         body.dark-mode .stat-card {
-            background: #1E1E1E !important;
-            border-color: #333333 !important;
-            color: #E0E0E0 !important;
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+            color: #E2E8F0 !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
         }
+
+        html.dark-mode .card-header,
+        html[data-theme="dark"] .card-header,
         body.dark-mode .card-header {
-            border-color: #333333 !important;
+            border-color: #334155 !important;
         }
+
+        html.dark-mode .card-title,
+        html[data-theme="dark"] .card-title,
         body.dark-mode .card-title {
-            color: #FFD700 !important;
+            color: #FCD34D !important;
         }
+
+        html.dark-mode .detail-row,
+        html[data-theme="dark"] .detail-row,
         body.dark-mode .detail-row {
-            border-color: #2A2A2A !important;
+            border-color: #334155 !important;
         }
+
+        html.dark-mode .detail-label,
+        html[data-theme="dark"] .detail-label,
         body.dark-mode .detail-label {
-            color: #9CA3AF !important;
+            color: #94A3B8 !important;
         }
+
+        html.dark-mode .detail-val,
+        html[data-theme="dark"] .detail-val,
         body.dark-mode .detail-val {
+            color: #F8FAFC !important;
+        }
+
+        html.dark-mode .form-label,
+        html[data-theme="dark"] .form-label,
+        body.dark-mode .form-label {
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .form-control,
+        html[data-theme="dark"] .form-control,
+        body.dark-mode .form-control {
+            background-color: #0F172A !important;
+            border-color: #475569 !important;
+            color: #F8FAFC !important;
+        }
+
+        html.dark-mode .form-control:focus,
+        html[data-theme="dark"] .form-control:focus,
+        body.dark-mode .form-control:focus {
+            border-color: #F59E0B !important;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+        }
+
+        html.dark-mode .form-text,
+        html[data-theme="dark"] .form-text,
+        body.dark-mode .form-text {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .chip,
+        html[data-theme="dark"] .chip,
+        body.dark-mode .chip {
+            background-color: #1E293B !important;
+            border-color: #F59E0B !important;
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .doc-item,
+        html[data-theme="dark"] .doc-item,
+        body.dark-mode .doc-item {
+            background-color: #0F172A !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .doc-item:hover,
+        html[data-theme="dark"] .doc-item:hover,
+        body.dark-mode .doc-item:hover {
+            background-color: #1E293B !important;
+            border-color: #F59E0B !important;
+        }
+
+        html.dark-mode .doc-item div,
+        html[data-theme="dark"] .doc-item div,
+        body.dark-mode .doc-item div {
+            color: #E2E8F0 !important;
+        }
+
+        html.dark-mode .btn-outline,
+        html[data-theme="dark"] .btn-outline,
+        body.dark-mode .btn-outline {
+            background: transparent !important;
+            color: #FCD34D !important;
+            border-color: #FCD34D !important;
+        }
+
+        html.dark-mode .stat-data .value,
+        html[data-theme="dark"] .stat-data .value,
+        body.dark-mode .stat-data .value {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .stat-data .label,
+        html[data-theme="dark"] .stat-data .label,
+        body.dark-mode .stat-data .label {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .stat-icon,
+        html[data-theme="dark"] .stat-icon,
+        body.dark-mode .stat-icon {
+            background-color: #334155 !important;
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .top-nav-bar span,
+        html[data-theme="dark"] .top-nav-bar span,
+        body.dark-mode .top-nav-bar span {
+            color: #FCD34D !important;
+        }
+
+        /* Admin Panels Dark Mode */
+        html.dark-mode .admin-edit-card,
+        html[data-theme="dark"] .admin-edit-card,
+        body.dark-mode .admin-edit-card {
+            background: #0B1E36 !important;
+            border-color: #0284C7 !important;
+        }
+        html.dark-mode .admin-edit-card .card-header,
+        html[data-theme="dark"] .admin-edit-card .card-header,
+        body.dark-mode .admin-edit-card .card-header {
+            border-color: #0369A1 !important;
+        }
+        html.dark-mode .admin-edit-card .card-title,
+        html[data-theme="dark"] .admin-edit-card .card-title,
+        body.dark-mode .admin-edit-card .card-title {
+            color: #7DD3FC !important;
+        }
+        html.dark-mode .admin-edit-card p,
+        html[data-theme="dark"] .admin-edit-card p,
+        body.dark-mode .admin-edit-card p {
+            color: #BAE6FD !important;
+        }
+
+        html.dark-mode .pending-review-card,
+        html[data-theme="dark"] .pending-review-card,
+        body.dark-mode .pending-review-card {
+            background: #241A06 !important;
+            border-color: #D97706 !important;
+        }
+        html.dark-mode .pending-review-card .card-header,
+        html[data-theme="dark"] .pending-review-card .card-header,
+        body.dark-mode .pending-review-card .card-header {
+            border-color: #92400E !important;
+        }
+        html.dark-mode .pending-review-card .card-title,
+        html[data-theme="dark"] .pending-review-card .card-title,
+        body.dark-mode .pending-review-card .card-title {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .pending-review-card .pending-meta,
+        html[data-theme="dark"] .pending-review-card .pending-meta,
+        body.dark-mode .pending-review-card .pending-meta {
             color: #FEF3C7 !important;
         }
-        body.dark-mode .form-label {
-            color: #E5E7EB !important;
+
+        html.dark-mode .admin-reject-box,
+        html[data-theme="dark"] .admin-reject-box,
+        body.dark-mode .admin-reject-box {
+            background: #2A0E11 !important;
+            border-color: #991B1B !important;
+            color: #FECACA !important;
         }
-        body.dark-mode .form-control {
-            background: #262626 !important;
-            border-color: #404040 !important;
-            color: #FFFFFF !important;
+
+        html.dark-mode .request-banner,
+        html[data-theme="dark"] .request-banner,
+        body.dark-mode .request-banner {
+            background: #241A06 !important;
+            border-color: #D97706 !important;
+            color: #FEF3C7 !important;
         }
-        body.dark-mode .doc-item {
-            background: #252525 !important;
-            border-color: #383838 !important;
+        html.dark-mode .request-banner .request-banner-title,
+        html[data-theme="dark"] .request-banner .request-banner-title,
+        body.dark-mode .request-banner .request-banner-title {
+            color: #FCD34D !important;
         }
-        body.dark-mode .btn-outline {
-            background: #262626 !important;
-            color: #FFD700 !important;
-            border-color: #FFD700 !important;
+        html.dark-mode .request-banner-body,
+        html[data-theme="dark"] .request-banner-body,
+        body.dark-mode .request-banner-body {
+            color: #FEF3C7 !important;
         }
-        body.dark-mode .stat-data .value {
-            color: #FFD700 !important;
+
+        /* History Cards in Dark Mode */
+        html.dark-mode .req-history-card.approved,
+        html[data-theme="dark"] .req-history-card.approved,
+        body.dark-mode .req-history-card.approved {
+            background: #064E3B !important;
+            border-color: #059669 !important;
+            color: #A7F3D0 !important;
         }
-        body.dark-mode .stat-data .label {
-            color: #9CA3AF !important;
+        html.dark-mode .req-history-card.rejected,
+        html[data-theme="dark"] .req-history-card.rejected,
+        body.dark-mode .req-history-card.rejected {
+            background: #3B0D0D !important;
+            border-color: #DC2626 !important;
+            color: #FCA5A5 !important;
         }
-        body.dark-mode #admin-edit-panel {
-            background: #1A2234 !important;
-            border-color: #2563EB !important;
+        html.dark-mode .req-history-card .req-date,
+        html[data-theme="dark"] .req-history-card .req-date,
+        body.dark-mode .req-history-card .req-date {
+            color: #94A3B8 !important;
         }
-        body.dark-mode #admin-edit-panel .card-title {
-            color: #60A5FA !important;
+        html.dark-mode .req-history-card .req-details,
+        html[data-theme="dark"] .req-history-card .req-details,
+        body.dark-mode .req-history-card .req-details {
+            color: #F1F5F9 !important;
+        }
+
+        /* Reject Note in Dark Mode - High Contrast Readability! */
+        html.dark-mode .req-admin-note,
+        html[data-theme="dark"] .req-admin-note,
+        body.dark-mode .req-admin-note {
+            background: #1C0505 !important;
+            border-left-color: #EF4444 !important;
+            color: #FEE2E2 !important;
+        }
+        html.dark-mode .req-admin-note strong,
+        html[data-theme="dark"] .req-admin-note strong,
+        body.dark-mode .req-admin-note strong {
+            color: #FCA5A5 !important;
+        }
+
+        /* Alerts in Dark Mode */
+        html.dark-mode .alert-success,
+        html[data-theme="dark"] .alert-success,
+        body.dark-mode .alert-success {
+            background: #064E3B !important;
+            color: #A7F3D0 !important;
+            border-left-color: #10B981 !important;
+        }
+        html.dark-mode .alert-error,
+        html[data-theme="dark"] .alert-error,
+        body.dark-mode .alert-error {
+            background: #3B0D0D !important;
+            color: #FCA5A5 !important;
+            border-left-color: #EF4444 !important;
         }
     </style>
 </head>
@@ -610,10 +995,20 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
         <div class="hero-profile-card">
             <div class="hero-content">
                 <div class="avatar-box">
-                    <img src="<?php echo htmlspecialchars($teacher_photo); ?>" alt="<?php echo htmlspecialchars($teacher_name); ?>" onerror="this.src='images/icon.png'">
+                    <img src="<?php echo htmlspecialchars($teacher_photo); ?>" alt="<?php echo htmlspecialchars($teacher_name); ?>" id="currentAvatarImg" onerror="this.src='images/icon.png'">
+                    <?php if ($is_admin || $logged_user_id === $teacher_id): ?>
+                        <form id="avatarUploadForm" method="POST" enctype="multipart/form-data" style="display:none;">
+                            <?php echo csrfField(); ?>
+                            <input type="hidden" name="update_profile_photo" value="1">
+                            <input type="file" name="profile_photo" id="avatarFileInput" accept="image/jpeg,image/png,image/webp,image/gif" onchange="previewAndSubmitAvatar(this);">
+                        </form>
+                        <button type="button" class="avatar-edit-btn" onclick="document.getElementById('avatarFileInput').click();" title="የመገለጫ ፎቶ ቀይር (Change Photo)">
+                            📷
+                        </button>
+                    <?php endif; ?>
                 </div>
                 <div class="teacher-meta">
-                    <div class="badge"><?php echo $is_admin ? '🛡️ የመምህራን አስተዳደር (አስተዳዳሪ እይታ)' : '⛪ አጸደ ትጉሃን መምህር'; ?></div>
+                    <div class="badge"><?php echo $is_admin ? '🛡️ የመምህራን አስተዳደር (የትምህርት ክፍል እይታ)' : '⛪ አጸደ ትጉሃን መምህር'; ?></div>
                     <h1><?php echo htmlspecialchars($teacher_name); ?></h1>
                     <div class="sub-info">
                         <span>👤 @<?php echo htmlspecialchars($teacher_username); ?></span> &bull; 
@@ -635,7 +1030,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
             <div class="stat-card">
                 <div class="stat-icon">📄</div>
                 <div class="stat-data">
-                    <div class="label">የተሰቀሉ ሰነዶች</div>
+                    <div class="label">የተጫኑ ሰነዶች</div>
                     <div class="value"><?php echo count($documents); ?> ፋይሎች</div>
                 </div>
             </div>
@@ -688,18 +1083,18 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
         <?php if ($is_admin): ?>
             <!-- ADMIN VIEW: PROFILE CHANGE REQUEST REVIEW (IF PENDING) -->
             <?php if ($pending_request): ?>
-                <div class="card" style="border: 2px solid #F59E0B; background: #FFFBEB;">
-                    <div class="card-header" style="border-color: #FDE68A;">
-                        <div class="card-title" style="color: #92400E;"><span>⏳</span> በመጠባበቅ ላይ ያለ የመረጃ ለውጥ ጥያቄ</div>
-                        <span class="chip" style="background:#FEF3C7; color:#92400E; font-weight:700;">የአስተዳዳሪ ውሳኔ ይፈልጋል</span>
+                <div class="card pending-review-card">
+                    <div class="card-header">
+                        <div class="card-title"><span>⏳</span> በመጠባበቅ ላይ ያለ የመረጃ ለውጥ ጥያቄ</div>
+                        <span class="chip" style="font-weight:700;">የትምህርት ክፍል ውሳኔ ይፈልጋል</span>
                     </div>
-                    <div style="font-size: 14px; color: #78350F; line-height: 1.8; margin-bottom: 16px;">
+                    <div class="pending-meta" style="font-size: 14px; line-height: 1.8; margin-bottom: 16px;">
                         <div><strong>የቀረበበት ቀን፡</strong> <?php echo date('M d, Y h:i A', strtotime($pending_request['created_at'])); ?></div>
                         <?php if ($pending_request['requested_name'] && $pending_request['requested_name'] !== $teacher['name']): ?>
-                            <div><strong>የተጠየቀ አዲስ ስም፡</strong> <span style="font-weight:700; color:#1E3A8A;"><?php echo htmlspecialchars($pending_request['requested_name']); ?></span> (የነበረው፡ <?php echo htmlspecialchars($teacher['name']); ?>)</div>
+                            <div><strong>የተጠየቀ አዲስ ስም፡</strong> <span style="font-weight:700;"><?php echo htmlspecialchars($pending_request['requested_name']); ?></span> (የነበረው፡ <?php echo htmlspecialchars($teacher['name']); ?>)</div>
                         <?php endif; ?>
                         <?php if ($pending_request['requested_phone'] && $pending_request['requested_phone'] !== $teacher['phone']): ?>
-                            <div><strong>የተጠየቀ አዲስ ስልክ፡</strong> <span style="font-weight:700; color:#1E3A8A;"><?php echo htmlspecialchars($pending_request['requested_phone']); ?></span> (የነበረው፡ <?php echo htmlspecialchars($teacher['phone'] ?? '---'); ?>)</div>
+                            <div><strong>የተጠየቀ አዲስ ስልክ፡</strong> <span style="font-weight:700;"><?php echo htmlspecialchars($pending_request['requested_phone']); ?></span> (የነበረው፡ <?php echo htmlspecialchars($teacher['phone'] ?? '---'); ?>)</div>
                         <?php endif; ?>
                         <?php if ($pending_request['requested_photo']): ?>
                             <div style="margin-top: 8px;">
@@ -714,7 +1109,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                         <?php endif; ?>
                     </div>
 
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap; border-top: 1px dashed #FDE68A; padding-top: 14px;">
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; border-top: 1px dashed rgba(217, 119, 6, 0.4); padding-top: 14px;">
                         <form method="POST" style="display: inline;">
                             <?php echo csrfField(); ?>
                             <input type="hidden" name="request_id" value="<?php echo $pending_request['id']; ?>">
@@ -726,14 +1121,14 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                             ❌ ውድቅ አድርግ (Reject)
                         </button>
                     </div>
-                    <div id="reject-box-admin" style="display:none; margin-top: 12px; padding: 14px; background: white; border-radius: 10px; border: 1px solid #FECACA;">
+                    <div id="reject-box-admin" class="admin-reject-box">
                         <form method="POST">
                             <?php echo csrfField(); ?>
                             <input type="hidden" name="request_id" value="<?php echo $pending_request['id']; ?>">
                             <label class="form-label" style="font-size:12.5px; font-weight:600;">ውድቅ የተደረገበት ምክንያት (ለመምህሩ የሚላክ)፦</label>
                             <input type="text" name="admin_notes" class="form-control" placeholder="ምክንያት ይጻፉ..." style="margin-bottom:10px;" required>
                             <button type="submit" name="reject_profile_request" class="btn-action" style="background:#DC2626; color:white; border:none; padding:8px 16px;">
-                                አረጋግጥና ውድቅ አድርግ
+                                ውድቅ አድርግ
                             </button>
                         </form>
                     </div>
@@ -741,13 +1136,13 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
             <?php endif; ?>
 
             <!-- ADMIN DIRECT EDIT PANEL -->
-            <div class="card" id="admin-edit-panel" style="border: 2px solid #0284C7; background: #F0F9FF;">
-                <div class="card-header" style="border-color: #BAE6FD;">
-                    <div class="card-title" style="color: #0369A1;"><span>⚡</span> የአስተዳዳሪ ቀጥታ ማስተካከያ (Admin Controls)</div>
-                    <span style="font-size: 12px; color: #0284C7; font-weight: 600;">አስተዳዳሪ ብቻ</span>
+            <div class="card admin-edit-card" id="admin-edit-panel">
+                <div class="card-header">
+                    <div class="card-title"><span>⚡</span> የትምህርት ክፍል ቀጥታ ማስተካከያ (Admin Controls)</div>
+                    <span style="font-size: 12px; font-weight: 600;">ትምህርት ክፍል ብቻ</span>
                 </div>
-                <p style="font-size: 13px; color: #0369A1; margin-bottom: 16px;">
-                    አስተዳዳሪ እንደመሆንዎ መጠን የመምህሩን ስም፣ ስልክ ቁጥር፣ ፎቶ፣ የይለፍ ቃል እና የአካውንት ሁኔታ በቀጥታ ማስተካከል ይችላሉ።
+                <p style="font-size: 13px; margin-bottom: 16px;">
+                    የትምህርት ክፍል ኃላፊ እንደመሆንዎ መጠን የመምህሩን ስም፣ ስልክ ቁጥር፣ ፎቶ፣ የይለፍ ቃል እና የአካውንት ሁኔታ በቀጥታ ማስተካከል ይችላሉ።
                 </p>
                 <form method="POST" enctype="multipart/form-data">
                     <?php echo csrfField(); ?>
@@ -762,12 +1157,12 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                             <input type="text" name="phone" class="form-control" value="<?php echo htmlspecialchars($teacher['phone'] ?? ''); ?>">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">የመምህር አዲስ ፎቶ ስቀል</label>
+                            <label class="form-label">የመምህር አዲስ ፎቶ ይጫኑ (Upload)</label>
                             <input type="file" name="admin_photo" class="form-control" accept="image/*">
-                            <div class="form-text">ፎቶ መቀየር ካልፈለጉ ባዶ ይተዉት።</div>
+                            <div class="form-text">ፎቶ መቀየር ካልፈለጉ ባዶ ይተዉት። (እስከ 25MB)</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">የይለፍ ቃል ዳግም አስጀምር (Reset Password)</label>
+                            <label class="form-label">የይለፍ ቃል ቀይር (Reset Password)</label>
                             <input type="password" name="admin_new_password" class="form-control" placeholder="አዲስ የይለፍ ቃል ያስገቡ..." autocomplete="new-password">
                             <div class="form-text">የይለፍ ቃል መቀየር ካልፈለጉ ባዶ ይተዉት።</div>
                         </div>
@@ -793,15 +1188,20 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                         <span style="font-size: 12px; color: #6B7280;"><?php echo count($past_requests); ?> ጥያቄዎች</span>
                     </div>
                     <?php foreach ($past_requests as $pr): ?>
-                        <div style="padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; font-size: 13px; background: <?php echo $pr['status'] === 'approved' ? '#ECFDF5' : '#FEF2F2'; ?>; border: 1px solid <?php echo $pr['status'] === 'approved' ? '#A7F3D0' : '#FECACA'; ?>;">
+                        <div class="req-history-card <?php echo $pr['status'] === 'approved' ? 'approved' : 'rejected'; ?>">
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                                 <strong><?php echo $pr['status'] === 'approved' ? '✅ የጸደቀ' : '❌ ውድቅ የተደረገ'; ?></strong>
-                                <span style="color: #6B7280; font-size: 11.5px;"><?php echo date('M d, Y h:i A', strtotime($pr['created_at'])); ?></span>
+                                <span class="req-date"><?php echo date('M d, Y h:i A', strtotime($pr['created_at'])); ?></span>
                             </div>
-                            <div style="margin-top: 6px; color: #374151;">
+                            <div class="req-details">
                                 <?php if ($pr['requested_name']): ?><div><strong>የተጠየቀ ስም፡</strong> <?php echo htmlspecialchars($pr['requested_name']); ?></div><?php endif; ?>
                                 <?php if ($pr['requested_phone']): ?><div><strong>የተጠየቀ ስልክ፡</strong> <?php echo htmlspecialchars($pr['requested_phone']); ?></div><?php endif; ?>
-                                <?php if ($pr['admin_notes']): ?><div style="color: #991B1B; margin-top: 4px;"><strong>የአስተዳዳሪ ማስታወሻ፡</strong> <?php echo htmlspecialchars($pr['admin_notes']); ?></div><?php endif; ?>
+                                <?php if ($pr['admin_notes']): ?>
+                                    <div class="req-admin-note">
+                                        <strong>📌 ውድቅ የተደረገበት ምክንያት (የትምህርት ክፍል ማስታወሻ)፦</strong><br>
+                                        <span><?php echo nl2br(htmlspecialchars($pr['admin_notes'])); ?></span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -813,11 +1213,11 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
             <div class="card" id="change-request-section">
                 <div class="card-header">
                     <div class="card-title"><span>📝</span> የመረጃ ለውጥ መጠየቂያ</div>
-                    <span style="font-size: 12px; color: #B45309; font-weight:600;">🔒 በቀጥታ አይቀየርም፤ ለአስተዳዳሪ ጥያቄ ይላካል</span>
+                    <span style="font-size: 12px; color: #B45309; font-weight:600;">🔒 በቀጥታ አይቀየርም፤ ለትምህርት ክፍል ጥያቄ ይላካል</span>
                 </div>
 
                 <p style="font-size: 13px; color: #4B5563; margin-bottom: 16px; line-height: 1.5;">
-                    የመምህራን መረጃ በሲስተሙ አስተዳዳሪ ቁጥጥር ስር ስለሆነ፤ ስም፣ ስልክ ቁጥር ወይም ፎቶ መቀየር ከፈለጉ እባክዎ ከታች ያለውን ቅጽ ሞልተው ጥያቄ ይላኩ። አስተዳዳሪው ሲያጸድቀው መረጃዎ በራስ-ሰር ይሻሻላል።
+                    የመምህራን መረጃ በትምህርት ክፍል ቁጥጥር ስር ስለሆነ፤ ስም፣ ስልክ ቁጥር ወይም ፎቶ መቀየር ከፈለጉ እባክዎ ከታች ያለውን ቅጽ ሞልተው ጥያቄ ይላኩ። ትምህርት ክፍሉ ሲያጸድቀው መረጃዎ በራስ-ሰር ይሻሻላል።
                 </p>
 
                 <?php if ($pending_request): ?>
@@ -826,7 +1226,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                         <div class="request-banner-title">
                             <span>⏳</span> በመጠባበቅ ላይ ያለ የመረጃ ለውጥ ጥያቄ
                         </div>
-                        <div style="font-size: 13px; color: #78350F; line-height: 1.6;">
+                        <div class="request-banner-body" style="font-size: 13px; line-height: 1.6;">
                             <strong>የቀረበበት ቀን፡</strong> <?php echo date('M d, Y h:i A', strtotime($pending_request['created_at'])); ?><br>
                             <?php if ($pending_request['requested_name'] && $pending_request['requested_name'] !== $teacher['name']): ?>
                                 <strong>የተጠየቀ አዲስ ስም፡</strong> <?php echo htmlspecialchars($pending_request['requested_name']); ?><br>
@@ -835,14 +1235,14 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                                 <strong>የተጠየቀ አዲስ ስልክ፡</strong> <?php echo htmlspecialchars($pending_request['requested_phone']); ?><br>
                             <?php endif; ?>
                             <?php if ($pending_request['requested_photo']): ?>
-                                <strong>አዲስ ፎቶ፡</strong> <a href="<?php echo htmlspecialchars($pending_request['requested_photo']); ?>" target="_blank" style="color:#B45309; text-decoration:underline;">የተሰቀለውን ፎቶ ይመልከቱ</a><br>
+                                <strong>አዲስ ፎቶ፡</strong> <a href="<?php echo htmlspecialchars($pending_request['requested_photo']); ?>" target="_blank" style="color:#B45309; text-decoration:underline;">የተጫነውን ፎቶ ይመልከቱ</a><br>
                             <?php endif; ?>
                             <?php if ($pending_request['reason']): ?>
                                 <strong>ምክንያት፡</strong> <?php echo htmlspecialchars($pending_request['reason']); ?><br>
                             <?php endif; ?>
                         </div>
-                        <div style="margin-top: 10px; font-size: 12px; color: #92400E; font-style: italic;">
-                            🔔 ጥያቄዎ ለአስተዳዳሪው ተልኳል፤ አስተዳዳሪው ውሳኔ ሲሰጥበት በስልክዎ/ብሮውዘርዎ ማሳወቂያ ይደርስዎታል።
+                        <div style="margin-top: 10px; font-size: 12px; font-style: italic; opacity: 0.9;">
+                            🔔 ጥያቄዎ ለትምህርት ክፍል ተልኳል፤ ትምህርት ክፍሉ ውሳኔ ሲሰጥበት በስልክዎ/ብሮውዘርዎ ማሳወቂያ ይደርስዎታል።
                         </div>
                     </div>
                 <?php else: ?>
@@ -868,7 +1268,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                         <div class="form-group">
                             <label class="form-label">አዲስ የመገለጫ ፎቶ (ካለ)</label>
                             <input type="file" name="requested_photo" accept="image/*" class="form-control">
-                            <div class="form-text">JPG, PNG, GIF, WebP እስከ 5MB መሆን አለበት።</div>
+                            <div class="form-text">JPG, PNG, GIF, WebP እስከ 25MB መሆን አለበት።</div>
                         </div>
 
                         <div class="form-group">
@@ -884,17 +1284,28 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
 
                 <!-- Past Requests History for Teacher -->
                 <?php if (!empty($past_requests)): ?>
-                    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #E5E7EB;">
-                        <div style="font-size: 13px; font-weight: 700; color: #4B5563; margin-bottom: 10px;">የቀደሙ ጥያቄዎች ታሪክ፦</div>
+                    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed rgba(229, 231, 235, 0.5);">
+                        <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px;">የቀደሙ ጥያቄዎች ታሪክ፦</div>
                         <?php foreach ($past_requests as $pr): ?>
-                            <div style="padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 12px; background: <?php echo $pr['status'] === 'approved' ? '#ECFDF5' : '#FEF2F2'; ?>; border: 1px solid <?php echo $pr['status'] === 'approved' ? '#A7F3D0' : '#FECACA'; ?>;">
-                                <div style="display: flex; justify-content: space-between;">
+                            <div class="req-history-card <?php echo $pr['status'] === 'approved' ? 'approved' : 'rejected'; ?>">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                                     <strong><?php echo $pr['status'] === 'approved' ? '✅ የጸደቀ' : '❌ ውድቅ የተደረገ'; ?></strong>
-                                    <span style="color: #6B7280;"><?php echo date('M d, Y', strtotime($pr['created_at'])); ?></span>
+                                    <span class="req-date"><?php echo date('M d, Y', strtotime($pr['created_at'])); ?></span>
                                 </div>
-                                <?php if ($pr['admin_notes']): ?>
-                                    <div style="margin-top: 4px; color: #374151;"><strong>የአስተዳዳሪ ማስታወሻ፡</strong> <?php echo htmlspecialchars($pr['admin_notes']); ?></div>
-                                <?php endif; ?>
+                                <div class="req-details">
+                                    <?php if ($pr['requested_name'] && $pr['requested_name'] !== $teacher['name']): ?>
+                                        <div><strong>የተጠየቀ ስም፡</strong> <?php echo htmlspecialchars($pr['requested_name']); ?></div>
+                                    <?php endif; ?>
+                                    <?php if ($pr['requested_phone'] && $pr['requested_phone'] !== $teacher['phone']): ?>
+                                        <div><strong>የተጠየቀ ስልክ፡</strong> <?php echo htmlspecialchars($pr['requested_phone']); ?></div>
+                                    <?php endif; ?>
+                                    <?php if ($pr['admin_notes']): ?>
+                                        <div class="req-admin-note">
+                                            <strong>📌 ውድቅ የተደረገበት ምክንያት (የትምህርት ክፍል ማስታወሻ)፦</strong><br>
+                                            <span><?php echo nl2br(htmlspecialchars($pr['admin_notes'])); ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -922,7 +1333,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                         <input type="text" name="doc_name" class="form-control" placeholder="ምሳሌ፡ የክፍል መመሪያ">
                     </div>
                     <button type="submit" name="upload_doc" class="btn-submit" style="height: 44px;">
-                        ⬆️ ሰነዱን ስቀል
+                        ⬆️ ሰነዱን ጫን (Upload)
                     </button>
                 </div>
             </form>
@@ -956,7 +1367,7 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
                 <?php endforeach; ?>
             <?php else: ?>
                 <div style="text-align: center; padding: 24px; color: #9CA3AF; font-size: 13px;">
-                    📭 እስካሁን የተሰቀለ ሰነድ የለም።
+                    📭 እስካሁን የተጫነ ሰነድ የለም።
                 </div>
             <?php endif; ?>
         </div>
@@ -982,6 +1393,33 @@ $nav_active = $is_admin ? 'manage_teachers' : 'teacher_profile';
             <?php endif; ?>
         </div>
     </div>
+    <script>
+    function previewAndSubmitAvatar(input) {
+        if (!input.files || !input.files[0]) return;
+        var file = input.files[0];
+        
+        // 25MB check
+        if (file.size > 26214400) {
+            alert('የተመረጠው ፎቶ መጠን ከ 25MB ያንሳል! እባክዎ አነስ ያለ ፎቶ ይምረጡ።');
+            input.value = '';
+            return;
+        }
+
+        // Preview immediate change
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = document.getElementById('currentAvatarImg');
+            if (img) img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        if (confirm('የተመረጠውን ፎቶ እንደ መገለጫ ፎቶ አሁን ማስቀመጥ ይፈልጋሉ?')) {
+            document.getElementById('avatarUploadForm').submit();
+        } else {
+            input.value = '';
+        }
+    }
+    </script>
 </body>
 </html>
 <?php mysqli_close($conn); ?>

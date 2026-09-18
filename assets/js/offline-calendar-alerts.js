@@ -145,32 +145,115 @@
                     const title = isExam ? `📝 መጪ ፈተና: ${e.title}` : `📅 የካላንደር ማስታወሻ: ${e.title}`;
                     const body = e.description || `ቀን፡ ${e.ethiopian_month}/${e.ethiopian_day}/${e.ethiopian_year} ዓ.ም`;
 
-                    try {
-                        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                            navigator.serviceWorker.ready.then(reg => {
-                                reg.showNotification(title, {
-                                    body: body,
-                                    icon: '/exam/images/icon.png',
-                                    badge: '/exam/images/icon.png',
-                                    tag: `cal_${e.id}`,
-                                    data: { url: '/exam/calendar_view.php' }
-                                });
-                            });
-                        } else {
-                            new Notification(title, {
-                                body: body,
-                                icon: '/exam/images/icon.png'
-                            });
-                        }
-                    } catch (err) {
-                        console.debug('[OfflineCalendar] Local notification error:', err);
-                    }
+                    this.dispatchPush(title, body, `cal_${e.id}`, '/exam/calendar_view.php');
                 }
             });
 
             try {
                 localStorage.setItem(NOTIFIED_KEY, JSON.stringify(notified));
             } catch (e) {}
+        },
+
+        dispatchPush(title, body, tag, url) {
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.showNotification(title, {
+                            body: body,
+                            icon: '/exam/images/icon.png',
+                            badge: '/exam/images/icon.png',
+                            tag: tag || 'atsede_alert',
+                            data: { url: url || '/exam/calendar_view.php' }
+                        });
+                    });
+                } else if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification(title, {
+                        body: body,
+                        icon: '/exam/images/icon.png'
+                    });
+                }
+            } catch (err) {
+                console.debug('[OfflineCalendar] Push error:', err);
+            }
+        },
+
+        // Ethiopian Date Calculation (Works 100% Offline)
+        getEthiopianDate(gregDate) {
+            const d = gregDate || new Date();
+            const gy = d.getFullYear();
+            const prevEthLeap = ((gy - 8) % 4 === 3);
+            const nyDay = prevEthLeap ? 12 : 11;
+            const nyDate = new Date(gy, 8, nyDay);
+            let ey, diff;
+            if (d >= nyDate) {
+                ey = gy - 7;
+                diff = Math.floor((d - nyDate) / (1000 * 60 * 60 * 24));
+            } else {
+                ey = gy - 8;
+                const prevPrevEthLeap = ((gy - 9) % 4 === 3);
+                const prevNyDay = prevPrevEthLeap ? 12 : 11;
+                const prevNyDate = new Date(gy - 1, 8, prevNyDay);
+                diff = Math.floor((d - prevNyDate) / (1000 * 60 * 60 * 24));
+            }
+            let em = Math.floor(diff / 30) + 1;
+            let ed = (diff % 30) + 1;
+            if (em > 13) em = 13;
+            return { year: ey, month: em, day: ed };
+        },
+
+        // Check Church Feast Day Greetings (Days: 3, 16, 21, 23, 26, 27)
+        checkFeastAlerts() {
+            const eth = this.getEthiopianDate();
+            const FEASTS = {
+                3: 'ቅዱስ ሩፋኤል',
+                16: 'ኪዳነ ምሕረት',
+                21: 'እመቤታችን ቅድስት ድንግል ማርያም',
+                23: 'ቅዱስ ጊዮርጊስ',
+                26: 'አቡነ ሐብተ ማርያም',
+                27: 'መድኃኔዓለም'
+            };
+            const feastName = FEASTS[eth.day];
+            if (!feastName) return;
+
+            const now = new Date();
+            const todayStr = now.toISOString().slice(0, 10);
+            const alertKey = `feast_greeting_notified_${eth.year}_${eth.month}_${eth.day}_${todayStr}`;
+
+            if (!localStorage.getItem(alertKey)) {
+                localStorage.setItem(alertKey, '1');
+                const title = '⛪ አጸደ ትጉሃን ሰንበት ትምህርት ቤት';
+                const body = `እንኳን አደረሳችሁ ለ${feastName} ዕለት!`;
+                this.dispatchPush(title, body, `feast_${eth.day}`, '/exam/calendar_view.php');
+            }
+        },
+
+        // Check Sunday 04:50 (10:50 AM) Children Teacher Alert
+        checkSundayTeacherAlert() {
+            const isChildTeacher = (window.IS_CHILDREN_TEACHER || localStorage.getItem('is_children_teacher') === '1');
+            if (!isChildTeacher) return;
+
+            const now = new Date();
+            // 0 is Sunday
+            if (now.getDay() !== 0) return;
+
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            // Ethiopian 05:00 is 11:00 AM. 10 minutes before is 10:50 AM.
+            // Active window: from 10:50 AM to 12:00 PM
+            const timeMinutes = hours * 60 + minutes;
+            const alertStart = 10 * 60 + 50; // 10:50 AM
+            const alertEnd = 12 * 60;        // 12:00 PM
+
+            if (timeMinutes >= alertStart && timeMinutes <= alertEnd) {
+                const todayStr = now.toISOString().slice(0, 10);
+                const alertKey = `sunday_child_teacher_alert_${todayStr}`;
+                if (!localStorage.getItem(alertKey)) {
+                    localStorage.setItem(alertKey, '1');
+                    const title = '⏰ የህፃናት ክፍል መምህራን ማስታወሻ';
+                    const body = 'ልጆችዎ እየጠበቁዎት ነው ቤተክርስቲያን ይገኙ! (ትምህርት 05:00 ይጀምራል)';
+                    this.dispatchPush(title, body, 'sunday_child_teacher', '/exam/dashboard_attendance.php');
+                }
+            }
         }
     };
 
@@ -185,6 +268,12 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         OfflineCalendar.syncAndCheck();
+        OfflineCalendar.checkFeastAlerts();
+        OfflineCalendar.checkSundayTeacherAlert();
+        // Check Sunday teacher alert every minute while page is active
+        setInterval(() => {
+            OfflineCalendar.checkSundayTeacherAlert();
+        }, 60000);
     });
 
     window.addEventListener('online', () => {

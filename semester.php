@@ -79,10 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Check for URL parameters for messages
 if(isset($_GET['closed']) && $_GET['closed'] == 1) {
-    $message = "ሴሚስተር በተሳካ ሁኔታ ተዘግቷል!";
+    $message = "ሴሚስተር በትክክል ተዘግቷል!";
 }
 if(isset($_GET['opened']) && $_GET['opened'] == 1) {
-    $message = "ሴሚስተር በተሳካ ሁኔታ ተከፍቷል!";
+    $message = "ሴሚስተር በትክክል ተከፍቷል!";
 }
 
 // Get ALL semesters for current Ethiopian year

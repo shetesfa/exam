@@ -94,10 +94,30 @@ if ($userDarkModePref === 1) {
     <link rel="stylesheet" href="/exam/assets/css/dark-mode.css?v=<?php echo file_exists(__DIR__ . '/assets/css/dark-mode.css') ? filemtime(__DIR__ . '/assets/css/dark-mode.css') : 1; ?>">
 
     <!-- Offline DB, Sync Manager, Push Notifications, and Offline Calendar Alerts Scripts -->
+    <?php
+    // Automated check for Church Feasts & Sunday 04:50 Children Teacher alerts
+    if (isset($conn) && function_exists('checkAutomatedSchoolAlerts')) {
+        @checkAutomatedSchoolAlerts($conn);
+    }
+    $is_child_t = false;
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'teacher' && !empty($_SESSION['user_id']) && isset($conn)) {
+        $uid = intval($_SESSION['user_id']);
+        $chk_ct = dbFetchOne($conn, "SELECT 1 FROM teacher_class tc JOIN classes c ON tc.class_id = c.id LEFT JOIN grades g ON c.grade_id = g.id WHERE tc.teacher_id = ? AND (g.division_id = 1 OR c.name LIKE '%ህፃናት%' OR c.description LIKE '%ህፃናት%') LIMIT 1", "i", [$uid]);
+        if ($chk_ct) $is_child_t = true;
+    }
+    ?>
+    <script>
+        window.IS_CHILDREN_TEACHER = <?php echo $is_child_t ? 'true' : 'false'; ?>;
+        if (window.IS_CHILDREN_TEACHER) {
+            localStorage.setItem('is_children_teacher', '1');
+        } else if (<?php echo (isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'teacher') ? 'true' : 'false'; ?>) {
+            localStorage.removeItem('is_children_teacher');
+        }
+    </script>
     <script src="/exam/assets/js/offline-db.js"></script>
     <script src="/exam/assets/js/sync-manager.js"></script>
     <script src="/exam/assets/js/push-notifications.js"></script>
-    <script src="/exam/assets/js/offline-calendar-alerts.js"></script>
+    <script src="/exam/assets/js/offline-calendar-alerts.js?v=<?php echo file_exists(__DIR__ . '/assets/js/offline-calendar-alerts.js') ? filemtime(__DIR__ . '/assets/js/offline-calendar-alerts.js') : 1; ?>"></script>
 
     <script>
     // Per-Account Dark Mode Toggle Handler
@@ -209,19 +229,37 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
     if (isLoggedIn() || isStudent()) {
         $bridgeUserId = isLoggedIn() ? (int)($_SESSION['user_id'] ?? 0) : (int)($_SESSION['student_id'] ?? 0);
         $bridgeRole = isLoggedIn() ? ($_SESSION['role'] ?? 'teacher') : 'student';
-        $bridgeName = isLoggedIn() ? ($_SESSION['user_name'] ?? '') : ($_SESSION['student_name'] ?? '');
+        $bridgeName = isLoggedIn() ? trim($_SESSION['user_name'] ?? '') : trim($_SESSION['student_name'] ?? '');
+        $bridgeUsername = '';
+        if (isLoggedIn()) {
+            $bridgeUsername = trim($_SESSION['username'] ?? '');
+            if ($bridgeUsername === '' && $bridgeUserId > 0) {
+                $uRow = dbFetchOne($conn, "SELECT username FROM users WHERE id = ?", "i", [$bridgeUserId]);
+                if ($uRow && !empty($uRow['username'])) {
+                    $bridgeUsername = trim($uRow['username']);
+                    $_SESSION['username'] = $bridgeUsername;
+                }
+            }
+        } else {
+            $bridgeUsername = $bridgeName;
+        }
+
         $bridgeToken = function_exists('getOrCreateOfflineToken') ? getOrCreateOfflineToken($conn, $bridgeUserId, $bridgeRole) : null;
         if ($bridgeToken) {
             $clientUserData = [
                 'id' => $bridgeUserId,
+                'username' => $bridgeUsername,
                 'name' => $bridgeName,
                 'role' => $bridgeRole,
                 'token' => $bridgeToken,
                 'expiresAt' => date('Y-m-d H:i:s', strtotime('+30 days'))
             ];
+            $currSem = function_exists('getCurrentSemester') ? getCurrentSemester($conn) : null;
+            if ($currSem) {
+                $clientUserData['active_semester'] = $currSem;
+            }
             if ($bridgeRole === 'teacher') {
                 $assignedClassIds = [];
-                $currSem = function_exists('getCurrentSemester') ? getCurrentSemester($conn) : null;
                 $semId = $currSem ? (int)$currSem['id'] : 0;
                 $tClasses = dbFetchAll($conn, "SELECT class_id FROM teacher_class WHERE teacher_id = ?" . ($semId ? " AND semester_id = $semId" : ""), "i", [$bridgeUserId]);
                 foreach ($tClasses as $tc) {
@@ -232,13 +270,72 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
             echo '<script>
             window.CURRENT_USER = ' . json_encode($clientUserData, JSON_UNESCAPED_UNICODE) . ';
             document.addEventListener("DOMContentLoaded", () => {
+                // Request browser persistent storage to guarantee 2+ weeks offline persistence
+                if (navigator.storage && navigator.storage.persist) {
+                    navigator.storage.persist().catch(() => {});
+                }
+
                 if (typeof OfflineDB !== "undefined" && window.CURRENT_USER) {
                     OfflineDB.saveAuth(window.CURRENT_USER, window.CURRENT_USER.token, window.CURRENT_USER.expiresAt)
                         .then(() => {
+                            if (window.CURRENT_USER.active_semester && OfflineDB.setActiveSemester) {
+                                OfflineDB.setActiveSemester(window.CURRENT_USER.active_semester);
+                            }
                             if (typeof SyncManager !== "undefined") {
                                 SyncManager.fullSync();
                             }
                         }).catch(e => console.warn("Offline auth sync:", e));
+                }
+
+                // Proactively pre-cache the real PHP dashboards so navigation offline ALWAYS serves the same PHP UI
+                if ("caches" in window && navigator.onLine) {
+                    caches.open("exam-pwa-v14").then(cache => {
+                        const urlsToPrecache = [
+                            "/exam/",
+                            "/exam/index.php",
+                            "/exam/offline.html",
+                            "/exam/calendar_view.php",
+                            "/exam/print_orthodox_calendar.php",
+                            window.location.pathname,
+                            window.location.href
+                        ];
+                        const r = window.CURRENT_USER?.role;
+                        if (r === "teacher") {
+                            urlsToPrecache.push(
+                                "/exam/dashboard_teacher.php",
+                                "/exam/dashboard_attendance.php",
+                                "/exam/lesson_plan_editor.php",
+                                "/exam/teacher_marking_scheme.php"
+                            );
+                        } else if (r === "admin") {
+                            urlsToPrecache.push(
+                                "/exam/dashboard_admin.php",
+                                "/exam/dashboard_attendance.php",
+                                "/exam/lesson_plan_editor.php",
+                                "/exam/manage_teachers.php",
+                                "/exam/manage_classes.php",
+                                "/exam/manage_students.php"
+                            );
+                        } else if (r === "attendance_submitter") {
+                            urlsToPrecache.push(
+                                "/exam/dashboard_attendance.php"
+                            );
+                        } else if (r === "student") {
+                            urlsToPrecache.push("/exam/dashboard_student.php");
+                        }
+                        urlsToPrecache.forEach(u => {
+                            fetch(u, { credentials: "same-origin" })
+                                .then(res => {
+                                    if (res && res.status === 200) {
+                                        cache.put(u, res.clone());
+                                        try {
+                                            const clean = new URL(u, window.location.origin).pathname;
+                                            cache.put(clean, res);
+                                        } catch(e) {}
+                                    }
+                                }).catch(() => {});
+                        });
+                    }).catch(() => {});
                 }
             });
             </script>' . PHP_EOL;
@@ -246,6 +343,63 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
     }
 }
 ?>
+<!-- Offline / Online Floating Pill Banner -->
+<style>
+.ats-offline-pill {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #DC2626, #B91C1C);
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 16px;
+    border-radius: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    z-index: 999999;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    animation: atsPopIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(255,255,255,0.3);
+    pointer-events: none;
+}
+.ats-offline-pill.online {
+    background: linear-gradient(135deg, #059669, #047857);
+}
+@keyframes atsPopIn {
+    from { opacity: 0; transform: translate(-50%, -15px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+</style>
+<div id="atsOfflinePill" class="ats-offline-pill" role="status" aria-live="polite">
+    <span class="pill-dot">●</span>
+    <span class="pill-text">Offline (መረጃዎች በስልክዎ / PC ይቀመጣል)</span>
+</div>
+<script>
+(function() {
+    function updateConnPill() {
+        var pill = document.getElementById('atsOfflinePill');
+        if (!pill) return;
+        if (!navigator.onLine) {
+            pill.className = 'ats-offline-pill';
+            pill.querySelector('.pill-text').textContent = '📡 Offline (መረጃዎች በስልክዎ / PC ይቀመጣል)';
+            pill.style.display = 'inline-flex';
+        } else {
+            if (pill.style.display === 'inline-flex') {
+                pill.className = 'ats-offline-pill online';
+                pill.querySelector('.pill-text').textContent = '✅ ተገናኝቷል (በማመሳሰል ላይ...)';
+                setTimeout(function() { pill.style.display = 'none'; }, 2000);
+            }
+        }
+    }
+    window.addEventListener('online', updateConnPill);
+    window.addEventListener('offline', updateConnPill);
+    document.addEventListener('DOMContentLoaded', updateConnPill);
+})();
+</script>
+
 <!-- Floating Dark Mode Toggle (Auto-hidden on pages that have .site-header) -->
 <button type="button" id="floatingDarkModeToggle" class="floating-dark-toggle" onclick="toggleDarkMode()" title="የገጽ ገጽታ ቀይር" aria-label="Toggle Dark Mode">
   <span class="floating-dark-icon">🌙</span>

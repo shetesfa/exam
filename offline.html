@@ -3,12 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ከመስመር ውጭ መሥሪያ | አጸደ ትጉሃን</title>
+    <title>Offline መሥሪያ | አጸደ ትጉሃን</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="images/icon.png" type="image/png">
 <link rel="stylesheet" href="assets/css/mobile.css">
 <link rel="stylesheet" href="assets/css/dark-mode.css">
+<script src="assets/js/offline-db.js"></script>
 <script>
+// Role-aware auto-forward to real cached PHP dashboard if available
+if ('caches' in window && typeof OfflineDB !== 'undefined') {
+    OfflineDB.getAuth().then(auth => {
+        if (auth && auth.user) {
+            const role = auth.user.role;
+            if (role === 'teacher') {
+                caches.match('/exam/dashboard_teacher.php', { ignoreSearch: true }).then(match => {
+                    if (match) window.location.replace('/exam/dashboard_teacher.php');
+                }).catch(() => {});
+            } else if (role === 'attendance_submitter') {
+                caches.match('/exam/dashboard_attendance.php', { ignoreSearch: true }).then(match => {
+                    if (match) window.location.replace('/exam/dashboard_attendance.php');
+                }).catch(() => {});
+            } else if (role === 'admin') {
+                caches.match('/exam/dashboard_admin.php', { ignoreSearch: true }).then(match => {
+                    if (match) window.location.replace('/exam/dashboard_admin.php');
+                }).catch(() => {});
+            }
+        }
+    }).catch(() => {});
+}
 (function() {
     try {
         for (let i = 0; i < localStorage.length; i++) {
@@ -165,6 +187,56 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
     z-index: 1000;
     display: none;
 }
+
+/* Offline Calendar Styles */
+.off-cal-day {
+    min-height: 68px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 4px;
+    background: #FFFFFF;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.off-cal-day:hover {
+    border-color: #D97706;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+.off-cal-weekend {
+    background: #F0FDF4 !important;
+    border: 1.5px solid #86EFAC !important;
+}
+.off-cal-special {
+    background: #FFFDF0 !important;
+    border: 1.5px solid #F59E0B !important;
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.12);
+}
+.off-cal-today {
+    box-shadow: 0 0 0 2px #F59E0B !important;
+}
+.dark-mode .off-cal-day {
+    background: #162032 !important;
+    border-color: #27354A !important;
+    color: #F1F5F9 !important;
+}
+.dark-mode .off-cal-weekend {
+    background: #06281E !important;
+    border-color: #059669 !important;
+}
+.dark-mode .off-cal-special {
+    background: #2A1F0A !important;
+    border-color: #F59E0B !important;
+}
+.dark-mode #calDayModal > div {
+    background: #1E293B !important;
+    color: #F1F5F9 !important;
+    border: 1px solid #334155 !important;
+}
 </style>
 </head>
 <body>
@@ -180,7 +252,7 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
         </button>
         <div id="connBadge" class="conn-badge conn-offline">
             <span id="connDot">●</span>
-            <span id="connText">ከመስመር ውጭ</span>
+            <span id="connText">Offline</span>
         </div>
     </div>
 </header>
@@ -189,7 +261,7 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
     <!-- AUTHENTICATION CARD (Shown when not logged in) -->
     <div id="authView" class="card auth-box" style="display:none;">
         <img src="images/icon.png" class="auth-logo" alt="Logo">
-        <h2 style="color:var(--brown-dark); margin-bottom:4px; font-size:20px;">ከመስመር ውጭ መግቢያ</h2>
+        <h2 style="color:var(--brown-dark); margin-bottom:4px; font-size:20px;">Offline መግቢያ</h2>
         <p style="color:#666; font-size:13px; margin-bottom:20px;">በዚህ መሳሪያ ላይ ቀደም ሲል የገቡበትን የተጠቃሚ ስም ያስገቡ</p>
         
         <div id="authError" style="color:var(--error); font-size:13px; margin-bottom:12px; display:none;"></div>
@@ -199,7 +271,11 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
                 <label>የተጠቃሚ ስም</label>
                 <input type="text" id="loginUsername" required placeholder="የተጠቃሚ ስም ያስገቡ">
             </div>
-            <button type="submit" class="btn btn-block">🔓 ከመስመር ውጭ ግባ</button>
+            <div class="input-group">
+                <label>የይለፍ ቃል (ከተዘጋጀ)</label>
+                <input type="password" id="loginPassword" placeholder="የይለፍ ቃል ያስገቡ">
+            </div>
+            <button type="submit" class="btn btn-block">🔓 Offline ይግቡ</button>
         </form>
     </div>
 
@@ -223,13 +299,15 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
         <div class="tab-bar">
             <button class="tab-btn active" onclick="switchTab('attTab', this)">📋 አቴንዳንስ</button>
             <button class="tab-btn" onclick="switchTab('marksTab', this)">📊 ውጤት</button>
+            <button class="tab-btn" onclick="switchTab('planTab', this)">📝 የትምህርት እቅድ</button>
+            <button class="tab-btn" onclick="switchTab('calTab', this)">📅 የቀን መቁጠሪያ</button>
             <button class="tab-btn" onclick="switchTab('queueTab', this)">
                 🔄 ያልተላኩ ለውጦች <span id="tabQueueBadge" class="badge" style="display:none;">0</span>
             </button>
         </div>
 
         <!-- Class & Date Selector Bar -->
-        <div class="card" style="padding:14px;">
+        <div class="card" id="classDateBar" style="padding:14px;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div>
                     <label style="font-size:13px; font-weight:600; color:#555; display:block; margin-bottom:4px;">ክፍል</label>
@@ -267,7 +345,201 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
             </div>
         </div>
 
-        <!-- 3. PENDING SYNC QUEUE TAB -->
+        <!-- 3. LESSON PLAN TAB -->
+        <div id="planTab" class="card" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                <div>
+                    <h3 style="font-size:16px; color:var(--brown-dark);">📝 የትምህርት እቅድ ማዘጋጃ (Offline)</h3>
+                    <p style="font-size:12px; color:#666;">ያዘጋጁትን እቅድ እዚህ በስልክዎ/PC ላይ በረቂቅነት መዝግበው ማቆየት ይችላሉ።</p>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <a href="lesson_plan_editor.php" class="btn btn-sm" style="text-decoration:none; background:var(--brown-dark); color:var(--gold-primary);">
+                        🌐 ወደ ዋናው የዕቅድ ገጽ
+                    </a>
+                </div>
+            </div>
+
+            <!-- Draft Form -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">ክፍል *</label>
+                    <select id="planClassSelect" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;" onchange="onPlanClassChanged()">
+                        <option value="">ክፍል ይምረጡ...</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">የትምህርት ዓይነት *</label>
+                    <input type="text" id="planSubjectInput" placeholder="ትምህርት..." style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">ዓመተ ምሕረት</label>
+                    <select id="planYearSelect" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <option value="2018">2018 ዓ.ም</option>
+                        <option value="2019" selected>2019 ዓ.ም</option>
+                        <option value="2020">2020 ዓ.ም</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">ወር *</label>
+                    <select id="planMonthSelect" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <option value="1">መስከረም</option>
+                        <option value="2">ጥቅምት</option>
+                        <option value="3">ኅዳር</option>
+                        <option value="4" selected>ታኅሣሥ</option>
+                        <option value="5">ጥር</option>
+                        <option value="6">የካቲት</option>
+                        <option value="7">መጋቢት</option>
+                        <option value="8">ሚያዝያ</option>
+                        <option value="9">ግንቦት</option>
+                        <option value="10">ሰኔ</option>
+                        <option value="11">ሐምሌ</option>
+                        <option value="12">ነሐሴ</option>
+                        <option value="13">ጳጉሜን</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">ሳምንት *</label>
+                    <input type="text" id="planWeekInput" placeholder="1ኛ ሳምንት" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">ምዕራፍ</label>
+                    <input type="text" id="planChapterInput" placeholder="ምዕራፍ..." style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">ንዑስ ርዕስ *</label>
+                    <input type="text" id="planSubTopicInput" placeholder="ንዑስ ርዕስ..." style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:8px;">
+                </div>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">የትምህርቱ ዓላማ</label>
+                <textarea id="planObjectiveInput" rows="2" placeholder="የትምህርቱ ዋና ዓላማ..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;"></textarea>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">የማስተማሪያ መርጃ መሣሪያዎች</label>
+                <textarea id="planMaterialsInput" rows="2" placeholder="መጽሐፍ ቅዱስ፣ ሥዕላት..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;"></textarea>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:3px;">የተማሪዎች ምዘናና ክትትል</label>
+                <textarea id="planEvaluationInput" rows="2" placeholder="የክፍል ሥራ፣ ምዘና..." style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:8px;"></textarea>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <button type="button" class="btn" onclick="saveOfflinePlanDraft()" style="background:#8B4513; color:white; padding:10px 24px;">
+                    💾 ረቂቁን በስልክዎ/PC አስቀምጥ
+                </button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="clearPlanDraftForm()">
+                    ✖️ አጽዳ
+                </button>
+            </div>
+
+            <!-- Saved Drafts List -->
+            <div style="border-top:1px dashed #CBD5E1; padding-top:14px; margin-top:14px;">
+                <h4 style="font-size:14px; color:var(--brown-dark); margin-bottom:8px;">📂 በስልክዎ/PC የተቀመጡ የዕቅድ ረቂቆች</h4>
+                <div id="savedDraftsContainer">
+                    <p style="color:#999; font-size:13px;">ምንም የተቀመጠ ረቂቅ የለም።</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. CALENDAR TAB -->
+        <div id="calTab" class="card" style="display:none; padding:14px;">
+            <!-- Calendar Header Banner -->
+            <div style="background:linear-gradient(135deg, var(--brown-dark), #5A2D0C); color:white; padding:14px 16px; border-radius:12px; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <span id="calEvangelistBadge" style="background:rgba(255,255,255,0.2); font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700;">✨ ዘመነ ሉቃስ</span>
+                        <h2 id="calMonthTitle" style="font-size:19px; font-weight:800; margin-top:4px; color:#FDE68A;">ታኅሣሥ 2019 ዓ.ም ፳፻፲፱</h2>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <select id="calMonthSelect" onchange="onOfflineCalChange()" style="padding:6px 10px; border-radius:8px; border:none; font-weight:700; font-size:13px; cursor:pointer;">
+                            <option value="1">መስከረም</option>
+                            <option value="2">ጥቅምት</option>
+                            <option value="3">ኅዳር</option>
+                            <option value="4" selected>ታኅሣሥ</option>
+                            <option value="5">ጥር</option>
+                            <option value="6">የካቲት</option>
+                            <option value="7">መጋቢት</option>
+                            <option value="8">ሚያዝያ</option>
+                            <option value="9">ግንቦት</option>
+                            <option value="10">ሰኔ</option>
+                            <option value="11">ሐምሌ</option>
+                            <option value="12">ነሐሴ</option>
+                            <option value="13">ጳጉሜን</option>
+                        </select>
+                        <select id="calYearSelect" onchange="onOfflineCalChange()" style="padding:6px 8px; border-radius:8px; border:none; font-weight:700; font-size:13px; cursor:pointer;">
+                            <option value="2018">2018 ዓ.ም</option>
+                            <option value="2019" selected>2019 ዓ.ም</option>
+                            <option value="2020">2020 ዓ.ም</option>
+                            <option value="2021">2021 ዓ.ም</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; gap:6px;">
+                    <button type="button" id="calViewGridBtn" class="btn btn-sm" onclick="setCalView('grid')" style="background:var(--brown-dark); color:var(--gold-primary);">📅 የወር ሰንጠረዥ</button>
+                    <button type="button" id="calViewListBtn" class="btn btn-sm btn-outline" onclick="setCalView('list')">📋 የበዓላትና ቅዱሳን ዝርዝር</button>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <a href="print_orthodox_calendar.php" target="_blank" class="btn btn-sm" style="text-decoration:none; background:#8B4513; color:#FFD700; border:1px solid #FFD700; font-size:12px;" title="የሰንበት ትምህርት ቤቱ የቅዱሳንና ዓመታዊ በዓላት መዝገብ PDF">
+                        📜 የበዓላት መዝገብ (PDF)
+                    </a>
+                    <a href="calendar_view.php" class="btn btn-sm btn-outline" style="text-decoration:none; font-size:12px;">
+                        🌐 ሙሉ ገጽ
+                    </a>
+                </div>
+            </div>
+
+            <!-- Calendar Grid View -->
+            <div id="calGridView">
+                <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:4px; text-align:center; font-weight:700; font-size:11.5px; margin-bottom:6px;">
+                    <div style="background:#ECFDF5; color:#065F46; padding:6px 2px; border-radius:6px;">እሁድ (ት/ቤት)</div>
+                    <div style="background:#F1F5F9; padding:6px 2px; border-radius:6px;">ሰኞ</div>
+                    <div style="background:#F1F5F9; padding:6px 2px; border-radius:6px;">ማክሰኞ</div>
+                    <div style="background:#F1F5F9; padding:6px 2px; border-radius:6px;">ረቡዕ</div>
+                    <div style="background:#F1F5F9; padding:6px 2px; border-radius:6px;">ሐሙስ</div>
+                    <div style="background:#F1F5F9; padding:6px 2px; border-radius:6px;">አርብ</div>
+                    <div style="background:#ECFDF5; color:#065F46; padding:6px 2px; border-radius:6px;">ቅዳሜ (ት/ቤት)</div>
+                </div>
+                <div id="calDaysGrid" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:4px;">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Calendar List View -->
+            <div id="calListView" style="display:none;">
+                <div id="calListContent">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Day Details Modal -->
+            <div id="calDayModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:14px;">
+                <div style="background:white; border-radius:14px; max-width:420px; width:100%; padding:18px; box-shadow:0 10px 25px rgba(0,0,0,0.25);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:8px; margin-bottom:12px;">
+                        <h3 id="modalDayTitle" style="font-size:16px; color:var(--brown-dark);"></h3>
+                        <button type="button" onclick="closeCalModal()" style="border:none; background:none; font-size:20px; cursor:pointer; color:#888;">✕</button>
+                    </div>
+                    <div id="modalDayBody" style="font-size:13.5px; line-height:1.5;"></div>
+                    <div style="text-align:right; margin-top:14px;">
+                        <button type="button" class="btn btn-sm" onclick="closeCalModal()">እሺ / ዝጋ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. PENDING SYNC QUEUE TAB -->
         <div id="queueTab" class="card" style="display:none;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <h3 style="font-size:16px; color:var(--brown-dark);">ወደ ሰርቨር ያልተላኩ ለውጦች</h3>
@@ -280,7 +552,7 @@ body { background: var(--bg-page); color: var(--text-primary); min-height: 100vh
     </div>
 </div>
 
-<div id="toast" class="toast">💾 ከመስመር ውጭ ተቀምጧል!</div>
+<div id="toast" class="toast">💾 Offline ተቀምጧል!</div>
 
 <script src="assets/js/offline-db.js"></script>
 <script src="assets/js/sync-manager.js"></script>
@@ -331,7 +603,7 @@ function updateConnBadge(status = null, details = null) {
             text.textContent = 'መስመር ላይ';
         } else {
             badge.className = 'conn-badge conn-offline';
-            text.textContent = 'ከመስመር ውጭ';
+            text.textContent = 'Offline';
         }
     });
 
@@ -364,7 +636,13 @@ async function showWorkspace() {
     document.getElementById('workspaceView').style.display = 'block';
 
     document.getElementById('userNameText').textContent = currentUser.name || currentUser.username;
-    document.getElementById('userRoleBadge').textContent = currentUser.role === 'teacher' ? 'መምህር' : (currentUser.role === 'attendance_submitter' ? 'ጸሐፊ' : currentUser.role);
+    const roleMap = {
+        'admin': 'አስተዳዳሪ (ICT)',
+        'teacher': 'መምህር',
+        'attendance_submitter': 'ጸሐፊ (ክትትል)',
+        'student': 'ተማሪ'
+    };
+    document.getElementById('userRoleBadge').textContent = roleMap[currentUser.role] || currentUser.role;
 
     await loadClasses();
     await updatePendingCounts();
@@ -375,8 +653,10 @@ async function handleOfflineLogin(e) {
     const errDiv = document.getElementById('authError');
     errDiv.style.display = 'none';
     const username = document.getElementById('loginUsername').value.trim();
+    const pwdInput = document.getElementById('loginPassword');
+    const password = pwdInput ? pwdInput.value : '';
 
-    const res = await OfflineDB.offlineLogin(username, '');
+    const res = await OfflineDB.offlineLogin(username, password);
     if (res.success) {
         currentUser = res.user;
         showWorkspace();
@@ -398,19 +678,31 @@ function switchTab(tabId, el) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
 
+    const isClassRequired = (tabId === 'attTab' || tabId === 'marksTab');
+    const classBar = document.getElementById('classDateBar');
+    if (classBar) classBar.style.display = isClassRequired ? 'block' : 'none';
+
     document.getElementById('attTab').style.display = (tabId === 'attTab') ? 'block' : 'none';
     document.getElementById('marksTab').style.display = (tabId === 'marksTab') ? 'block' : 'none';
+    document.getElementById('planTab').style.display = (tabId === 'planTab') ? 'block' : 'none';
+    document.getElementById('calTab').style.display = (tabId === 'calTab') ? 'block' : 'none';
     document.getElementById('queueTab').style.display = (tabId === 'queueTab') ? 'block' : 'none';
 
     if (tabId === 'queueTab') {
         renderQueue();
+    } else if (tabId === 'calTab') {
+        renderOfflineCalendar();
+    } else if (tabId === 'planTab') {
+        renderOfflinePlanEditor();
     }
 }
 
 async function loadClasses() {
     currentClasses = await OfflineDB.getAllClasses(currentUser);
     const sel = document.getElementById('classSelector');
+    const planSel = document.getElementById('planClassSelect');
     sel.innerHTML = '';
+    if (planSel) planSel.innerHTML = '<option value="">ክፍል ይምረጡ...</option>';
 
     if (currentClasses.length === 0) {
         sel.innerHTML = '<option value="">ምንም ክፍል አልተገኘም (እባክዎ መጀመሪያ ኢንተርኔት ባለበት ያመሳስሉ)</option>';
@@ -422,9 +714,474 @@ async function loadClasses() {
         opt.value = c.id;
         opt.textContent = c.name;
         sel.appendChild(opt);
+
+        if (planSel) {
+            const planOpt = document.createElement('option');
+            planOpt.value = c.id;
+            planOpt.textContent = c.name;
+            planSel.appendChild(planOpt);
+        }
     });
 
     await onClassChanged();
+}
+
+// ============================================
+// OFFLINE LESSON PLAN MANAGEMENT
+// ============================================
+const OFFLINE_PLANS_KEY = 'atsede_offline_plans_queue';
+
+function onPlanClassChanged() {
+    const classId = parseInt(document.getElementById('planClassSelect')?.value || 0);
+    const subInput = document.getElementById('planSubjectInput');
+    if (!classId || !subInput) return;
+    const cls = currentClasses.find(c => c.id === classId);
+    if (cls && cls.assigned_subject_name) {
+        subInput.value = cls.assigned_subject_name;
+    }
+}
+
+function saveOfflinePlanDraft() {
+    const classId = document.getElementById('planClassSelect')?.value;
+    const subject = document.getElementById('planSubjectInput')?.value.trim();
+    const year = document.getElementById('planYearSelect')?.value || '2019';
+    const month = document.getElementById('planMonthSelect')?.value || '4';
+    const week = document.getElementById('planWeekInput')?.value.trim();
+    const chapter = document.getElementById('planChapterInput')?.value.trim();
+    const subTopic = document.getElementById('planSubTopicInput')?.value.trim();
+    const objective = document.getElementById('planObjectiveInput')?.value.trim();
+    const materials = document.getElementById('planMaterialsInput')?.value.trim();
+    const evaluation = document.getElementById('planEvaluationInput')?.value.trim();
+
+    if (!classId) {
+        alert('እባክዎ ክፍል ይምረጡ!');
+        return;
+    }
+    if (!subTopic) {
+        alert('እባክዎ ንዑስ ርዕስ ያስገቡ!');
+        return;
+    }
+
+    const cls = currentClasses.find(c => c.id == classId);
+    const className = cls ? cls.name : ('ክፍል #' + classId);
+
+    const draft = {
+        id: 'plan_' + Date.now(),
+        class_id: classId,
+        class_name: className,
+        subject: subject,
+        eth_year: year,
+        eth_month: month,
+        week_number: week,
+        chapter: chapter,
+        sub_topic: subTopic,
+        objective: objective,
+        materials: materials,
+        evaluation: evaluation,
+        saved_at: new Date().toLocaleString('am-ET')
+    };
+
+    let drafts = [];
+    try {
+        const raw = localStorage.getItem(OFFLINE_PLANS_KEY);
+        if (raw) drafts = JSON.parse(raw);
+    } catch(e) {}
+    drafts.unshift(draft);
+    localStorage.setItem(OFFLINE_PLANS_KEY, JSON.stringify(drafts));
+
+    // Also sync active draft so lesson_plan_editor.php can pick it up
+    localStorage.setItem('atsede_plan_draft', JSON.stringify(draft));
+
+    showToast('💾 የትምህርት ዕቅድ ረቂቅ በስልክዎ/PC ተቀምጧል!');
+    renderOfflinePlanEditor();
+}
+
+function clearPlanDraftForm() {
+    document.getElementById('planClassSelect').value = '';
+    document.getElementById('planSubjectInput').value = '';
+    document.getElementById('planWeekInput').value = '';
+    document.getElementById('planChapterInput').value = '';
+    document.getElementById('planSubTopicInput').value = '';
+    document.getElementById('planObjectiveInput').value = '';
+    document.getElementById('planMaterialsInput').value = '';
+    document.getElementById('planEvaluationInput').value = '';
+}
+
+function renderOfflinePlanEditor() {
+    const container = document.getElementById('savedDraftsContainer');
+    if (!container) return;
+
+    let drafts = [];
+    try {
+        const raw = localStorage.getItem(OFFLINE_PLANS_KEY);
+        if (raw) drafts = JSON.parse(raw);
+    } catch(e) {}
+
+    if (drafts.length === 0) {
+        container.innerHTML = '<p style="color:#999; font-size:13px;">ምንም የተቀመጠ ረቂቅ የለም።</p>';
+        return;
+    }
+
+    let html = '';
+    drafts.forEach((d, idx) => {
+        const mName = ETH_MONTHS[parseInt(d.eth_month)] || d.eth_month;
+        html += `
+        <div class="card" style="padding:12px; margin-bottom:10px; border:1px solid #E2E8F0; background:#FAF8F5;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                <div>
+                    <strong style="color:var(--brown-dark); font-size:14px;">${escapeHtml(d.sub_topic)}</strong>
+                    <div style="font-size:12px; color:#555; margin-top:2px;">
+                        ${escapeHtml(d.class_name)} · ${escapeHtml(d.subject || '')} · ${mName} ${escapeHtml(d.week_number || '')} (${escapeHtml(d.eth_year)} ዓ.ም)
+                    </div>
+                </div>
+                <span style="font-size:11px; color:#888;">${escapeHtml(d.saved_at || '')}</span>
+            </div>
+            ${d.objective ? `<div style="font-size:12px; color:#444; margin-bottom:6px;"><strong>ዓላማ:</strong> ${escapeHtml(d.objective)}</div>` : ''}
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+                <button type="button" class="btn btn-sm" onclick="restoreDraftFromList(${idx})" style="padding:4px 10px; font-size:12px;">🔄 መልሰህ ሙላ</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="deleteDraftFromList(${idx})" style="padding:4px 10px; font-size:12px; color:#DC2626; border-color:#FCA5A5;">🗑️ ሰርዝ</button>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function restoreDraftFromList(idx) {
+    let drafts = [];
+    try {
+        const raw = localStorage.getItem(OFFLINE_PLANS_KEY);
+        if (raw) drafts = JSON.parse(raw);
+    } catch(e) {}
+    const d = drafts[idx];
+    if (!d) return;
+
+    if (d.class_id) document.getElementById('planClassSelect').value = d.class_id;
+    if (d.subject) document.getElementById('planSubjectInput').value = d.subject;
+    if (d.eth_year) document.getElementById('planYearSelect').value = d.eth_year;
+    if (d.eth_month) document.getElementById('planMonthSelect').value = d.eth_month;
+    if (d.week_number) document.getElementById('planWeekInput').value = d.week_number;
+    if (d.chapter) document.getElementById('planChapterInput').value = d.chapter;
+    if (d.sub_topic) document.getElementById('planSubTopicInput').value = d.sub_topic;
+    if (d.objective) document.getElementById('planObjectiveInput').value = d.objective;
+    if (d.materials) document.getElementById('planMaterialsInput').value = d.materials;
+    if (d.evaluation) document.getElementById('planEvaluationInput').value = d.evaluation;
+
+    localStorage.setItem('atsede_plan_draft', JSON.stringify(d));
+    showToast('✅ ረቂቁ ወደ ፎርሙ ተመልሷል!');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteDraftFromList(idx) {
+    if (!confirm('ይህንን ረቂቅ መሰረዝ ይፈልጋሉ?')) return;
+    let drafts = [];
+    try {
+        const raw = localStorage.getItem(OFFLINE_PLANS_KEY);
+        if (raw) drafts = JSON.parse(raw);
+    } catch(e) {}
+    drafts.splice(idx, 1);
+    localStorage.setItem(OFFLINE_PLANS_KEY, JSON.stringify(drafts));
+    renderOfflinePlanEditor();
+    showToast('🗑️ ረቂቁ ተሰርዟል!');
+}
+
+// ============================================
+// OFFLINE ETHIOPIAN CALENDAR ENGINE
+// ============================================
+const ETH_MONTHS = [
+    '', 'መስከረም', 'ጥቅምት', 'ኅዳር', 'ታኅሣሥ',
+    'ጥር', 'የካቲት', 'መጋቢት', 'ሚያዝያ',
+    'ግንቦት', 'ሰኔ', 'ሐምሌ', 'ነሐሴ', 'ጳጉሜን'
+];
+
+const DAILY_SAINTS = {
+    1:  'ልደታ ለማርያም / ቅዱስ ራጉኤል',
+    2:  'ታዴዎስ ሐዋርያ / ኢዮብ ጻድቅ',
+    3:  'ቅዱስ ሩፋኤል / በዓታ ለማርያም',
+    4:  'ዮሐንስ ወልደ ነጎድጓድ',
+    5:  'አቡነ ገብረ መንፈስ ቅዱስ / ቅዱስ ጴጥሮስ ወጳውሎስ',
+    6:  'ደብረ ቁስቋም / ቅድስት አርሴማ',
+    7:  'ቅድስት ሥላሴ / አባ ጊዮርጊስ ዘጋስጫ',
+    8:  'አባ ኪሮስ / አባ ብሦይ',
+    9:  'ሠለስቱ ምዕት (፫፻፲፰ቱ ሊቃውንት) / ቶማስ ሐዋርያ',
+    10: 'መስቀለ ክርስቶስ',
+    11: 'ቅዱስ ፋሲለደስ ሰማዕት / ሐና ወኢያቄም',
+    12: 'ቅዱስ ሚካኤል ሊቀ መላእክት',
+    13: 'እግዚአብሔር አብ / ቅዱስ ሩፋኤል',
+    14: 'አቡነ አረጋዊ / ገብረ ክርስቶስ',
+    15: 'ቅዱስ ቂርቆስና እናቱ ቅድስት ኢየሉጣ',
+    16: 'ኪዳነ ምሕረት',
+    17: 'ቅዱስ እስጢፋኖስ / ያዕቆብ ሐዋርያ',
+    18: 'አቡነ ኤዎስጣቴዎስ / ፊልጶስ ሐዋርያ',
+    19: 'ቅዱስ ገብርኤል ሊቀ መላእክት',
+    20: 'ሕንፀተ ቤተክርስቲያን / ነቢዩ ኤልሳዕ',
+    21: 'እመቤታችን ቅድስት ድንግል ማርያም',
+    22: 'ቅዱስ ዑራኤል ሊቀ መላእክት / ቅዱስ ደቅስዮስ',
+    23: 'ቅዱስ ጊዮርጊስ ሊቀ ሰማዕታት',
+    24: 'አቡነ ተክለ ሃይማኖት',
+    25: 'ቅዱስ መርቆሬዎስ ሰማዕት',
+    26: 'አቡነ ሐብተ ማርያም / ቶማስ ዘመርዓስ',
+    27: 'መድኃኔዓለም / ሕዝቅኤል ነቢይ',
+    28: 'አማኑኤል / ቴዎድሮስ ባኔድሮስ',
+    29: 'በዓለ ወልድ / እግዚእነ ኢየሱስ ክርስቶስ',
+    30: 'ቅዱስ ዮሐንስ መጥምቅ / ቅዱስ ማርቆስ ወንጌላዊ'
+};
+
+const CHURCH_SPECIAL_FEASTS = {
+    3:  { name: 'ቅዱስ ሩፋኤል', icon: '🕊️' },
+    16: { name: 'ኪዳነ ምሕረት', icon: '👑' },
+    21: { name: 'እመቤታችን ቅድስት ድንግል ማርያም', icon: '🌸' },
+    23: { name: 'ቅዱስ ጊዮርጊስ', icon: '☦️' },
+    26: { name: 'አቡነ ሐብተ ማርያም', icon: '🕯️' },
+    27: { name: 'መድኃኔዓለም', icon: '✝️' }
+};
+
+const ANNUAL_HOLIDAYS = {
+    '1-1':  '🌟 ርእሰ ዐውደ ዓመት (ቅዱስ ዮሐንስ / እንቁጣጣሽ)',
+    '1-10': '✝️ ጾመ ዮዲት (የመስቀል ጾም መጀመሪያ)',
+    '1-16': '🔥 ደመራ (የመስቀል ዋዜማ)',
+    '1-17': '✝️ በዓለ መስቀል (ቅዱስ መስቀል የተገኘበት)',
+    '1-21': '✝️ በዓለ ግማደ መስቀል (የቅዱስ መስቀል ማጠቃለያ)',
+    '2-5':  '🕊️ አቡነ ገብረ መንፈስ ቅዱስ (ተሰጥዎ)',
+    '2-14': '🕊️ አቡነ አረጋዊ (ስውረታቸው / በዓለ ዕረፍት)',
+    '2-24': '🕊️ አቡነ ተክለ ሃይማኖት (ፍልሰተ አጽም)',
+    '2-27': '✝️ ጥቅምት መድኃኔዓለም (ለኖኅ ቃል ኪዳን የገባበት)',
+    '3-6':  '🌸 ደብረ ቁስቋም (የስደት ፍጻሜ)',
+    '3-8':  '🕊️ አሥራ ሁለቱ አበው ነቢያት',
+    '3-9':  '📜 ሠለስቱ ምዕት (፫፻፲፰ቱ የኒቂያ ሊቃውንት)',
+    '3-12': '🕊️ ቅዱስ ሚካኤል (ኅዳር ሚካኤል)',
+    '3-15': '🌸 ጾመ ነቢያት (የገና ጾም ዋዜማ)',
+    '3-16': '🌸 ጾመ ነቢያት (የገና ጾም መግቢያ)',
+    '3-21': '🌸 ጽዮን ማርያም (ታቦተ ጽዮን ወደ ኢትዮጵያ የገባችበት)',
+    '3-24': '👑 ሃያ አራቱ ካህናተ ሰማይ',
+    '3-25': '☦️ ቅዱስ መርቆሬዎስ ሰማዕት',
+    '4-3':  '🌸 በዓታ ለማርያም (እመቤታችን ወደ ቤተ መቅደስ የገባችበት)',
+    '4-19': '🕊️ ቅዱስ ገብርኤል ሊቀ መላእክት (ታኅሣሥ ገብርኤል)',
+    '4-22': '👑 ቅዱስ ደቅስዮስ',
+    '4-24': '🕯️ አቡነ ተክለ ሃይማኖት (ልደታቸው)',
+    '4-28': '✝️ በዓለ አማኑኤል (በዘመነ ዮሐንስ የገና ዋዜማ)',
+    '4-29': '🌟 በዓለ ልደት (ገና - የጌታችን ልደት)',
+    '5-6':  '👑 ግዝረተ ክርስቶስ (የጌታችን ግዝረት)',
+    '5-11': '🕊️ በዓለ ጥምቀት (የጌታችን መጠመቅ)',
+    '5-12': '🌟 ቃና ዘገሊላ / ቅዱስ ሚካኤል',
+    '5-18': '☦️ ቅዱስ ጊዮርጊስ (ፍልሰተ አጽም)',
+    '5-21': '🌸 አስተርእዮ ማርያም (ዕረፍተ ድንግል)',
+    '5-22': '🕊️ ቅዱስ ዑራኤል ሊቀ መላእክት',
+    '6-8':  '🕯️ አባ ኪሮስ',
+    '6-16': '🌸 ኪዳነ ምሕረት (ታላቁ የቃል ኪዳን በዓል)',
+    '6-23': '☦️ ቅዱስ ጊዮርጊስ',
+    '7-10': '✝️ ተረክቦተ መስቀል (ንግሥት ዕሌኒ መስቀሉን ያገኘችበት)',
+    '7-27': '✝️ መጋቢት መድኃኔዓለም (መታሰቢያ ስቅለተ ክርስቶስ)',
+    '7-29': '🌟 በዓለ ጽንሰት (የጌታችን ጽንሰት)',
+    '8-23': '☦️ ቅዱስ ጊዮርጊስ (ሰማዕትነቱ / ዕረፍቱ - ታላቁ በዓል)',
+    '9-1':  '🌸 ልደታ ለማርያም (የእመቤታችን ልደት - ግንቦት ልደታ)',
+    '9-12': '🕊️ ቅዱስ ሚካኤል ሊቀ መላእክት (ግንቦት ሚካኤል)',
+    '9-20': '🌸 ጽንሰታ ለማርያም (ኢያቄምና ሐና እመቤታችንን የፀነሱበት)',
+    '9-21': '🌸 አስተርእዮተ ማርያም (የእመቤታችን በብርሃን መገለጥ)',
+    '10-12': '🕊️ ቅዱስ ሚካኤል (ሰኔ ሚካኤል - ባሕራንን ያዳነበት)',
+    '10-20': '⛪ ሕንፀተ ቤተክርስቲያን (የመጀመሪያዋ ቤተክርስቲያን የታነጸችበት)',
+    '10-30': '🕊️ ቅዱስ ዮሐንስ መጥምቅ / ቅዱስ ማርቆስ ወንጌላዊ',
+    '11-5':  '👑 ቅዱሳን ጴጥሮስ ወጳውሎስ (ሰማዕትነታቸው)',
+    '11-7':  '✝️ ቅድስት ሥላሴ (ሐምሌ ሥላሴ - አብርሃም ሥላሴን ያስተናገደበት)',
+    '11-19': '👑 ቅዱስ ቂርቆስና እናቱ ቅድስት ኢየሉጣ',
+    '12-1':  '🌸 ጾመ ፍልሰታ መጀመሪያ',
+    '12-13': '🌟 ደብረ ታቦር (ቡሄ / ብርሃነ መለኮት)',
+    '12-16': '🌸 ፍልሰታ ለማርያም (ዕርገተ ሥጋዋ ለእመቤታችን)',
+    '12-24': '🕯️ አቡነ ተክለ ሃይማኖት (ዕረፍታቸው)',
+    '13-3':  '🕊️ ቅዱስ ሩፋኤል ሊቀ መላእክት',
+    '13-6':  '🌟 ጳጉሜን 6 (በዘመነ ዮሐንስ መታሰቢያ)'
+};
+
+function toEthiopicNumber(num) {
+    const geez = [
+        '', '፩', '፪', '፫', '፬', '፭', '፮', '፯', '፰', '፱', '፲',
+        '፲፩', '፲፪', '፲፫', '፲፬', '፲፭', '፲፮', '፲፯', '፲፰', '፲፱', '፳',
+        '፳፩', '፳፪', '፳፫', '፳፬', '፳፭', '፳፮', '፳፯', '፳፰', '፳፱', '፴'
+    ];
+    return geez[num] || String(num);
+}
+
+function toEthiopicYear(year) {
+    if (year >= 2000 && year < 2100) {
+        const rem = year - 2000;
+        const geezDigits = [
+            '', '፩', '፪', '፫', '፬', '፭', '፮', '፯', '፰', '፱',
+            '፲', '፲፩', '፲፪', '፲፫', '፲፬', '፲፭', '፲፮', '፲፯', '፲፰', '፲፱',
+            '፳', '፳፩', '፳፪', '፳፫', '፳፬', '፳፭', '፳፮', '፳፯', '፳፰', '፳፱', '፴'
+        ];
+        return '፳፻' + (geezDigits[rem] || String(rem));
+    }
+    return String(year);
+}
+
+function getEvangelistName(year) {
+    const rem = year % 4;
+    switch (rem) {
+        case 0: return 'ዘመነ ዮሐንስ';
+        case 1: return 'ዘመነ ማቴዎስ';
+        case 2: return 'ዘመነ ማርቆስ';
+        case 3: return 'ዘመነ ሉቃስ';
+    }
+    return '';
+}
+
+function ethiopianToGregorian(ethYear, ethMonth, ethDay) {
+    const gregYear = ethYear + 7;
+    const newYearDay = ((ethYear - 1) % 4 === 3) ? 12 : 11;
+    const startDate = new Date(Date.UTC(gregYear, 8, newYearDay));
+    const daysOffset = (ethMonth - 1) * 30 + (ethDay - 1);
+    startDate.setUTCDate(startDate.getUTCDate() + daysOffset);
+    return startDate;
+}
+
+let calViewMode = 'grid';
+
+function setCalView(mode) {
+    calViewMode = mode;
+    document.getElementById('calViewGridBtn').className = (mode === 'grid') ? 'btn btn-sm' : 'btn btn-sm btn-outline';
+    document.getElementById('calViewGridBtn').style.background = (mode === 'grid') ? 'var(--brown-dark)' : 'white';
+    document.getElementById('calViewGridBtn').style.color = (mode === 'grid') ? 'var(--gold-primary)' : '#555';
+
+    document.getElementById('calViewListBtn').className = (mode === 'list') ? 'btn btn-sm' : 'btn btn-sm btn-outline';
+    document.getElementById('calViewListBtn').style.background = (mode === 'list') ? 'var(--brown-dark)' : 'white';
+    document.getElementById('calViewListBtn').style.color = (mode === 'list') ? 'var(--gold-primary)' : '#555';
+
+    document.getElementById('calGridView').style.display = (mode === 'grid') ? 'block' : 'none';
+    document.getElementById('calListView').style.display = (mode === 'list') ? 'block' : 'none';
+    renderOfflineCalendar();
+}
+
+function onOfflineCalChange() {
+    renderOfflineCalendar();
+}
+
+function renderOfflineCalendar() {
+    const monthSelect = document.getElementById('calMonthSelect');
+    const yearSelect = document.getElementById('calYearSelect');
+    if (!monthSelect || !yearSelect) return;
+
+    const m = parseInt(monthSelect.value);
+    const y = parseInt(yearSelect.value);
+
+    document.getElementById('calMonthTitle').textContent = `${ETH_MONTHS[m]} ${y} ዓ.ም ${toEthiopicYear(y)}`;
+    document.getElementById('calEvangelistBadge').textContent = `✨ ${getEvangelistName(y)}`;
+
+    const totalDays = (m === 13) ? ((y % 4 === 3) ? 6 : 5) : 30;
+    const firstDateGreg = ethiopianToGregorian(y, m, 1);
+    const firstDow = firstDateGreg.getUTCDay();
+
+    const gridEl = document.getElementById('calDaysGrid');
+    gridEl.innerHTML = '';
+
+    for (let b = 0; b < firstDow; b++) {
+        const blank = document.createElement('div');
+        blank.style.minHeight = '68px';
+        blank.style.background = 'transparent';
+        gridEl.appendChild(blank);
+    }
+
+    for (let d = 1; d <= totalDays; d++) {
+        const cellDow = (firstDow + d - 1) % 7;
+        const isClassDay = (cellDow === 0 || cellDow === 6);
+        const isSpecial = !!CHURCH_SPECIAL_FEASTS[d];
+        const specialObj = CHURCH_SPECIAL_FEASTS[d];
+        const annualKey = `${m}-${d}`;
+        const annualFeast = ANNUAL_HOLIDAYS[annualKey];
+        const saintText = DAILY_SAINTS[d] || '';
+
+        const cell = document.createElement('div');
+        let classes = ['off-cal-day'];
+        if (isSpecial) classes.push('off-cal-special');
+        else if (isClassDay) classes.push('off-cal-weekend');
+        cell.className = classes.join(' ');
+
+        cell.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px;">
+                <span style="font-size:14px; font-weight:800; color:${isSpecial ? '#B45309' : (isClassDay ? '#065F46' : '#1E293B')};">${d}</span>
+                <span style="font-size:11px; font-weight:700; color:#D97706;">${toEthiopicNumber(d)}</span>
+            </div>
+            <div style="font-size:9.5px; line-height:1.2; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(saintText)}">
+                ${specialObj ? `${specialObj.icon} ` : ''}${escapeHtml(saintText)}
+            </div>
+            ${annualFeast ? `<div style="font-size:9px; background:#FEF3C7; color:#92400E; padding:1px 3px; border-radius:3px; margin-top:auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700;" title="${escapeHtml(annualFeast)}">${escapeHtml(annualFeast)}</div>` : ''}
+        `;
+
+        cell.onclick = () => showCalDayModal(d, m, y, cellDow, saintText, annualFeast, isClassDay);
+        gridEl.appendChild(cell);
+    }
+
+    const listEl = document.getElementById('calListContent');
+    if (listEl) {
+        let listHtml = '';
+        const dayNames = ['እሑድ', 'ሰኞ', 'ማክሰኞ', 'ረቡዕ', 'ሐሙስ', 'ዓርብ', 'ቅዳሜ'];
+        for (let d = 1; d <= totalDays; d++) {
+            const cellDow = (firstDow + d - 1) % 7;
+            const isClassDay = (cellDow === 0 || cellDow === 6);
+            const isSpecial = !!CHURCH_SPECIAL_FEASTS[d];
+            const specialObj = CHURCH_SPECIAL_FEASTS[d];
+            const annualKey = `${m}-${d}`;
+            const annualFeast = ANNUAL_HOLIDAYS[annualKey];
+            const saintText = DAILY_SAINTS[d] || '';
+
+            listHtml += `
+            <div style="padding:10px; border-bottom:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:${annualFeast ? '#FFFBEB' : (isClassDay ? '#F0FDF4' : 'transparent')}; border-radius:6px; margin-bottom:4px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="min-width:40px; text-align:center;">
+                        <span style="font-size:16px; font-weight:800; color:var(--brown-dark);">${d}</span>
+                        <span style="font-size:11px; color:#92400E; display:block;">${toEthiopicNumber(d)}</span>
+                    </div>
+                    <div>
+                        <div style="font-weight:700; font-size:13.5px; color:#1E293B;">
+                            ${dayNames[cellDow]} · ${saintText}
+                        </div>
+                        ${annualFeast ? `<div style="color:#B45309; font-weight:700; font-size:12.5px; margin-top:2px;">${annualFeast}</div>` : ''}
+                        ${isClassDay ? `<span style="font-size:10.5px; background:#D1FAE5; color:#065F46; padding:1px 6px; border-radius:4px; font-weight:700;">📚 መደበኛ የትምህርት ቀን</span>` : ''}
+                    </div>
+                </div>
+                ${isSpecial ? `<span style="font-size:12px; font-weight:700; color:#B45309; background:#FEF3C7; padding:2px 8px; border-radius:10px;">${specialObj.icon} ${specialObj.name}</span>` : ''}
+            </div>`;
+        }
+        listEl.innerHTML = listHtml;
+    }
+}
+
+function showCalDayModal(d, m, y, dow, saint, annual, isClassDay) {
+    const dayNames = ['እሑድ', 'ሰኞ', 'ማክሰኞ', 'ረቡዕ', 'ሐሙስ', 'ዓርብ', 'ቅዳሜ'];
+    const title = `${dayNames[dow]}፣ ${ETH_MONTHS[m]} ${d} (${toEthiopicNumber(d)}) ቀን ${y} ዓ.ም`;
+    document.getElementById('modalDayTitle').textContent = title;
+
+    let body = `
+        <div style="margin-bottom:12px;">
+            <strong style="color:var(--brown-dark); display:block; margin-bottom:4px;">⛪ የዕለቱ ቅዱሳን ዝክር፡</strong>
+            <div style="background:#FAF8F5; padding:10px; border-radius:8px; border:1px solid #E2E8F0;">
+                ${saint}
+            </div>
+        </div>
+    `;
+
+    if (annual) {
+        body += `
+        <div style="margin-bottom:12px;">
+            <strong style="color:#B45309; display:block; margin-bottom:4px;">🌟 ዓመታዊ የቤተክርስቲያን በዓል፡</strong>
+            <div style="background:#FEF3C7; padding:10px; border-radius:8px; border:1px solid #F59E0B; color:#92400E; font-weight:700;">
+                ${annual}
+            </div>
+        </div>`;
+    }
+
+    if (isClassDay) {
+        body += `
+        <div style="margin-bottom:10px; background:#ECFDF5; padding:10px; border-radius:8px; border:1px solid #86EFAC; color:#065F46; font-size:13px;">
+            📚 <strong>የሰንበት ትምህርት ቤት መርሃ ግብር፡</strong><br>
+            ቅዳሜ እና እሁድ መደበኛ የክፍል ትምህርት የሚሰጥባቸው ቀናት ናቸው።
+        </div>`;
+    }
+
+    document.getElementById('modalDayBody').innerHTML = body;
+    document.getElementById('calDayModal').style.display = 'flex';
+}
+
+function closeCalModal() {
+    document.getElementById('calDayModal').style.display = 'none';
 }
 
 async function onClassChanged() {
@@ -463,8 +1220,6 @@ async function loadAttendanceForCurrentSelection() {
                 <button type="button" class="dot-btn ${status === 'present' ? 'active-p' : ''}" onclick="recordAtt(${s.id}, 'present', this)">ተገኝቷል</button>
                 <button type="button" class="dot-btn ${status === 'absent' ? 'active-a' : ''}" onclick="recordAtt(${s.id}, 'absent', this)">ቀረ</button>
                 <button type="button" class="dot-btn ${status === 'permission' ? 'active-per' : ''}" onclick="recordAtt(${s.id}, 'permission', this)">ፈቃድ</button>
-                <button type="button" class="dot-btn ${status === 'late' ? 'active-l' : ''}" onclick="recordAtt(${s.id}, 'late', this)">ዘግይቷል</button>
-                <button type="button" class="dot-btn ${status === 'excused' ? 'active-e' : ''}" onclick="recordAtt(${s.id}, 'excused', this)">ይቅርታ</button>
             </div>
         </div>`;
     });
@@ -483,9 +1238,7 @@ async function recordAtt(studentId, status, btn) {
     const classMap = {
         'present': 'active-p',
         'absent': 'active-a',
-        'permission': 'active-per',
-        'late': 'active-l',
-        'excused': 'active-e'
+        'permission': 'active-per'
     };
     btn.classList.add(classMap[status]);
 
@@ -500,7 +1253,7 @@ async function recordAtt(studentId, status, btn) {
         marked_by: currentUser.id
     });
 
-    showToast('💾 አቴንዳንስ ከመስመር ውጭ ተቀምጧል!');
+    showToast('💾 አቴንዳንስ Offline ተቀምጧል!');
     await updatePendingCounts();
 
     // Auto push in background (SyncManager verifies server reachability)
@@ -567,11 +1320,14 @@ async function saveStudentMark(studentId) {
 
     const uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'mrk_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
 
+    const activeSem = (window.OfflineDB && OfflineDB.getActiveSemester) ? (await OfflineDB.getActiveSemester()) : null;
+    const targetSemesterId = activeSem ? parseInt(activeSem.id) : 1;
+
     await OfflineDB.saveMarksLocal({
         local_uuid: uuid,
         student_id: studentId,
         class_id: classId,
-        semester_id: 1,
+        semester_id: targetSemesterId,
         assignment: as,
         participation: pa,
         attendance: at,
@@ -581,7 +1337,7 @@ async function saveStudentMark(studentId) {
         teacher_id: currentUser.id
     });
 
-    showToast('💾 ውጤት ከመስመር ውጭ ተቀምጧል!');
+    showToast('💾 ውጤት Offline ተቀምጧል!');
     await updatePendingCounts();
 
     SyncManager.pushChanges();
@@ -618,7 +1374,7 @@ async function renderQueue() {
 }
 
 async function triggerSync() {
-    showToast('🔄 ውሂብ በማመሳሰል ላይ...');
+    showToast('🔄 መረጃዎችን በማመሳሰል ላይ...');
     const res = await SyncManager.fullSync();
     if (res && res.success) {
         showToast('✅ ተመሳስሏል!');
@@ -627,7 +1383,7 @@ async function triggerSync() {
             await renderQueue();
         }
     } else if (res && res.offline) {
-        showToast('ℹ️ ኢንተርኔት የለም። ለውጦቹ በመሳሪያዎ ላይ ተይዘዋል።');
+        showToast('ℹ️ ኢንተርኔት የለም። ለውጦቹ በስልክዎ / PC ይቀመጣል');
     } else {
         showToast('⚠️ ማመሳሰል አልተሳካም: ' + (res?.message || 'ስህተት ተከስቷል'));
     }

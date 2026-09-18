@@ -52,22 +52,55 @@ async function tx(storeName, mode, fn) {
     });
 }
 
+async function hashPassword(pwd) {
+    if (!pwd || typeof pwd !== 'string') return null;
+    try {
+        const msgUint8 = new TextEncoder().encode(pwd);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (_) {
+        return null;
+    }
+}
+
 const OfflineDB = {
     // ---- Auth (offline login) ----
-    async saveAuth(user, token, expiresAt) {
+    async saveAuth(user, token, expiresAt, password = null) {
         try {
             const prev = await this.getAuth();
-            if (prev && prev.user && user && (prev.user.id !== user.id || prev.user.role !== user.role)) {
+            const prevId = prev && prev.user ? parseInt(prev.user.id) : null;
+            const newId = user ? parseInt(user.id) : null;
+            const prevRole = prev && prev.user ? prev.user.role : null;
+            const newRole = user ? user.role : null;
+
+            if (prevId && newId && (prevId !== newId || prevRole !== newRole)) {
                 // User switch: clear classes and students to guarantee 0% data leakage across accounts
                 await tx('classes', 'readwrite', (s) => s.clear());
                 await tx('students', 'readwrite', (s) => s.clear());
+                await tx('meta', 'readwrite', (s) => s.clear());
             }
+
+            let pwdHash = prev ? prev.pwdHash : null;
+            if (password) {
+                pwdHash = await hashPassword(password);
+            }
+
+            if (user) {
+                user.name = (user.name || '').trim();
+                if (user.username) user.username = user.username.trim();
+                if (user.role === 'admin') {
+                    if (!user.username) user.username = 'admin';
+                    if (!user.name) user.name = 'ICT';
+                }
+            }
+
+            return tx('auth', 'readwrite', (store) => {
+                store.put({ id: 'current', user, token, expiresAt, pwdHash });
+            });
         } catch (e) {
-            console.warn('saveAuth cleanup notice:', e);
+            console.warn('saveAuth error:', e);
         }
-        return tx('auth', 'readwrite', (store) => {
-            store.put({ id: 'current', user, token, expiresAt });
-        });
     },
     async getAuth() {
         const db = await openDB();
@@ -80,7 +113,7 @@ const OfflineDB = {
     async clearAuth() {
         return tx('auth', 'readwrite', (store) => store.delete('current'));
     },
-    /** Offline login: checks cached user and token validity */
+    /** Offline login: checks cached user, aliases, and token validity */
     async offlineLogin(username, password) {
         const cached = await this.getAuth();
         if (!cached || !cached.user) {
@@ -88,12 +121,25 @@ const OfflineDB = {
         }
         const u = cached.user;
         const entered = (username || '').trim().toLowerCase();
-        const matchesUser = (u.username && u.username.toLowerCase() === entered) ||
-                            (u.name && u.name.toLowerCase() === entered);
+        const uName = (u.name || '').trim().toLowerCase();
+        const uUser = (u.username || '').trim().toLowerCase();
+
+        const matchesUser = (uUser && uUser === entered) ||
+                            (uName && uName === entered) ||
+                            (u.role === 'admin' && (entered === 'admin' || entered === 'ict' || entered.includes('ict')));
 
         if (!matchesUser) {
-            return { success: false, message: 'የተጠቃሚ ስም በዚህ መሳሪያ ላይ ከተቀመጠው ጋር አይዛመድም።' };
+            return { success: false, message: 'የተጠቃሚ ስም በዚህ መሳሪያ ላይ ከተቀመጠው ጋር አልተዛመደም።' };
         }
+
+        // Verify password if cached and non-empty password provided
+        if (cached.pwdHash && password) {
+            const enteredHash = await hashPassword(password);
+            if (enteredHash && enteredHash !== cached.pwdHash) {
+                return { success: false, message: 'የተሳሳተ የይለፍ ቃል!' };
+            }
+        }
+
         if (cached.expiresAt && new Date(cached.expiresAt) < new Date()) {
             return { success: false, message: 'የተቀመጠው የመግቢያ ጊዜ አልቋል። እባክዎ ኢንተርኔት አገናኝተው እንደገና ይግቡ።' };
         }
@@ -117,7 +163,7 @@ const OfflineDB = {
             req.onerror = () => resolve([]);
         });
         const user = forUser || (await this.getAuth())?.user || window.CURRENT_USER;
-        if (user && user.role === 'teacher' && Array.isArray(user.class_ids)) {
+        if (user && user.role === 'teacher' && Array.isArray(user.class_ids) && user.class_ids.length > 0) {
             const allowed = user.class_ids.map(id => parseInt(id));
             return allClasses.filter(c => allowed.includes(parseInt(c.id)));
         }
@@ -142,15 +188,16 @@ const OfflineDB = {
     },
     async getStudentsByClass(classId, forUser) {
         const cid = parseInt(classId);
+        if (!cid) return [];
         const user = forUser || (await this.getAuth())?.user || window.CURRENT_USER;
-        if (user && user.role === 'teacher' && Array.isArray(user.class_ids)) {
+        if (user && user.role === 'teacher' && Array.isArray(user.class_ids) && user.class_ids.length > 0) {
             const allowed = user.class_ids.map(id => parseInt(id));
             if (!allowed.includes(cid)) {
                 return []; // Strictly isolated
             }
         }
         const all = await this.getAllStudents();
-        return all.filter((s) => s.class_id === cid && !s.is_deleted);
+        return all.filter((s) => parseInt(s.class_id) === cid && (s.is_deleted === 0 || s.is_deleted === '0' || !s.is_deleted));
     },
 
     // ---- Attendance: local writes + dirty queue ----
@@ -173,6 +220,23 @@ const OfflineDB = {
         record.updated_at = new Date().toISOString();
         return tx('attendance', 'readwrite', (store) => store.put(record));
     },
+    async deleteAttendanceLocal(studentId, classId, dateStr) {
+        const sid = parseInt(studentId);
+        const cid = parseInt(classId);
+        const all = await this.getAllAttendance();
+        const existing = all.find((r) => parseInt(r.student_id) === sid && parseInt(r.class_id) === cid && r.attendance_date === dateStr);
+        const uuid = existing ? existing.local_uuid : ((window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'att_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9));
+        const record = {
+            local_uuid: uuid,
+            student_id: sid,
+            class_id: cid,
+            attendance_date: dateStr,
+            status: 'remove',
+            dirty: true,
+            updated_at: new Date().toISOString()
+        };
+        return tx('attendance', 'readwrite', (store) => store.put(record));
+    },
     async getAllAttendance() {
         const db = await openDB();
         return new Promise((resolve) => {
@@ -184,7 +248,7 @@ const OfflineDB = {
     async getAttendanceByClassAndDate(classId, dateStr) {
         const all = await this.getAllAttendance();
         const cid = parseInt(classId);
-        return all.filter((r) => parseInt(r.class_id) === cid && r.attendance_date === dateStr);
+        return all.filter((r) => parseInt(r.class_id) === cid && r.attendance_date === dateStr && r.status !== 'remove' && r.status !== 'uncheck' && r.status !== 'deleted');
     },
     async getDirtyAttendance() {
         const all = await this.getAllAttendance();
@@ -195,7 +259,14 @@ const OfflineDB = {
             const req = store.get(localUuid);
             req.onsuccess = () => {
                 const rec = req.result;
-                if (rec) { rec.dirty = false; store.put(rec); }
+                if (rec) {
+                    if (rec.status === 'remove' || rec.status === 'uncheck' || rec.status === 'deleted') {
+                        store.delete(localUuid);
+                    } else {
+                        rec.dirty = false;
+                        store.put(rec);
+                    }
+                }
             };
         });
     },
@@ -271,5 +342,16 @@ const OfflineDB = {
     },
     async setLastSync(timestamp) {
         return tx('meta', 'readwrite', (store) => store.put({ key: 'last_sync', value: timestamp }));
+    },
+    async getActiveSemester() {
+        const db = await openDB();
+        return new Promise((resolve) => {
+            const req = db.transaction('meta', 'readonly').objectStore('meta').get('active_semester');
+            req.onsuccess = () => resolve(req.result ? req.result.value : null);
+            req.onerror = () => resolve(null);
+        });
+    },
+    async setActiveSemester(sem) {
+        return tx('meta', 'readwrite', (store) => store.put({ key: 'active_semester', value: sem }));
     }
 };

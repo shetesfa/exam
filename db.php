@@ -34,7 +34,7 @@ if (APP_DEBUG) {
     set_exception_handler(function ($e) {
         error_log('Uncaught exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         http_response_code(500);
-        echo "እባክዎ እንደገና ይሞክሩ። ችግሩ ከቀጠለ አስተዳዳሪውን ያነጋግሩ።";
+        echo "እባክዎ እንደገና ይሞክሩ። ችግሩ ከቀጠለ ትምህርት ክፍልን ያነጋግሩ።";
         exit;
     });
     register_shutdown_function(function () {
@@ -42,7 +42,7 @@ if (APP_DEBUG) {
         if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
             error_log('Fatal error: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
             if (!headers_sent()) http_response_code(500);
-            echo "እባክዎ እንደገና ይሞክሩ። ችግሩ ከቀጠለ አስተዳዳሪውን ያነጋግሩ። (Something went wrong - please try again.)";
+            echo "እባክዎ እንደገና ይሞክሩ። ችግሩ ከቀጠለ ትምህርት ክፍልን ያነጋግሩ። (Something went wrong - please try again.)";
         }
     });
 }
@@ -335,22 +335,54 @@ function getMarkingScheme($conn, $teacher_id, $class_id, $semester_id) {
     );
     
     if ($row) {
+        $row['component1_name'] = getChurchComponentName($row['component1_name'] ?? '', 'የቤት ሥራ');
+        $row['component2_name'] = getChurchComponentName($row['component2_name'] ?? '', 'የክፍል ተሳትፎ');
+        $row['component3_name'] = getChurchComponentName($row['component3_name'] ?? '', 'የክፍል ክትትል');
+        $row['component4_name'] = getChurchComponentName($row['component4_name'] ?? '', 'የአጋማሽ ፈተና');
+        $row['component5_name'] = getChurchComponentName($row['component5_name'] ?? '', 'የማጠቃለያ ፈተና');
         return $row;
     }
     
-    // Return default scheme
+    // Return default church scheme in Amharic
     return [
-        'component1_name' => 'Assignment',
+        'component1_name' => 'የቤት ሥራ',
         'component1_percentage' => 20,
-        'component2_name' => 'Participation',
+        'component2_name' => 'የክፍል ተሳትፎ',
         'component2_percentage' => 20,
-        'component3_name' => 'Attendance',
+        'component3_name' => 'የክፍል ክትትል',
         'component3_percentage' => 10,
-        'component4_name' => 'Mid Exam',
+        'component4_name' => 'የአጋማሽ ፈተና',
         'component4_percentage' => 25,
-        'component5_name' => 'Final Exam',
+        'component5_name' => 'የማጠቃለያ ፈተና',
         'component5_percentage' => 25
     ];
+}
+
+function getChurchComponentName($name, $default = '') {
+    $trimmed = trim((string)$name);
+    if (empty($trimmed) || $trimmed === '-' || strpos($trimmed, '?') !== false) {
+        return $default;
+    }
+    $map = [
+        'assignment' => 'የቤት ሥራ',
+        'participation' => 'የክፍል ተሳትፎ',
+        'attendance' => 'የክፍል ክትትል',
+        'mid exam' => 'የአጋማሽ ፈተና',
+        'mid' => 'የአጋማሽ ፈተና',
+        'final exam' => 'የማጠቃለያ ፈተና',
+        'final' => 'የማጠቃለያ ፈተና',
+        'የቤት ስራ (assignment)' => 'የቤት ሥራ',
+        'ተሳትፎ (participation)' => 'የክፍል ተሳትፎ',
+        'ክትትል (attendance)' => 'የክፍል ክትትል',
+        'አጋማሽ ፈተና (mid exam)' => 'የአጋማሽ ፈተና',
+        'የማጠቃለያ ፈተና (final exam)' => 'የማጠቃለያ ፈተና',
+        'የቤት ስራ' => 'የቤት ሥራ',
+        'ተሳትፎ' => 'የክፍል ተሳትፎ',
+        'ክትትል' => 'የክፍል ክትትል',
+        'አጋማሽ ፈተና' => 'የአጋማሽ ፈተና',
+    ];
+    $key = mb_strtolower($trimmed, 'UTF-8');
+    return $map[$key] ?? $trimmed;
 }
 
 function saveMarkingScheme($conn, $teacher_id, $class_id, $semester_id, $data) {
@@ -358,20 +390,20 @@ function saveMarkingScheme($conn, $teacher_id, $class_id, $semester_id, $data) {
     $class_id = intval($class_id);
     $semester_id = intval($semester_id);
     
-    $c1_name = trim($data['c1_name'] ?? 'Assignment');
+    $c1_name = getChurchComponentName(trim($data['c1_name'] ?? 'የቤት ሥራ'), 'የቤት ሥራ');
     $c1_perc = floatval($data['c1_perc'] ?? 0);
-    $c2_name = trim($data['c2_name'] ?? 'Participation');
+    $c2_name = getChurchComponentName(trim($data['c2_name'] ?? 'የክፍል ተሳትፎ'), 'የክፍል ተሳትፎ');
     $c2_perc = floatval($data['c2_perc'] ?? 0);
-    $c3_name = trim($data['c3_name'] ?? 'Attendance');
+    $c3_name = getChurchComponentName(trim($data['c3_name'] ?? 'የክፍል ክትትል'), 'የክፍል ክትትል');
     $c3_perc = floatval($data['c3_perc'] ?? 0);
-    $c4_name = trim($data['c4_name'] ?? 'Mid Exam');
+    $c4_name = getChurchComponentName(trim($data['c4_name'] ?? 'የአጋማሽ ፈተና'), 'የአጋማሽ ፈተና');
     $c4_perc = floatval($data['c4_perc'] ?? 0);
-    $c5_name = trim($data['c5_name'] ?? 'Final Exam');
+    $c5_name = getChurchComponentName(trim($data['c5_name'] ?? 'የማጠቃለያ ፈተና'), 'የማጠቃለያ ፈተና');
     $c5_perc = floatval($data['c5_perc'] ?? 0);
     
     $total = $c1_perc + $c2_perc + $c3_perc + $c4_perc + $c5_perc;
     if (abs($total - 100) > 0.01) {
-        return ['success' => false, 'message' => "Total must be 100% (Current: {$total}%)"];
+        return ['success' => false, 'message' => "የውጤት መስፈርቶቹ ድምር በትክክል 100% መሆን አለበት! (አሁን: {$total}%)"];
     }
     
     $stmt = mysqli_prepare($conn, "INSERT INTO marking_schemes 
@@ -409,12 +441,12 @@ function saveMarkingScheme($conn, $teacher_id, $class_id, $semester_id, $data) {
     
     if (mysqli_stmt_execute($stmt)) {
         mysqli_stmt_close($stmt);
-        return ['success' => true, 'message' => 'Marking scheme saved!'];
+        return ['success' => true, 'message' => 'የውጤት መስፈርቱ በትክክል ተቀምጧል!'];
     }
     
     $err = mysqli_stmt_error($stmt);
     mysqli_stmt_close($stmt);
-    return ['success' => false, 'message' => 'Error: ' . $err];
+    return ['success' => false, 'message' => 'ስህተት ተከስቷል፦ ' . $err];
 }
 
 // ============================================
@@ -469,12 +501,18 @@ function gregorianToEthiopian($gregorianDate = null) {
         9 => 'ግንቦት', 10 => 'ሰኔ', 11 => 'ሐምሌ', 12 => 'ነሐሴ', 13 => 'ጳጉሜን'
     ];
     
+    $amharicDays = [
+        'Sunday' => 'እሑድ', 'Monday' => 'ሰኞ', 'Tuesday' => 'ማክሰኞ',
+        'Wednesday' => 'ረቡዕ', 'Thursday' => 'ሐሙስ', 'Friday' => 'ዓርብ', 'Saturday' => 'ቅዳሜ'
+    ];
+    
     return [
         'year' => (int)$ey,
         'month' => (int)$em,
         'day' => (int)$ed,
         'month_name' => $ethiopianMonths[$em] ?? 'ያልታወቀ',
         'day_of_week' => $date->format('l'),
+        'day_of_week_am' => $amharicDays[$date->format('l')] ?? '',
         'formatted' => ($ethiopianMonths[$em] ?? '') . ' ' . $ed . ' ቀን ' . $ey . ' ዓ.ም',
         'full' => ($ethiopianMonths[$em] ?? '') . ' ' . $ed . ' ቀን ' . $ey . ' ዓ.ም'
     ];
@@ -611,11 +649,12 @@ function saveAttendance($conn, $student_id, $class_id, $teacher_id, $date, $stat
     $status = in_array(strtolower($status), ['present', 'absent', 'permission', 'late', 'excused']) ? strtolower($status) : 'absent';
     
     $stmt = mysqli_prepare($conn, "INSERT INTO attendance_records 
-              (student_id, class_id, teacher_id, attendance_date, status, marked_by)
-              VALUES (?, ?, ?, ?, ?, ?)
+              (student_id, class_id, teacher_id, attendance_date, status, marked_by, is_deleted)
+              VALUES (?, ?, ?, ?, ?, ?, 0)
               ON DUPLICATE KEY UPDATE
               status = VALUES(status),
               marked_by = VALUES(marked_by),
+              is_deleted = 0,
               last_updated = CURRENT_TIMESTAMP");
               
     if (!$stmt) return false;
@@ -624,6 +663,18 @@ function saveAttendance($conn, $student_id, $class_id, $teacher_id, $date, $stat
     $res = mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
     return $res;
+}
+
+function deleteAttendanceRecord($conn, $student_id, $class_id, $date) {
+    $student_id = intval($student_id);
+    $class_id = intval($class_id);
+    $date = date('Y-m-d', strtotime($date));
+    return dbExecute(
+        $conn,
+        "DELETE FROM attendance_records WHERE student_id = ? AND class_id = ? AND attendance_date = ?",
+        "iis",
+        [$student_id, $class_id, $date]
+    );
 }
 
 function getNextSchoolDays($conn, $limit = 10) {
@@ -1065,6 +1116,77 @@ function setUserDarkMode($conn, $userId, $mode, $isStudent = false) {
     }
     $_SESSION['dark_mode_preference'] = $val;
     $_SESSION['dark_mode'] = $val;
+    return true;
+}
+
+// ============================================
+// AUTOMATED CHURCH FEAST & SUNDAY TEACHER ALERTS
+// ============================================
+
+function checkAutomatedSchoolAlerts($conn) {
+    if (!$conn) return false;
+
+    // 1. Church Feast Day Greetings (Days: 3, 16, 21, 23, 26, 27)
+    $today_eth = getCurrentEthiopianDate();
+    $ey = intval($today_eth['year']);
+    $em = intval($today_eth['month']);
+    $ed = intval($today_eth['day']);
+
+    $special_feasts = [
+        3  => 'ቅዱስ ሩፋኤል',
+        16 => 'ኪዳነ ምሕረት',
+        21 => 'እመቤታችን ቅድስት ድንግል ማርያም',
+        23 => 'ቅዱስ ጊዮርጊስ',
+        26 => 'አቡነ ሐብተ ማርያም',
+        27 => 'መድኃኔዓለም'
+    ];
+
+    if (isset($special_feasts[$ed])) {
+        $feastName = $special_feasts[$ed];
+        $marker = "feast_greeting:{$ey}:{$em}:{$ed}";
+        $chk = dbFetchOne($conn, "SELECT id FROM notifications WHERE related_page = ?", "s", [$marker]);
+        if (!$chk) {
+            $title = "⛪ የዕለቱ በዓል ማሳሰቢያ";
+            $message = "እንኳን አደረሳችሁ ለ{$feastName} ዕለት! — አጸደ ትጉሃን ሰንበት ትምህርት ቤት";
+            createNotification($conn, $title, $message, [], 'normal', null, $marker);
+        }
+    }
+
+    // 2. Sunday 04:50 (10:50 AM) Children's Teacher Notification
+    $dt = new DateTime('now', new DateTimeZone('Africa/Addis_Ababa'));
+    $dow = intval($dt->format('w')); // 0 = Sunday
+    $hour = intval($dt->format('H'));
+    $min = intval($dt->format('i'));
+
+    if ($dow === 0) {
+        // Ethiopian 05:00 is 11:00 AM. 10 minutes before is 10:50 AM.
+        $timeMinutes = $hour * 60 + $min;
+        $alertStart = 10 * 60 + 50; // 10:50 AM
+        $alertEnd = 12 * 60;        // 12:00 PM
+
+        if ($timeMinutes >= $alertStart && $timeMinutes <= $alertEnd) {
+            $todayGreg = $dt->format('Y-m-d');
+            $marker = "children_teacher_sunday_alert:{$todayGreg}";
+            $chk = dbFetchOne($conn, "SELECT id FROM notifications WHERE related_page = ?", "s", [$marker]);
+            if (!$chk) {
+                // Find all teachers teaching children classes (Division 1 / Grades 1-6)
+                $tRows = dbFetchAll(
+                    $conn,
+                    "SELECT DISTINCT tc.teacher_id 
+                     FROM teacher_class tc 
+                     JOIN classes c ON tc.class_id = c.id 
+                     LEFT JOIN grades g ON c.grade_id = g.id 
+                     WHERE g.division_id = 1 OR c.name LIKE '%ህፃናት%' OR c.description LIKE '%ህፃናት%'"
+                );
+                $teacherIds = array_column($tRows, 'teacher_id');
+                if (!empty($teacherIds)) {
+                    $title = "⏰ የህፃናት ክፍል መምህራን ማስታወሻ";
+                    $message = "ልጆችዎ እየጠበቁዎት ነው ቤተክርስቲያን ይገኙ! (ትምህርት 05:00 ይጀምራል)";
+                    createNotification($conn, $title, $message, ['users' => $teacherIds], 'high', null, $marker);
+                }
+            }
+        }
+    }
     return true;
 }
 ?>

@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($updated) {
                 $_SESSION['first_login'] = 0;
-                $success = "የይለፍ ቃል በተሳካ ሁኔታ ተቀይሯል! እንኳን ደህና መጡ!";
+                $success = "የይለፍ ቃል በትክክል ተቀይሯል! እንኳን ደህና መጡ!";
                 
                 $redirect = "dashboard_teacher.php";
                 if ($user['role'] === 'admin') {
@@ -324,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="form-group">
-                    <label>የይለፍ ቃሉን በድጋሚ ያረጋግጡ</label>
+                    <label>የይለፍ ቃሉን በድጋሚ ያስገቡ</label>
                     <div class="input-group">
                         <span class="input-icon">✓</span>
                         <input type="password" name="confirm_password" class="form-control" 

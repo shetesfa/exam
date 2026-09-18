@@ -125,5 +125,6 @@ json_out([
     'students' => $students,
     'attendance' => $attendance,
     'marks' => $marks,
+    'active_semester' => $currentSemester,
     'server_time' => date('c')
 ]);

@@ -64,8 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($matched_user && password_verify($password, $matched_user['password'])) {
                 session_regenerate_id(true);
 
-                $_SESSION['user_id'] = $matched_user['id'];
-                $_SESSION['user_name'] = $matched_user['name'];
+                $_SESSION['user_id'] = (int)$matched_user['id'];
+                $_SESSION['user_name'] = trim($matched_user['name']);
+                $_SESSION['username'] = trim($matched_user['username']);
                 $_SESSION['role'] = $matched_user['role'];
                 $_SESSION['first_login'] = $matched_user['first_login'];
                 $_SESSION['dark_mode'] = intval($matched_user['dark_mode'] ?? 0);
@@ -515,7 +516,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'student_logout') {
 
                 <button type="submit" class="btn-login">
                     <span>🔑</span>
-                    ወደ ሲስተሙ ግባ
+                    ወደ ሲስተሙ ይግቡ
                 </button>
             </form>
 
@@ -592,7 +593,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'student_logout') {
                         });
                         const authData = await authRes.json();
                         if (authData.success && authData.token) {
-                            await OfflineDB.saveAuth(authData.user, authData.token, authData.expires_at);
+                            await OfflineDB.saveAuth(authData.user, authData.token, authData.expires_at, password);
                         }
                     } catch (_) {}
 
@@ -623,7 +624,7 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'student_logout') {
                             errDiv.className = 'error-message';
                             loginForm.parentNode.insertBefore(errDiv, loginForm);
                         }
-                        errDiv.innerHTML = `<span>⚠️</span> ${result.message || 'ከመስመር ውጭ መግባት አልተቻለም!'}`;
+                        errDiv.innerHTML = `<span>⚠️</span> ${result.message || 'Offline መግባት አልተቻለም!'}`;
                     }
                 }
             });

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * manage_curriculum.php - የመማሪያ መጻሕፍት፣ ምዕራፎች እና ንዑስ ርዕሶች ማስተዳደሪያ
  * 
@@ -50,7 +50,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action'])) {
             [$grade, $subject, $chapter, $subtopic]
         );
 
-        echo json_encode(['success' => (bool)$ins, 'message' => $ins ? 'አዲሱ መጽሐፍ በተሳካ ሁኔታ ተፈጥሯል!' : 'ስህተት ተፈጥሯል!']);
+        echo json_encode(['success' => (bool)$ins, 'message' => $ins ? 'አዲሱ መጽሐፍ በትክክል ተመዝግቧል!' : 'ስህተት ተከስቷል!']);
         exit();
     }
 
@@ -124,7 +124,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action'])) {
             [$grade, $subject, $chapter, $subtopic, $nextOrder]
         );
 
-        echo json_encode(['success' => (bool)$ins, 'message' => $ins ? 'አዲሱ ምዕራፍ በተሳካ ሁኔታ ተጨምሯል!' : 'ስህተት ተፈጥሯል!']);
+        echo json_encode(['success' => (bool)$ins, 'message' => $ins ? 'አዲሱ ምዕራፍ በትክክል ተጨምሯል!' : 'ስህተት ተከስቷል!']);
         exit();
     }
 
@@ -200,7 +200,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action'])) {
             [$grade, $subject, $chapter, $subtopic, $nextOrder]
         );
 
-        echo json_encode(['success' => (bool)$ins, 'message' => $ins ? 'ንዑስ ርዕሱ በተሳካ ሁኔታ ተጨምሯል!' : 'ስህተት ተፈጥሯል!']);
+        echo json_encode(['success' => (bool)$ins, 'message' => $ins ? 'ንዑስ ርዕሱ በትክክል ተጨምሯል!' : 'ስህተት ተከስቷል!']);
         exit();
     }
 
@@ -1213,7 +1213,7 @@ function getSubjectIcon($name) {
 
     // Direct Deletion Helpers with Confirmations
     async function deleteSubject(subjectName) {
-        if (!confirm(`«${subjectName}» የተሰኘውን መጽሐፍ እና በእርሱ ስር ያሉ ምዕራፎችንና ርዕሶችን በሙሉ መሰረዝ ይፈልጋሉ? ይህ ድርጊት አይመለስም!`)) {
+        if (!confirm(`«${subjectName}» የተሰኘውን መጽሐፍ እና በእርሱ ስር ያሉ ምዕራፎችንና ርዕሶችን በሙሉ መሰረዝ ይፈልጋሉ? ይህ ከተሰረዘ በኋላ አይመለስም!`)) {
             return;
         }
         const fd = new FormData();
@@ -1232,7 +1232,7 @@ function getSubjectIcon($name) {
                 showToast(data.message, true);
             }
         } catch (e) {
-            showToast('ስህተት ተፈጥሯል!', true);
+            showToast('ስህተት ተከስቷል!', true);
         }
     }
 
@@ -1257,7 +1257,7 @@ function getSubjectIcon($name) {
                 showToast(data.message, true);
             }
         } catch (e) {
-            showToast('ስህተት ተፈጥሯል!', true);
+            showToast('ስህተት ተከስቷል!', true);
         }
     }
 
@@ -1284,7 +1284,7 @@ function getSubjectIcon($name) {
                 showToast(data.message, true);
             }
         } catch (e) {
-            showToast('ስህተት ተፈጥሯል!', true);
+            showToast('ስህተት ተከስቷል!', true);
         }
     }
 

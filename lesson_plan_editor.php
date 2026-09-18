@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireTeacher();
 
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "የደህንነት ማረጋገጫ አልተሳካም!";
     } elseif (isset($_POST['save_plan'])) {
         if (!$can_create_plan) {
-            $error = "ይቅርታ፤ የወጣቶች መምህራን የትምህርት ዕቅድ የማዘጋጀት ፈቃድ አልተሰጣቸውም። አስተዳዳሪውን ያነጋግሩ።";
+            $error = "ይቅርታ፤ የወጣቶች መምህራን የትምህርት ዕቅድ የማዘጋጀት ፈቃድ አልተሰጣቸውም። ትምህርት ክፍልን ያነጋግሩ።";
         } else {
             $plan_id = intval($_POST['plan_id'] ?? 0);
             $class_id = intval($_POST['class_id'] ?? 0);
@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($plan_id > 0) {
                     $lockRow = dbFetchOne($conn, "SELECT plan_locked FROM teacher_class WHERE teacher_id = ? AND class_id = ? AND semester_id = ?", "iii", [$teacher_id, $class_id, $semester_id]);
                     if ($lockRow && $lockRow['plan_locked']) {
-                        $error = "ይህ ክፍል ለዕቅድ አርትዖት ተቆልፏል! አስተዳዳሪውን ያነጋግሩ።";
+                        $error = "ይህ ክፍል ለዕቅድ አርትዖት ተቆልፏል! ትምህርት ክፍልን ያነጋግሩ።";
                     } else {
                         $ownerCheck = dbFetchOne($conn, "SELECT id, paper_photo_path FROM lesson_plans WHERE id = ? AND teacher_id = ?", "ii", [$plan_id, $teacher_id]);
                         if (!$ownerCheck) {
@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $params[] = $plan_id;
                             dbExecute($conn, $sql, $types, $params);
                             auditLog($conn, 'lesson_plan_updated', 'lesson_plans', $plan_id);
-                            $message = "ዕቅድ በተሳካ ሁኔታ ተሻሽሏል!";
+                            $message = "ዕቅድ በትክክል ተሻሽሏል!";
                         }
                     }
                 } else {
@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                     $newId = mysqli_insert_id($conn);
                     auditLog($conn, 'lesson_plan_created', 'lesson_plans', $newId);
-                    $message = "ዕቅድ በተሳካ ሁኔታ ተፈጥሯል!";
+                    $message = "ዕቅድ በትክክል ተዘጋጅቷል!";
                 }
             }
         }
@@ -289,8 +289,8 @@ textarea { resize:vertical; }
 .spinner { display:inline-block; width:20px; height:20px; border:3px solid #FEF3C7; border-top:3px solid #B45309; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-right:8px; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* Mobile Cards for Lesson Plans */
-.plans-mobile-cards { display:flex; }
+/* Mobile Cards for Lesson Plans (hidden on desktop > 768px, visible on mobile <= 768px) */
+.plans-mobile-cards { display: none; }
 
 @media (max-width: 768px) {
     .main-container { padding: 0 10px 40px; margin: 10px auto; }
@@ -825,14 +825,16 @@ body.dark-mode .warning-card,
 <body>
 <?php include 'mobile_nav.php'; ?>
 <div class="main-container">
-    <?php if ($message): ?><div class="message success">✅ <?php echo htmlspecialchars($message); ?></div><?php endif; ?>
+    <?php if ($message): ?><div class="message success">✅ <?php echo htmlspecialchars($message); ?></div>
+    <script>try { localStorage.removeItem('atsede_plan_draft'); } catch(e){}</script>
+    <?php endif; ?>
     <?php if ($error): ?><div class="message error">⚠️ <?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
     <?php if (!$can_create_plan): ?>
     <div class="card warning-card" style="padding:20px;">
         <h3>⚠️ የትምህርት ዕቅድ ማዘጋጀት አልተፈቀደም</h3>
         <p>
-            በአሁኑ ደንብ መሠረት የወጣቶች (ከ7ኛ-12ኛ ክፍል) መምህራን የትምህርት ዕቅድ ማዘጋጀት አይጠበቅባቸውም። ማስተካከያ ወይም ፍቃድ ለማግኘት እባክዎ የስርዓት አስተዳዳሪውን ያነጋግሩ።
+            በአሁኑ ደንብ መሠረት የወጣቶች (ከ7ኛ-12ኛ ክፍል) መምህራን የትምህርት ዕቅድ ማዘጋጀት አይጠበቅባቸውም። ማስተካከያ ወይም ፍቃድ ለማግኘት እባክዎ የትምህርት ክፍልን ያነጋግሩ።
         </p>
     </div>
     <?php else: ?>
@@ -863,6 +865,18 @@ body.dark-mode .warning-card,
                 <span class="spinner"></span> ፎቶው በመጫን ላይ ነው... እባክዎ ጥቂት ይጠብቁ
             </div>
             <div id="ocrStatusMsg" style="margin-top:10px; font-size:13px; display:none;"></div>
+        </div>
+
+        <!-- Offline Draft Notice Banner -->
+        <div id="offlineDraftNotice" style="display:none; background:#FEF3C7; border:1.5px solid #F59E0B; color:#92400E; padding:12px 16px; border-radius:10px; margin-bottom:14px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:18px;">📝</span>
+                <span style="font-weight:600; font-size:13.5px;">ቀደም ሲል በስልክዎ/PC የተቀመጠ ያልተጠናቀቀ የዕቅድ ረቂቅ አለ።</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" onclick="restoreOfflineDraft()" class="btn btn-sm" style="background:#8B4513; color:white; padding:6px 14px; font-size:12.5px; border-radius:8px; cursor:pointer; border:none; font-weight:700;">🔄 መልሰህ ሙላ</button>
+                <button type="button" onclick="discardOfflineDraft()" class="btn btn-sm" style="background:white; border:1px solid #D97706; color:#92400E; padding:6px 14px; font-size:12.5px; border-radius:8px; cursor:pointer; font-weight:700;">✖️ አስወግድ</button>
+            </div>
         </div>
 
         <form method="POST" enctype="multipart/form-data" id="planForm">
@@ -924,7 +938,7 @@ body.dark-mode .warning-card,
                                     </span>
                                 </div>
                                 <?php if (isAdmin()): ?>
-                                <button type="button" class="subject-unlock-btn" onclick="unlockSubjectInput()" title="የትምህርት ዓይነት ቀይር (ለአስተዳዳሪ ብቻ)">
+                                <button type="button" class="subject-unlock-btn" onclick="unlockSubjectInput()" title="የትምህርት ዓይነት ቀይር (ለትምህርት ክፍል ብቻ)">
                                     ✏️
                                 </button>
                                 <?php endif; ?>
@@ -1005,10 +1019,14 @@ body.dark-mode .warning-card,
                         <textarea name="evaluation" id="field_evaluation" rows="2" placeholder="የቃል ጥያቄ፣ የክፍል ሥራ፣ ምዘና..."><?php echo htmlspecialchars($editing_plan['evaluation'] ?? ''); ?></textarea>
                     </div>
 
-                    <div class="btn-row">
+                    <div class="btn-row" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                         <button type="submit" name="save_plan" class="btn" style="background:#8B4513; color:white; font-size:15px; padding:12px 28px;">
                             💾 የትምህርት ዕቅድ አስቀምጥ
                         </button>
+                        <button type="button" class="btn btn-outline" onclick="saveDraftOffline(true)" style="border:1.5px solid #8B4513; color:#8B4513; font-weight:700; padding:11px 18px; border-radius:10px;" title="ረቂቁን በስልክዎ ወይም PC ላይ ያስቀምጡ">
+                            📥 ረቂቅ በስልክዎ/PC አስቀምጥ
+                        </button>
+                        <span id="draftStatusBadge" style="display:none; font-size:13px; font-weight:700; color:#059669;"></span>
                         <?php if ($editing_plan): ?>
                             <a href="lesson_plan_editor.php" class="btn btn-outline" style="text-decoration:none; display:inline-flex; align-items:center;">✖️ ተመለስ</a>
                         <?php endif; ?>
@@ -1507,8 +1525,192 @@ function applyOcrTopics(ocrChap, ocrSub) {
     }
 }
 
+// ============================================
+// OFFLINE DRAFT & LOCAL PERSISTENCE
+// ============================================
+const DRAFT_KEY = 'atsede_plan_draft';
+let autoSaveTimer = null;
+
+function getPlanFormData() {
+    const classSelect = document.getElementById('field_class_id');
+    const subInput = document.getElementById('field_subject');
+    const yearSelect = document.getElementById('field_eth_year');
+    const monthSelect = document.getElementById('field_eth_month');
+    const weekInput = document.getElementById('field_week_number');
+    const objArea = document.getElementById('field_objective');
+    const matArea = document.getElementById('field_materials');
+    const evalArea = document.getElementById('field_evaluation');
+
+    let chapVal = '';
+    let subVal = '';
+    if (isCustomMode) {
+        chapVal = document.getElementById('custom_chapter')?.value || '';
+        subVal = document.getElementById('custom_sub_topic')?.value || '';
+    } else {
+        chapVal = document.getElementById('select_chapter')?.value || '';
+        subVal = document.getElementById('select_sub_topic')?.value || '';
+    }
+
+    return {
+        class_id: classSelect ? classSelect.value : '',
+        subject: subInput ? subInput.value : '',
+        eth_year: yearSelect ? yearSelect.value : '2019',
+        eth_month: monthSelect ? monthSelect.value : '',
+        week_number: weekInput ? weekInput.value : '',
+        is_custom_mode: isCustomMode,
+        chapter: chapVal,
+        sub_topic: subVal,
+        objective: objArea ? objArea.value : '',
+        materials: matArea ? matArea.value : '',
+        evaluation: evalArea ? evalArea.value : '',
+        saved_at: new Date().toLocaleTimeString('am-ET')
+    };
+}
+
+function saveDraftOffline(showToast = false) {
+    try {
+        const data = getPlanFormData();
+        const hasContent = data.chapter || data.sub_topic || data.objective || data.materials || data.evaluation;
+        if (!hasContent && !showToast) return;
+
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+        const badge = document.getElementById('draftStatusBadge');
+        if (badge) {
+            badge.style.display = 'inline-block';
+            badge.textContent = `💾 ረቂቅ በስልክዎ/PC ተቀምጧል (${data.saved_at})`;
+            if (showToast) {
+                setTimeout(() => { badge.style.display = 'none'; }, 4000);
+            }
+        }
+    } catch(e) {
+        console.warn('Draft save error:', e);
+    }
+}
+
+function checkSavedDraft() {
+    try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+        const hasContent = draft.chapter || draft.sub_topic || draft.objective || draft.materials || draft.evaluation;
+        if (!hasContent) return;
+
+        const curObj = document.getElementById('field_objective')?.value.trim();
+        const curSub = document.getElementById('select_sub_topic')?.value || document.getElementById('custom_sub_topic')?.value;
+        const planId = parseInt(document.querySelector('input[name="plan_id"]')?.value || '0');
+
+        if (!planId && (!curObj && !curSub)) {
+            const notice = document.getElementById('offlineDraftNotice');
+            if (notice) notice.style.display = 'flex';
+        }
+    } catch(e) {}
+}
+
+function restoreOfflineDraft() {
+    try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+
+        if (draft.class_id) {
+            const cSel = document.getElementById('field_class_id');
+            if (cSel) {
+                cSel.value = draft.class_id;
+                onClassChange();
+            }
+        }
+        if (draft.subject) {
+            const subInput = document.getElementById('field_subject');
+            if (subInput) {
+                subInput.value = draft.subject;
+                currentEditingSubject = draft.subject;
+            }
+        }
+        if (draft.eth_year) {
+            const ySel = document.getElementById('field_eth_year');
+            if (ySel) ySel.value = draft.eth_year;
+        }
+        if (draft.eth_month) {
+            const mSel = document.getElementById('field_eth_month');
+            if (mSel) mSel.value = draft.eth_month;
+        }
+        if (draft.week_number) {
+            const wIn = document.getElementById('field_week_number');
+            if (wIn) wIn.value = draft.week_number;
+        }
+        if (draft.objective) {
+            const objArea = document.getElementById('field_objective');
+            if (objArea) objArea.value = draft.objective;
+        }
+        if (draft.materials) {
+            const matArea = document.getElementById('field_materials');
+            if (matArea) matArea.value = draft.materials;
+        }
+        if (draft.evaluation) {
+            const evalArea = document.getElementById('field_evaluation');
+            if (evalArea) evalArea.value = draft.evaluation;
+        }
+
+        if (draft.is_custom_mode) {
+            if (!isCustomMode) toggleCustomInputs();
+            if (draft.chapter) document.getElementById('custom_chapter').value = draft.chapter;
+            if (draft.sub_topic) document.getElementById('custom_sub_topic').value = draft.sub_topic;
+        } else {
+            currentEditingChapter = draft.chapter || '';
+            currentEditingSubTopic = draft.sub_topic || '';
+            loadCurriculum();
+        }
+
+        const notice = document.getElementById('offlineDraftNotice');
+        if (notice) notice.style.display = 'none';
+
+        const badge = document.getElementById('draftStatusBadge');
+        if (badge) {
+            badge.style.display = 'inline-block';
+            badge.textContent = `✅ ረቂቁ በተሳካ ሁኔታ ተመልሷል!`;
+            setTimeout(() => { badge.style.display = 'none'; }, 3000);
+        }
+    } catch(e) {
+        console.error('Error restoring draft:', e);
+    }
+}
+
+function discardOfflineDraft() {
+    try {
+        localStorage.removeItem(DRAFT_KEY);
+        const notice = document.getElementById('offlineDraftNotice');
+        if (notice) notice.style.display = 'none';
+    } catch(e) {}
+}
+
+function setupDraftAutoSave() {
+    const fields = ['field_objective', 'field_materials', 'field_evaluation', 'field_week_number', 'custom_chapter', 'custom_sub_topic'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', () => {
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => saveDraftOffline(false), 1500);
+            });
+        }
+    });
+
+    const form = document.getElementById('planForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!navigator.onLine) {
+                e.preventDefault();
+                saveDraftOffline(false);
+                alert('ℹ️ በአሁኑ ወቅት ኢንተርኔት አልተገኘም፤ ያዘጋጁት የትምህርት ዕቅድ በስልክዎ / PC ተቀምጧል!\n\nኢንተርኔት ሲኖር ይህን ገጽ ከፍተው "የትምህርት ዕቅድ አስቀምጥ" የሚለውን በመጫን በቀጥታ መላክ ይችላሉ።');
+            }
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadCurriculum();
+    checkSavedDraft();
+    setupDraftAutoSave();
 });
 </script>
 </body>

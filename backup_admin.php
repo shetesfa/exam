@@ -60,9 +60,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_backup'])) {
             fwrite($GLOBALS['__backup_fh'], $sql);
             fclose($GLOBALS['__backup_fh']);
             auditLog($conn, 'database_backup_created', null, null, $filename);
-            $message = "ምትኬ ተፈጥሯል: $filename";
+            $message = "Backup በትክክል ተወስዷል: $filename";
         } else {
-            $error = "ምትኬ ፋይል መፍጠር አልተቻለም! የ backups/ ማህደር ፍቃድ ያረጋግጡ።";
+            $error = "Backup ፋይል ማስቀመጥ አልተቻለም! የ backups/ ማህደር ፍቃድ ያረጋግጡ።";
         }
     }
 }
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_backup'])) {
 if (isset($_GET['download'])) {
     $safe = basename($_GET['download']); // prevent path traversal
     $path = __DIR__ . '/backups/' . $safe;
-    if (preg_match('/^backup_\d{8}_\d{6}\.sql$/', $safe) && file_exists($path)) {
+    if (preg_match('/^backup_[a-zA-Z0-9_]+\.sql$/', $safe) && file_exists($path)) {
         auditLog($conn, 'database_backup_downloaded', null, null, $safe);
         header('Content-Type: application/sql');
         header('Content-Disposition: attachment; filename="' . $safe . '"');
@@ -87,10 +87,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_backup'])) {
     if (verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         $safe = basename($_POST['filename'] ?? '');
         $path = __DIR__ . '/backups/' . $safe;
-        if (preg_match('/^backup_\d{8}_\d{6}\.sql$/', $safe) && file_exists($path)) {
+        if (preg_match('/^backup_[a-zA-Z0-9_]+\.sql$/', $safe) && file_exists($path)) {
             unlink($path);
             auditLog($conn, 'database_backup_deleted', null, null, $safe);
-            $message = "ምትኬ ተሰርዟል።";
+            $message = "Backup ተሰርዟል።";
         }
     }
 }
@@ -116,7 +116,7 @@ $latest_backup_time = !empty($backups) ? date('Y-m-d h:i A', filemtime($backups[
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>የመረጃ ቋት ምትኬ | አጸደ ትጉሃን</title>
+<title>Database Backup | አጸደ ትጉሃን</title>
 <?php include 'pwa_head.php'; ?>
 <style>
 :root {
@@ -592,8 +592,8 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
     <!-- Header -->
     <div class="page-header-card">
         <div class="header-info">
-            <h1>💾 የመረጃ ቋት ምትኬ (Database Backup)</h1>
-            <p>የተማሪዎችን ውጤት፣ መምህራንን፣ ክፍሎችን እና ሁሉንም መረጃዎች በደህና ሁኔታ ምትኬ ወስደው ያስቀምጡ።</p>
+            <h1>💾 Database Backup</h1>
+            <p>የተማሪዎችን ውጤት፣ መምህራንን፣ ክፍሎችን እና ሁሉንም መረጃዎች በደህና ሁኔታ Backup ወስደው ያስቀምጡ።</p>
         </div>
     </div>
 
@@ -611,7 +611,7 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
             <div class="stat-icon">📁</div>
             <div class="stat-data">
                 <div class="stat-val"><?php echo $total_backups; ?></div>
-                <div class="stat-lbl">ያሉ ምትኬ ፋይሎች</div>
+                <div class="stat-lbl">ያሉ Backup ፋይሎች</div>
             </div>
         </div>
         <div class="stat-box">
@@ -625,7 +625,7 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
             <div class="stat-icon">🕒</div>
             <div class="stat-data">
                 <div class="stat-val" style="font-size: 14px;"><?php echo $latest_backup_time; ?></div>
-                <div class="stat-lbl">የመጨረሻው ምትኬ</div>
+                <div class="stat-lbl">የመጨረሻው Backup</div>
             </div>
         </div>
     </div>
@@ -633,13 +633,13 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
     <!-- Create Action -->
     <div class="action-card">
         <div class="action-card-text">
-            <h3>⚡ አዲስ ምትኬ መፍጠር</h3>
+            <h3>⚡ Backup መውሰድ</h3>
             <p>ይህ ትዕዛዝ ሙሉውን የመረጃ ቋት ሰንጠረዦች በUTF-8 ቅርጸት ወደ <code>backups/</code> ማህደር ያዘጋጃል።</p>
         </div>
         <form method="POST" onsubmit="handleBackupSubmit(this)">
             <?php echo csrfField(); ?>
             <button type="submit" name="run_backup" id="btnBackup" class="btn-create-backup">
-                💾 አዲስ ምትኬ ፍጠር
+                💾 Backup ውሰድ
             </button>
         </form>
     </div>
@@ -647,14 +647,14 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
     <!-- Backups List -->
     <div class="list-card">
         <div class="list-card-header">
-            <h3>🗄️ የተቀመጡ ምትኬዎች ዝርዝር (<?php echo $total_backups; ?>)</h3>
+            <h3>🗄️ የተቀመጡ Backups ዝርዝር (<?php echo $total_backups; ?>)</h3>
         </div>
 
         <?php if (empty($backups)): ?>
         <div class="empty-state">
             <div class="empty-icon">📂</div>
-            <div style="font-size: 15px; font-weight: 600;">ምንም የተቀመጠ ምትኬ ፋይል የለም።</div>
-            <p style="font-size: 13px; margin-top: 6px;">ከላይ ያለውን "አዲስ ምትኬ ፍጠር" የሚለውን በመጫን አዲስ ምትኬ መውሰድ ይችላሉ።</p>
+            <div style="font-size: 15px; font-weight: 600;">ምንም የተቀመጠ Backup ፋይል የለም።</div>
+            <p style="font-size: 13px; margin-top: 6px;">ከላይ ያለውን "Backup ውሰድ" የሚለውን በመጫን አዲስ Backup መውሰድ ይችላሉ።</p>
         </div>
         <?php else: foreach ($backups as $b):
             $fname = basename($b);
@@ -676,7 +676,7 @@ body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; 
                 <a href="?download=<?php echo urlencode($fname); ?>" class="btn-dl">
                     ⬇️ አውርድ
                 </a>
-                <form method="POST" style="display:inline;" onsubmit="return confirm('እርግጠኛ ነዎት ይህን ምትኬ ፋይል [<?php echo htmlspecialchars($fname); ?>] መሰረዝ ይፈልጋሉ?')">
+                <form method="POST" style="display:inline;" onsubmit="return confirm('እርግጠኛ ነዎት ይህን Backup ፋይል [<?php echo htmlspecialchars($fname); ?>] መሰረዝ ይፈልጋሉ?')">
                     <?php echo csrfField(); ?>
                     <input type="hidden" name="filename" value="<?php echo htmlspecialchars($fname); ?>">
                     <button type="submit" name="delete_backup" class="btn-del" title="ሰርዝ">
@@ -694,7 +694,7 @@ function handleBackupSubmit(form) {
     var btn = document.getElementById('btnBackup');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '⏳ ምትኬ እየተፈጠረ ነው...';
+        btn.innerHTML = '⏳ Backup እየተወሰደ ነው...';
     }
 }
 </script>

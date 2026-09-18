@@ -29,15 +29,24 @@ function json_error($message, $code = 400) {
  * 2. Active PHP session (logged-in browser session)
  */
 function auth_from_token($conn) {
-    // 1. Check Bearer Authorization header
+    // 1. Check Bearer Authorization header or token query/body parameter
     $headers = function_exists('getallheaders') ? getallheaders() : [];
     $authHeader = $headers['Authorization'] ?? $headers['authorization'] 
         ?? $_SERVER['HTTP_AUTHORIZATION'] 
         ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] 
         ?? '';
 
+    $extractedToken = '';
     if (preg_match('/Bearer\s+(.+)/i', $authHeader, $m)) {
-        $token = mysqli_real_escape_string($conn, trim($m[1]));
+        $extractedToken = trim($m[1]);
+    } elseif (!empty($_GET['token'])) {
+        $extractedToken = trim($_GET['token']);
+    } elseif (!empty($_POST['token'])) {
+        $extractedToken = trim($_POST['token']);
+    }
+
+    if (!empty($extractedToken)) {
+        $token = mysqli_real_escape_string($conn, $extractedToken);
         $q = "SELECT * FROM auth_tokens WHERE token = '$token' AND revoked = 0 AND expires_at > NOW() LIMIT 1";
         $res = mysqli_query($conn, $q);
         if ($res && mysqli_num_rows($res) > 0) {

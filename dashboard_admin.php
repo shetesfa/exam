@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -7,12 +7,12 @@ $semester_id = $current_semester ? intval($current_semester['id']) : 0;
 
 // Get statistics with proper error handling
 $stats_query = "SELECT 
-    (SELECT COUNT(*) FROM users WHERE role = 'teacher') as total_teachers,
+    (SELECT COUNT(*) FROM users WHERE role = 'teacher' AND (status = 'active' OR status IS NULL)) as total_teachers,
     (SELECT COUNT(*) FROM classes) as total_classes,
     (SELECT COUNT(*) FROM students WHERE (is_deleted = 0 OR is_deleted IS NULL)) as total_students";
     
 if ($semester_id > 0) {
-    $stats_query .= ", (SELECT COUNT(*) FROM teacher_class WHERE semester_id = $semester_id) as assigned_classes";
+    $stats_query .= ", (SELECT COUNT(DISTINCT class_id) FROM teacher_class WHERE semester_id = $semester_id) as assigned_classes";
 } else {
     $stats_query .= ", 0 as assigned_classes";
 }

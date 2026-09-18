@@ -103,6 +103,13 @@ foreach (($body['attendance'] ?? []) as $rec) {
         continue;
     }
 
+    // Handle removal / uncheck
+    if (in_array(strtolower($status), ['remove', 'uncheck', 'deleted', 'clear'])) {
+        $ok = deleteAttendanceRecord($conn, $studentId, $classId, $date);
+        $results['attendance'][] = ['local_uuid' => $uuid, 'success' => (bool)$ok, 'message' => $ok ? 'synced' : mysqli_error($conn)];
+        continue;
+    }
+
     // Upsert attendance
     $ok = dbExecute(
         $conn,
@@ -176,17 +183,24 @@ foreach (($body['marks'] ?? []) as $rec) {
         continue;
     }
 
-    // Conflict detection
+    // Conflict detection & safe merge
     $existing = dbFetchOne(
         $conn,
-        "SELECT last_updated FROM marks WHERE student_id = ? AND class_id = ? AND semester_id = ? AND teacher_id = ? LIMIT 1",
+        "SELECT last_updated, assignment, participation, attendance, mid, final FROM marks WHERE student_id = ? AND class_id = ? AND semester_id = ? AND teacher_id = ? LIMIT 1",
         "iiii",
         [$studentId, $classId, $targetSemesterId, $userId]
     );
-    if ($existing && strtotime($existing['last_updated']) > strtotime($clientUpdatedAt)) {
+    if ($existing && !empty($existing['last_updated']) && strtotime($existing['last_updated']) > strtotime($clientUpdatedAt)) {
         $results['marks'][] = ['local_uuid' => $uuid, 'success' => false, 'conflict' => true, 'message' => 'Server record is newer than offline edit'];
         continue;
     }
+
+    $assignment = isset($rec['assignment']) ? floatval($rec['assignment']) : ($existing ? floatval($existing['assignment']) : 0);
+    $participation = isset($rec['participation']) ? floatval($rec['participation']) : ($existing ? floatval($existing['participation']) : 0);
+    $attendanceScore = isset($rec['attendance']) ? floatval($rec['attendance']) : ($existing ? floatval($existing['attendance']) : 0);
+    $mid = isset($rec['mid']) ? floatval($rec['mid']) : ($existing ? floatval($existing['mid']) : 0);
+    $final = isset($rec['final']) ? floatval($rec['final']) : ($existing ? floatval($existing['final']) : 0);
+    $total = $assignment + $participation + $attendanceScore + $mid + $final;
 
     // Upsert marks
     $ok = dbExecute(

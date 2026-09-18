@@ -40,7 +40,7 @@ function getActionBadgeInfo($action) {
     } elseif (strpos($act, 'insert') !== false || strpos($act, 'add') !== false || strpos($act, 'create') !== false) {
         return ['bg' => '#DCFCE7', 'color' => '#166534', 'icon' => '➕', 'label' => 'ምዝገባ'];
     } elseif (strpos($act, 'backup') !== false) {
-        return ['bg' => '#F3E8FF', 'color' => '#6B21A8', 'icon' => '💾', 'label' => 'ምትኬ'];
+        return ['bg' => '#F3E8FF', 'color' => '#6B21A8', 'icon' => '💾', 'label' => 'Backup'];
     } elseif (strpos($act, 'password') !== false || strpos($act, 'pin') !== false) {
         return ['bg' => '#FFEDD5', 'color' => '#C2410C', 'icon' => '🔒', 'label' => 'የይለፍ ቃል'];
     }

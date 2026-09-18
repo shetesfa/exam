@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
         }
         
         if ($success) {
-            $message = "መረጃው በተሳካ ሁኔታ ተቀምጧል!";
+            $message = "መረጃው በትክክል ተቀምጧል!";
         } else {
             $error = "ስህተት ተከስቷል! እባክዎ እንደገና ይሞክሩ።";
         }
@@ -320,7 +320,7 @@ $nav_active = 'admin_settings';
                             <span>📝 የወጣቶች መምህራን የትምህርት ዕቅድ ማዘጋጀት ይችላሉ</span>
                         </label>
                         <div class="permission-hint">
-                            ሲጠፋ፦ የወጣቶች መምህራን በሜኑ ላይ የትምህርት ዕቅድ ማዘጋጃ አይታይላቸውም፤ አዲስ ዕቅድ መፍጠርም አይችሉም።
+                            ሲጠፋ፦ የወጣቶች መምህራን በሜኑ ላይ የትምህርት ዕቅድ ማዘጋጃ አይታይላቸውም፤ አዲስ ዕቅድ ማዘጋጀትም አይችሉም።
                         </div>
 
                         <label class="permission-label" style="margin-top:8px;">

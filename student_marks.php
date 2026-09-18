@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marks'])) {
         if ($error_count > 0) {
             $_SESSION['error'] = "የአንዳንድ ተማሪዎችን ውጤት በማስቀመጥ ላይ ስህተት ተከስቷል!";
         } else {
-            $_SESSION['success'] = "የ{$success_count} ተማሪዎች ውጤት በተሳካ ሁኔታ ተቀምጧል!";
+            $_SESSION['success'] = "የ{$success_count} ተማሪዎች ውጤት በትክክል ተቀምጧል!";
         }
     }
 }

@@ -50,10 +50,12 @@ const SyncManager = {
         this._emit('syncing', { text: 'ያልተላኩ መረጃዎችን በመላክ ላይ... (Pushing changes...)', pending: dirtyAttendance.length + dirtyMarks.length });
 
         try {
-            const res = await fetch(this.apiBase + 'sync_push.php', {
+            const pushUrl = this.apiBase + 'sync_push.php?token=' + encodeURIComponent(token);
+            const res = await fetch(pushUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify({ attendance: dirtyAttendance, marks: dirtyMarks }),
+                credentials: 'same-origin',
+                body: JSON.stringify({ attendance: dirtyAttendance, marks: dirtyMarks, token: token }),
             });
             const data = await res.json();
 
@@ -78,15 +80,25 @@ const SyncManager = {
         if (!token) return { success: false, message: 'Not logged in' };
 
         try {
-            const since = await OfflineDB.getLastSync();
-            const res = await fetch(this.apiBase + 'sync_pull.php?since=' + encodeURIComponent(since), {
+            // Check if local cache has classes/students. If empty, pull from 1970 to re-populate
+            const existingClasses = await OfflineDB.getAllClasses();
+            const existingStudents = await OfflineDB.getAllStudents();
+            let since = await OfflineDB.getLastSync();
+            if (existingClasses.length === 0 || existingStudents.length === 0) {
+                since = '1970-01-01T00:00:00Z';
+            }
+
+            const pullUrl = this.apiBase + 'sync_pull.php?since=' + encodeURIComponent(since) + '&token=' + encodeURIComponent(token);
+            const res = await fetch(pullUrl, {
                 headers: { 'Authorization': 'Bearer ' + token },
+                credentials: 'same-origin'
             });
             const data = await res.json();
             if (data.classes && data.classes.length) await OfflineDB.cacheClasses(data.classes);
             if (data.students && data.students.length) await OfflineDB.cacheStudents(data.students);
             if (data.attendance && data.attendance.length) await OfflineDB.cacheAttendance(data.attendance);
             if (data.marks && data.marks.length) await OfflineDB.cacheMarks(data.marks);
+            if (data.active_semester && OfflineDB.setActiveSemester) await OfflineDB.setActiveSemester(data.active_semester);
             if (data.server_time) await OfflineDB.setLastSync(data.server_time);
 
             return {
@@ -110,7 +122,7 @@ const SyncManager = {
             if (!online) { 
                 const pending = await OfflineDB.getPendingCounts();
                 this._emit('offline', {
-                    text: pending.total > 0 ? `ከመስመር ውጭ (${pending.total} ያልተላኩ)` : 'ከመስመር ውጭ',
+                    text: pending.total > 0 ? `Offline (${pending.total} ያልተላኩ)` : 'Offline',
                     pending: pending.total
                 }); 
                 return { success: false, offline: true }; 
@@ -153,7 +165,7 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
     OfflineDB.getPendingCounts().then((p) => {
         SyncManager._emit('offline', {
-            text: p.total > 0 ? `ከመስመር ውጭ (${p.total} ያልተላኩ)` : 'ከመስመር ውጭ',
+            text: p.total > 0 ? `Offline (${p.total} ያልተላኩ)` : 'Offline',
             pending: p.total
         });
     });

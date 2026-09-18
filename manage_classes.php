@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($name)) {
                 $saved = dbExecute($conn, "INSERT INTO classes (name, description, grade_id) VALUES (?, ?, ?)", "ssi", [$name, $description, $grade_id]);
                 if ($saved) {
-                    $message = "ክፍሉ በተሳካ ሁኔታ ተፈጥሯል!";
+                    $message = "ክፍሉ በትክክል ተመዝግቧል!";
                 } else {
                     $error = "ስህተት ተከስቷል!";
                 }
@@ -66,6 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Get current academic year
+$current_year_query = "SELECT * FROM academic_years WHERE status = 'active' LIMIT 1";
+$current_year_result = mysqli_query($conn, $current_year_query);
+$current_year = mysqli_fetch_assoc($current_year_result);
+$current_ethiopian_year = $current_year ? $current_year['ethiopian_year'] : 2017;
+
 // Get all classes with statistics + their grade/division (if assigned)
 $classes_query = "SELECT c.*, 
                   g.name_am AS grade_name, g.level_number,
@@ -75,11 +81,44 @@ $classes_query = "SELECT c.*,
                   FROM classes c
                   LEFT JOIN grades g ON c.grade_id = g.id
                   LEFT JOIN divisions d ON g.division_id = d.id
-                  LEFT JOIN students s ON c.id = s.class_id
+                  LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                   LEFT JOIN teacher_class tc ON c.id = tc.class_id
                   GROUP BY c.id
                   ORDER BY d.sort_order, g.level_number, c.name";
 $classes = mysqli_query($conn, $classes_query);
+
+// Get all teacher assignments organized by class and year
+$all_class_teachers_query = "SELECT tc.*, 
+                              u.id as teacher_id,
+                              u.name as teacher_name, 
+                              u.photo as teacher_photo,
+                              s.name as semester_name,
+                              s.ethiopian_year,
+                              s.semester_number,
+                              s.status as semester_status
+                              FROM teacher_class tc
+                              JOIN users u ON tc.teacher_id = u.id
+                              JOIN semesters s ON tc.semester_id = s.id
+                              ORDER BY s.ethiopian_year DESC, s.semester_number DESC, u.name";
+$all_class_teachers = mysqli_query($conn, $all_class_teachers_query);
+$class_teacher_history = [];
+if ($all_class_teachers) {
+    while($asg = mysqli_fetch_assoc($all_class_teachers)) {
+        $c_id = $asg['class_id'];
+        $yr = $asg['ethiopian_year'];
+        if (!isset($class_teacher_history[$c_id])) {
+            $class_teacher_history[$c_id] = [];
+        }
+        if (!isset($class_teacher_history[$c_id][$yr])) {
+            $class_teacher_history[$c_id][$yr] = [
+                'semester1' => [],
+                'semester2' => []
+            ];
+        }
+        $sem_key = 'semester' . $asg['semester_number'];
+        $class_teacher_history[$c_id][$yr][$sem_key][] = $asg;
+    }
+}
 
 // Grade picker options, grouped by division (for the add/edit forms)
 $grades_by_division = [];
@@ -275,6 +314,149 @@ $nav_active = 'manage_classes';
             color: #94A3B8 !important;
         }
 
+        /* Direct Dark Mode Overrides for Class Components */
+        html.dark-mode .class-card,
+        body.dark-mode .class-card,
+        [data-theme="dark"] .class-card {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .class-card:hover,
+        body.dark-mode .class-card:hover,
+        [data-theme="dark"] .class-card:hover {
+            border-color: #F59E0B !important;
+        }
+
+        html.dark-mode .class-header,
+        body.dark-mode .class-header,
+        [data-theme="dark"] .class-header {
+            border-bottom-color: #334155 !important;
+        }
+
+        html.dark-mode .class-name,
+        body.dark-mode .class-name,
+        [data-theme="dark"] .class-name {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .class-desc,
+        body.dark-mode .class-desc,
+        [data-theme="dark"] .class-desc {
+            background: #162032 !important;
+            color: #94A3B8 !important;
+            border-left-color: #F59E0B !important;
+        }
+
+        html.dark-mode .class-metrics,
+        body.dark-mode .class-metrics,
+        [data-theme="dark"] .class-metrics {
+            background-color: #162032 !important;
+            border-color: #334155 !important;
+        }
+
+        html.dark-mode .class-metric-val,
+        body.dark-mode .class-metric-val,
+        [data-theme="dark"] .class-metric-val {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .class-metric-lbl,
+        body.dark-mode .class-metric-lbl,
+        [data-theme="dark"] .class-metric-lbl {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .class-meta-info,
+        body.dark-mode .class-meta-info,
+        [data-theme="dark"] .class-meta-info {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .class-division-badge.children,
+        body.dark-mode .class-division-badge.children,
+        [data-theme="dark"] .class-division-badge.children {
+            background-color: #1E3A8A !important;
+            color: #93C5FD !important;
+            border: 1px solid #3B82F6 !important;
+        }
+
+        html.dark-mode .class-division-badge.youth,
+        body.dark-mode .class-division-badge.youth,
+        [data-theme="dark"] .class-division-badge.youth {
+            background-color: #3B2A0F !important;
+            color: #FCD34D !important;
+            border: 1px solid #78350F !important;
+        }
+
+        html.dark-mode .class-division-badge.unassigned,
+        body.dark-mode .class-division-badge.unassigned,
+        [data-theme="dark"] .class-division-badge.unassigned {
+            background-color: #0F172A !important;
+            color: #94A3B8 !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .year-header,
+        body.dark-mode .year-header,
+        [data-theme="dark"] .year-header {
+            background: #162032 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .year-header:hover,
+        body.dark-mode .year-header:hover,
+        [data-theme="dark"] .year-header:hover {
+            background: #243247 !important;
+        }
+
+        html.dark-mode .semester-row,
+        body.dark-mode .semester-row,
+        [data-theme="dark"] .semester-row {
+            background: #162032 !important;
+            color: #CBD5E1 !important;
+        }
+
+        html.dark-mode .teacher-tag,
+        body.dark-mode .teacher-tag,
+        [data-theme="dark"] .teacher-tag {
+            background-color: #0F172A !important;
+            border-color: #F59E0B !important;
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .teacher-tag.locked,
+        body.dark-mode .teacher-tag.locked,
+        [data-theme="dark"] .teacher-tag.locked {
+            background-color: rgba(239, 68, 68, 0.2) !important;
+            border-color: #EF4444 !important;
+            color: #FCA5A5 !important;
+        }
+
+        html.dark-mode .class-actions,
+        body.dark-mode .class-actions,
+        [data-theme="dark"] .class-actions {
+            border-top-color: #334155 !important;
+        }
+
+        html.dark-mode .content-card-header h2,
+        body.dark-mode .content-card-header h2,
+        [data-theme="dark"] .content-card-header h2 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .content-card-header,
+        body.dark-mode .content-card-header,
+        [data-theme="dark"] .content-card-header {
+            border-bottom-color: #334155 !important;
+        }
+
+        html.dark-mode .form-group label,
+        body.dark-mode .form-group label,
+        [data-theme="dark"] .form-group label {
+            color: #CBD5E1 !important;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
         body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
@@ -414,9 +596,9 @@ $nav_active = 'manage_classes';
         /* Forms */
         .form-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 16px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
         .form-group {
             display: flex;
@@ -470,78 +652,132 @@ $nav_active = 'manage_classes';
             box-shadow: 0 6px 16px rgba(218, 165, 32, 0.35);
         }
 
-        /* Class Cards Grid */
+        /* Class Cards Grid (Matching Teachers Grid) */
         .classes-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
         }
+
         .class-card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            border: 1.5px solid var(--border-color);
+            background: white;
+            border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 2px solid var(--gold-pale);
+            transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: all 0.25s ease;
-            position: relative;
         }
-        .class-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--gold-dark);
-            box-shadow: 0 10px 24px rgba(139, 69, 19, 0.1);
-        }
-        .class-card-top {
-            margin-bottom: 14px;
-        }
-        .grade-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11.5px;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 20px;
-            margin-bottom: 10px;
-        }
-        .grade-tag.children { background: #DBEAFE; color: #1D4ED8; }
-        .grade-tag.youth { background: #FEF3C7; color: #92400E; }
-        .grade-tag.unassigned { background: #F3F4F6; color: #6B7280; }
 
-        .class-title {
-            font-size: 17px;
-            font-weight: 800;
+        .class-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--gold-primary);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+
+        .class-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--gold-pale);
+        }
+
+        .class-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: bold;
             color: var(--brown-dark);
+            border: 3px solid white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .class-title-area {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .class-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--brown-dark);
+            margin-bottom: 4px;
+            display: block;
+            line-height: 1.3;
+        }
+
+        .class-division-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 15px;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .class-division-badge.children {
+            background: #EFF6FF;
+            color: #2563EB;
+            border: 1px solid #BFDBFE;
+        }
+        .class-division-badge.youth {
+            background: #FEF3C7;
+            color: #D97706;
+            border: 1px solid #FDE68A;
+        }
+        .class-division-badge.unassigned {
+            background: #F3F4F6;
+            color: #6B7280;
+            border: 1px solid #E5E7EB;
+        }
+
+        .class-meta-info {
+            color: #666;
+            font-size: 13px;
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 6px;
+            margin-top: 2px;
         }
+
         .class-desc {
             font-size: 13px;
             color: var(--text-muted);
-            line-height: 1.4;
-            min-height: 36px;
+            line-height: 1.5;
+            margin-bottom: 14px;
+            padding: 8px 12px;
+            background: #FAF9F6;
+            border-radius: 8px;
+            border-left: 3px solid var(--gold-dark);
         }
 
-        /* Stats Inside Class Card */
+        /* Metrics inside Class Card */
         .class-metrics {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            background: #F9FAFB;
+            background: #F8F9FA;
             padding: 12px;
             border-radius: 10px;
-            margin-bottom: 16px;
-            border: 1px solid #F3F4F6;
+            margin-bottom: 14px;
+            border: 1px solid rgba(0,0,0,0.04);
         }
         .class-metric-item {
             text-align: center;
         }
         .class-metric-val {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 800;
             color: var(--brown-dark);
         }
@@ -549,65 +785,193 @@ $nav_active = 'manage_classes';
             font-size: 11px;
             color: var(--text-muted);
             font-weight: 600;
-            text-transform: uppercase;
         }
 
-        /* Class Card Action Buttons */
-        .class-actions-bar {
+        /* Action Buttons */
+        .class-actions {
             display: flex;
-            align-items: center;
             gap: 8px;
+            margin-top: 15px;
             flex-wrap: wrap;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(0,0,0,0.08);
         }
-        .btn-view-st {
-            flex: 1.5;
-            background: #EFF6FF;
-            color: #2563EB;
-            padding: 8px 12px;
-            border-radius: 8px;
+
+        .btn-students {
+            background: #8B5CF6;
+            color: white !important;
+            padding: 7px 12px;
+            font-size: 12px;
             text-decoration: none;
-            font-weight: 700;
-            font-size: 12.5px;
-            text-align: center;
+            border-radius: 8px;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
             gap: 5px;
             transition: all 0.2s;
         }
-        .btn-view-st:hover { background: #DBEAFE; }
+        .btn-students:hover {
+            background: #7C3AED;
+            transform: translateY(-1px);
+        }
 
-        .btn-edit-cls {
+        .btn-edit {
+            background: #3B82F6;
+            color: white;
+            padding: 7px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-edit:hover {
+            background: #2563EB;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete {
+            background: #EF4444;
+            color: white;
+            padding: 7px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-delete:hover:not(:disabled) {
+            background: #DC2626;
+            transform: translateY(-1px);
+        }
+
+        /* Timeline Styles from Teachers Design */
+        .timeline {
+            margin-top: 14px;
+        }
+
+        .year-group {
+            margin-bottom: 12px;
+            border-left: 3px solid var(--gold-primary);
+            padding-left: 12px;
+        }
+
+        .year-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            padding: 6px 10px;
+            background: #F8F9FA;
+            border-radius: 8px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .year-header:hover {
+            background: var(--gold-pale);
+        }
+
+        .year-badge {
+            background: var(--brown-dark);
+            color: var(--gold-primary);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .year-status {
+            font-size: 11px;
+            color: #059669;
+            font-weight: 700;
+        }
+
+        .toggle-icon {
+            margin-left: auto;
+            font-size: 13px;
+            color: var(--gold-dark);
+        }
+
+        .semester-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: #F8F9FA;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        .semester-badge {
+            min-width: 80px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .semester-1 {
+            background: #EFF6FF;
+            color: #2563EB;
+            border: 1px solid #BFDBFE;
+        }
+
+        .semester-2 {
             background: #FEF3C7;
-            color: #B45309;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 12.5px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.2s;
+            color: #D97706;
+            border: 1px solid #FDE68A;
         }
-        .btn-edit-cls:hover { background: #FDE68A; }
 
-        .btn-del-cls {
-            background: #FEE2E2;
-            color: #DC2626;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 12.5px;
-            cursor: pointer;
+        .teachers-list {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .teacher-tag {
+            background: white;
+            border: 1px solid var(--gold-primary);
+            color: var(--brown-dark);
+            padding: 3px 10px;
+            border-radius: 16px;
+            font-size: 11.5px;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
             gap: 4px;
+            text-decoration: none;
             transition: all 0.2s;
         }
-        .btn-del-cls:hover { background: #FCA5A5; }
+
+        .teacher-tag:hover {
+            background: var(--gold-pale);
+            border-color: var(--gold-dark);
+        }
+
+        .teacher-tag.locked {
+            background: #FEE2E2;
+            border-color: #EF4444;
+            color: #DC2626;
+        }
+
+        .no-data {
+            color: #9CA3AF;
+            font-style: italic;
+            padding: 6px 8px;
+            font-size: 12px;
+        }
 
         /* Modal */
         .modal-overlay {
@@ -680,9 +1044,8 @@ $nav_active = 'manage_classes';
             .content-card { padding: 16px 14px; border-radius: 14px; }
             .form-grid { grid-template-columns: 1fr; }
             .btn-primary-action { width: 100%; justify-content: center; min-height: 44px; }
-            .classes-grid { grid-template-columns: 1fr; gap: 14px; }
-            .class-actions-bar { flex-direction: row; }
-            .btn-view-st { flex: 1.5; }
+            .classes-grid { grid-template-columns: 1fr; }
+            .class-actions { flex-direction: row; }
         }
     </style>
 </head>
@@ -694,7 +1057,7 @@ $nav_active = 'manage_classes';
         <div class="page-header-card">
             <div class="header-info">
                 <h1>🏫 የክፍሎች አስተዳደር</h1>
-                <p>ክፍሎችን ይፍጠሩ፣ ከስርዓተ-ትምህርት ደረጃዎች ጋር ያገናኙ እና የተማሪ/መምህር ምደባዎችን ይከታተሉ።</p>
+                <p>ክፍሎችን ይመዝግቡ፣ ከስርዓተ-ትምህርት ደረጃዎች ጋር ያገናኙ እና የተማሪ/መምህር ምደባዎችን ይከታተሉ።</p>
             </div>
         </div>
 
@@ -772,7 +1135,7 @@ $nav_active = 'manage_classes';
                     </div>
                 </div>
                 <button type="submit" name="add_class" class="btn-primary-action">
-                    ➕ አዲስ ክፍል ፍጠር
+                    ➕ አዲስ ክፍል መዝግብ
                 </button>
             </form>
         </div>
@@ -784,61 +1147,154 @@ $nav_active = 'manage_classes';
                 <span class="header-badge"><?php echo $total_classes; ?> ክፍሎች</span>
             </div>
 
+            <!-- Instant Search Box -->
+            <div style="margin-bottom: 20px;">
+                <input type="text" id="classSearch" class="form-control" placeholder="🔍 የክፍል ስም፣ ደረጃ ወይም መግለጫ ይፈልጉ..." onkeyup="filterClasses()">
+            </div>
+
             <?php if($classes && mysqli_num_rows($classes) > 0): ?>
-            <div class="classes-grid">
+            <div class="classes-grid" id="classesListContainer">
                 <?php 
                 mysqli_data_seek($classes, 0);
                 while($class = mysqli_fetch_assoc($classes)): 
+                    $class_id = $class['id'];
+                    $class_name = $class['name'];
+                    $class_desc = $class['description'];
+                    $student_count = intval($class['student_count']);
+                    $teacher_count = intval($class['teacher_count']);
+                    $grade_name = $class['grade_name'];
+                    $division_name = $class['division_name'];
                     $divClass = ($class['division_code'] === 'CHILDREN') ? 'children' : (($class['division_code'] === 'YOUTH') ? 'youth' : 'unassigned');
+                    $class_teachers = $class_teacher_history[$class_id] ?? [];
+                    $has_history = !empty($class_teachers);
+                    $search_text = strtolower($class_name . ' ' . ($grade_name ?? '') . ' ' . ($division_name ?? '') . ' ' . ($class_desc ?? ''));
                 ?>
-                <div class="class-card">
-                    <div class="class-card-top">
-                        <?php if($class['grade_name']): ?>
-                        <div class="grade-tag <?php echo $divClass; ?>">
-                            🏷️ <?php echo htmlspecialchars($class['division_name'] . ' · ' . $class['grade_name']); ?>
+                <div class="class-card" data-search="<?php echo htmlspecialchars($search_text, ENT_QUOTES, 'UTF-8'); ?>">
+                    <div>
+                        <div class="class-header">
+                            <div class="class-avatar">
+                                🏫
+                            </div>
+                            <div class="class-title-area">
+                                <div>
+                                    <span class="class-name">
+                                        <?php echo htmlspecialchars($class_name); ?>
+                                    </span>
+                                </div>
+                                <div>
+                                    <?php if($grade_name): ?>
+                                    <span class="class-division-badge <?php echo $divClass; ?>">
+                                        🏷️ <?php echo htmlspecialchars($division_name . ' · ' . $grade_name); ?>
+                                    </span>
+                                    <?php else: ?>
+                                    <span class="class-division-badge unassigned">
+                                        ⚠️ ደረጃ ያልተመደበ
+                                    </span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="class-meta-info">
+                                    <span>👥 <?php echo $student_count; ?> ተማሪዎች</span>
+                                    <span>•</span>
+                                    <span>👨‍🏫 <?php echo $teacher_count; ?> መምህራን</span>
+                                </div>
+                            </div>
                         </div>
-                        <?php else: ?>
-                        <div class="grade-tag unassigned">
-                            ⚠️ ደረጃ ያልተመደበ
+
+                        <?php if(!empty($class_desc)): ?>
+                        <div class="class-desc">
+                            <?php echo htmlspecialchars($class_desc); ?>
                         </div>
                         <?php endif; ?>
 
-                        <div class="class-title">
-                            🏫 <?php echo htmlspecialchars($class['name']); ?>
-                        </div>
-                        <div class="class-desc">
-                            <?php echo htmlspecialchars($class['description'] ?: 'ምንም መግለጫ አልተሰጠም።'); ?>
-                        </div>
-                    </div>
-
-                    <div>
                         <div class="class-metrics">
                             <div class="class-metric-item">
-                                <div class="class-metric-val"><?php echo $class['student_count']; ?></div>
+                                <div class="class-metric-val"><?php echo $student_count; ?></div>
                                 <div class="class-metric-lbl">ተማሪዎች</div>
                             </div>
                             <div class="class-metric-item">
-                                <div class="class-metric-val"><?php echo $class['teacher_count']; ?></div>
+                                <div class="class-metric-val"><?php echo $teacher_count; ?></div>
                                 <div class="class-metric-lbl">መምህራን</div>
                             </div>
                         </div>
 
-                        <div class="class-actions-bar">
-                            <a href="manage_students.php?class_id=<?php echo $class['id']; ?>" class="btn-view-st">
-                                👥 ተማሪዎች
+                        <div class="class-actions">
+                            <a href="manage_students.php?class_id=<?php echo $class_id; ?>" class="btn-students">
+                                👥 ተማሪዎች (<?php echo $student_count; ?>)
                             </a>
-                            <button onclick="editClass(<?php echo $class['id']; ?>, '<?php echo htmlspecialchars(addslashes($class['name']), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($class['description'] ?? ''), ENT_QUOTES); ?>', <?php echo $class['grade_id'] ? (int)$class['grade_id'] : 'null'; ?>)" 
-                                    class="btn-edit-cls">
-                                ✏️ አርትዕ
+                            <button type="button" onclick="editClass(<?php echo $class_id; ?>, '<?php echo htmlspecialchars(addslashes($class_name), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($class_desc ?? ''), ENT_QUOTES); ?>', <?php echo $class['grade_id'] ? (int)$class['grade_id'] : 'null'; ?>)" 
+                                    class="btn-edit">
+                                ✏️ አስተካክል
                             </button>
+                            <?php if($student_count == 0): ?>
                             <form method="POST" style="display: inline;" 
-                                  onsubmit="return confirm('እርግጠኛ ነዎት ክፍል [<?php echo htmlspecialchars(addslashes($class['name']), ENT_QUOTES); ?>] መሰረዝ ይፈልጋሉ? ይህ ክዋኔ ሊቀለበስ አይችልም!')">
+                                  onsubmit="return confirm('እርግጠኛ ነዎት ክፍል [<?php echo htmlspecialchars(addslashes($class_name), ENT_QUOTES); ?>] መሰረዝ ይፈልጋሉ? ይህ ክዋኔ ሊቀለበስ አይችልም!')">
                                 <?php echo csrfField(); ?>
-                                <input type="hidden" name="class_id" value="<?php echo $class['id']; ?>">
-                                <button type="submit" name="delete_class" class="btn-del-cls" title="ሰርዝ">
-                                    🗑️
+                                <input type="hidden" name="class_id" value="<?php echo $class_id; ?>">
+                                <button type="submit" name="delete_class" class="btn-delete">
+                                    🗑️ ሰርዝ
                                 </button>
                             </form>
+                            <?php else: ?>
+                            <button type="button" class="btn-delete" style="opacity: 0.55; cursor: not-allowed;" 
+                                    title="ይህ ክፍል ተማሪዎች ስላሉት መሰረዝ አይቻልም! መጀመሪያ ተማሪዎቹን ያዛውሩ።">
+                                🗑️ መሰረዝ አይቻልም
+                            </button>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Assigned Teachers Timeline -->
+                        <div class="timeline">
+                            <?php if($has_history): ?>
+                                <?php 
+                                krsort($class_teachers);
+                                foreach($class_teachers as $year => $semesters): 
+                                    $is_current = ($year == $current_ethiopian_year);
+                                ?>
+                                <div class="year-group">
+                                    <div class="year-header" onclick="toggleYear('year-<?php echo $class_id . '-' . $year; ?>')">
+                                        <span class="year-badge"><?php echo $year; ?> ዓ.ም</span>
+                                        <?php if($is_current): ?>
+                                        <span class="year-status" style="color: var(--success); font-weight:700;">(ንቁ)</span>
+                                        <?php endif; ?>
+                                        <span class="toggle-icon" id="icon-<?php echo $class_id . '-' . $year; ?>"><?php echo $is_current ? '▼' : '▶'; ?></span>
+                                    </div>
+                                    
+                                    <div id="year-<?php echo $class_id . '-' . $year; ?>" style="display: <?php echo $is_current ? 'block' : 'none'; ?>;">
+                                        <?php if(!empty($semesters['semester1'])): ?>
+                                        <div class="semester-row">
+                                            <div class="semester-badge semester-1">ሴሚስተር 1</div>
+                                            <div class="teachers-list">
+                                                <?php foreach($semesters['semester1'] as $assignment): ?>
+                                                <a href="teacher_profile.php?id=<?php echo $assignment['teacher_id']; ?>" class="teacher-tag <?php echo $assignment['locked'] ? 'locked' : ''; ?>" title="የመምህሩን መገለጫ ይመልከቱ">
+                                                    <?php if($assignment['locked']): ?>🔒 <?php endif; ?>
+                                                    👨‍🏫 <?php echo htmlspecialchars($assignment['teacher_name']); ?>
+                                                </a>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+
+                                        <?php if(!empty($semesters['semester2'])): ?>
+                                        <div class="semester-row">
+                                            <div class="semester-badge semester-2">ሴሚስተር 2</div>
+                                            <div class="teachers-list">
+                                                <?php foreach($semesters['semester2'] as $assignment): ?>
+                                                <a href="teacher_profile.php?id=<?php echo $assignment['teacher_id']; ?>" class="teacher-tag <?php echo $assignment['locked'] ? 'locked' : ''; ?>" title="የመምህሩን መገለጫ ይመልከቱ">
+                                                    <?php if($assignment['locked']): ?>🔒 <?php endif; ?>
+                                                    👨‍🏫 <?php echo htmlspecialchars($assignment['teacher_name']); ?>
+                                                </a>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="no-data">
+                                    ይህ ክፍል እስካሁን ምንም መምህር አልተመደበለትም
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -903,6 +1359,32 @@ $nav_active = 'manage_classes';
 
         function closeModal() {
             document.getElementById('editModal').style.display = 'none';
+        }
+
+        function toggleYear(id) {
+            var el = document.getElementById(id);
+            var icon = document.getElementById(id.replace('year-', 'icon-'));
+            if (!el) return;
+            if (el.style.display === 'none' || el.style.display === '') {
+                el.style.display = 'block';
+                if (icon) icon.innerText = '▼';
+            } else {
+                el.style.display = 'none';
+                if (icon) icon.innerText = '▶';
+            }
+        }
+
+        function filterClasses() {
+            var q = document.getElementById('classSearch').value.toLowerCase();
+            var cards = document.querySelectorAll('.class-card');
+            cards.forEach(function(card) {
+                var searchData = card.getAttribute('data-search') || '';
+                if (!q || searchData.indexOf(q) > -1) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
 
         window.onclick = function(event) {

@@ -237,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['execute_promotion']))
 
 // Check for success redirect
 if (isset($_GET['promoted']) && $_GET['promoted'] == 1) {
-    $message = "✅ ደረጃ ማሳደግ በተሳካ ሁኔታ ተጠናቋል! ሁሉም ተማሪዎች ተሸጋግረዋል።";
+    $message = "✅ ደረጃ ማሳደግ በትክክል ተጠናቋል! ሁሉም ተማሪዎች ተሸጋግረዋል።";
 }
 
 // ============================================

@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Check if user accidentally entered a staff/admin username
         $staff_check = dbFetchOne($conn, "SELECT id, role FROM users WHERE username = ? OR name = ?", "ss", [$typed_name, $typed_name]);
         if ($staff_check) {
-            $error = "ይህ የመምህር ወይም የአስተዳዳሪ አካውንት ነው። እባክዎ <a href='index.php' style='color:#8B4513;font-weight:bold;text-decoration:underline;'>በዋናው መግቢያ</a> ይግቡ!";
+            $error = "ይህ የመምህር ወይም የትምህርት ክፍል አካውንት ነው። እባክዎ <a href='index.php' style='color:#8B4513;font-weight:bold;text-decoration:underline;'>በዋናው መግቢያ</a> ይግቡ!";
         } else {
             $matched_s = dbFetchOne($conn, "SELECT id FROM students WHERE name = ? AND student_portal_enabled = 1 AND (is_deleted = 0 OR is_deleted IS NULL)", "s", [$typed_name]);
             if ($matched_s) {
@@ -407,7 +407,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <button type="submit" class="btn-login" id="loginBtn" disabled>
-                🔑 ወደ አካውንትህ ግባ
+                🔑 ወደ አካውንት ይግቡ
             </button>
         </form>
 
@@ -417,7 +417,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             2. የተሰጠዎትን የይለፍ ቃል/ፒን ያስገቡ<br>
             3. ለመጀመሪያ ጊዜ ከሆነ አዲስ ፒን ይቀይራሉ<br>
             <br>
-            <strong>💡 ማስታወሻ:</strong> ስምዎ ካልተገኘ ወይም ፒን ከረሱ አስተዳዳሪዎን ያነጋግሩ።
+            <strong>💡 ማስታወሻ:</strong> ስምዎ ካልተገኘ ወይም ፒን ከረሱ ትምህርት ክፍልን ያነጋግሩ።
         </div>
 
         <a href="index.php" class="back-link">← ወደ ዋና ገፅ</a>
@@ -455,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             resultsDiv.innerHTML = html;
                             resultsDiv.classList.add('show');
                         } else {
-                            resultsDiv.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">ምንም አልተገኘም - አስተዳዳሪዎን ያነጋግሩ</div>';
+                            resultsDiv.innerHTML = '<div style="padding:15px; text-align:center; color:#999;">ምንም አልተገኘም - ትምህርት ክፍልን ያነጋግሩ</div>';
                             resultsDiv.classList.add('show');
                         }
                     });
@@ -639,7 +639,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         sessionStorage.setItem('offline_token', auth.token);
                         window.location.href = 'dashboard_student.php';
                     } else {
-                        alert('ከመስመር ውጭ ለመግባት አስቀድመው አንዴ ከሰርቨሩ ጋር ተገናኝተው መግባት አለብዎት!');
+                        alert('Offline ለመግባት አስቀድመው አንዴ ከሰርቨሩ ጋር ተገናኝተው መግባት አለብዎት!');
                     }
                 }
             });

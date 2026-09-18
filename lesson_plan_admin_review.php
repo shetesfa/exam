@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -19,12 +19,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && verifyCsrfToken($_POST['csr
             $plan_row = dbFetchOne($conn, "SELECT teacher_id, sub_topic, topic FROM lesson_plans WHERE id = ?", "i", [$plan_id]);
             if ($plan_row && function_exists('createNotification')) {
                 $pTopic = $plan_row['sub_topic'] ?: ($plan_row['topic'] ?: 'የትምህርት ዕቅድ');
-                $notifTitle = "💬 ከአስተዳዳሪ የተሰጠ አስተያየት";
-                $notifMsg = "ለዕቅድ '{$pTopic}' አስተዳዳሪ አስተያየት ሰጥቷል። " . ($feedback ? "አስተያየት: $feedback" : "እባክዎ ዕቅድዎን ይመልከቱ።");
+                $notifTitle = "💬 ከትምህርት ክፍል የተሰጠ አስተያየት";
+                $notifMsg = "ለዕቅድ '{$pTopic}' ትምህርት ክፍል አስተያየት ሰጥቷል። " . ($feedback ? "አስተያየት: $feedback" : "እባክዎ ዕቅድዎን ይመልከቱ።");
                 createNotification($conn, $notifTitle, $notifMsg, ['users' => [intval($plan_row['teacher_id'])]], 'normal', null, 'lesson_plan_editor.php?edit=' . $plan_id);
             }
 
-            $message = "አስተያየትዎ ለመምህሩ በተሳካ ሁኔታ ተልኳል!";
+            $message = "አስተያየትዎ ለመምህሩ በትክክል ተልኳል!";
         }
     } elseif (isset($_POST['send_broadcast_comment'])) {
         $broadcast_msg = trim($_POST['broadcast_message'] ?? '');

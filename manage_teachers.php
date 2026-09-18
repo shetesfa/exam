@@ -30,13 +30,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         [$name, $username, $phone, $password]
                     );
                     if ($saved) {
-                        $message = "መምህር በተሳካ ሁኔታ ተመዝግቧል! የተጠቃሚ ስም: $username | የይለፍ ቃል: 123";
+                        $message = "መምህር በትክክል ተመዝግቧል! የተጠቃሚ ስም: $username | የይለፍ ቃል: 123";
                     } else {
                         $error = "ስህተት ተከስቷል!";
                     }
                 }
             } else {
                 $error = "እባክዎ ስም እና የተጠቃሚ ስም ያስገቡ!";
+            }
+        }
+
+        if (isset($_POST['import_excel_teachers'])) {
+            $uploaded_path = null;
+            if (!empty($_FILES['excel_file']['tmp_name']) && is_uploaded_file($_FILES['excel_file']['tmp_name'])) {
+                $ext = strtolower(pathinfo($_FILES['excel_file']['name'], PATHINFO_EXTENSION));
+                if (in_array($ext, ['xlsx', 'xls', 'csv'])) {
+                    $target = __DIR__ . '/uploads/teachers_import_' . time() . '.' . $ext;
+                    if (move_uploaded_file($_FILES['excel_file']['tmp_name'], $target)) {
+                        $uploaded_path = $target;
+                    }
+                }
+            } elseif (file_exists(__DIR__ . '/መምህራን.xlsx')) {
+                $uploaded_path = __DIR__ . '/መምህራን.xlsx';
+            }
+            
+            if ($uploaded_path) {
+                $pyScript = escapeshellarg('C:/Users/Tesfa/.gemini/antigravity/brain/2fa187f5-ad49-481e-ac72-bde341e622cf/scratch/import_teachers.py');
+                $filePathArg = escapeshellarg($uploaded_path);
+                $cmd = "python $pyScript $filePathArg";
+                $output = shell_exec($cmd);
+                $message = "የመምህራን መረጃ ከ Excel ፋይል በትክክል ተጭኗል!";
+            } else {
+                $error = "እባክዎ ትክክለኛ የ Excel (.xlsx) ፋይል ይምረጡ!";
             }
         }
         
@@ -78,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     dbExecute($conn, "DELETE FROM users WHERE id = ? AND role = 'teacher'", "i", [$teacher_id]);
                     
                     mysqli_commit($conn);
-                    $message = "መምህር በተሳካ ሁኔታ ተሰርዟል!";
+                    $message = "መምህር በትክክል ተሰርዟል!";
                 } catch (Exception $e) {
                     mysqli_rollback($conn);
                     $error = "መምህሩን መሰረዝ አልተቻለም!";
@@ -124,13 +149,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 createNotification(
                     $conn,
                     "✅ የመረጃ ለውጥ ጥያቄዎ ጸድቋል",
-                    "ያቀረቡት የመረጃ ለውጥ ጥያቄ በአስተዳዳሪው ተቀባይነት አግኝቶ መረጃዎ ተሻሽሏል።",
+                    "ያቀረቡት የመረጃ ለውጥ ጥያቄ በትምህርት ክፍሉ ተቀባይነት አግኝቶ መረጃዎ ተሻሽሏል።",
                     ['user_id' => $req['teacher_id']],
                     'normal',
                     null,
                     'teacher_profile.php'
                 );
-                $message = "የመምህር መረጃ ለውጥ ጥያቄ በተሳካ ሁኔታ ጸድቋል!";
+                $message = "የመምህር መረጃ ለውጥ ጥያቄ በትክክል ጸድቋል!";
             }
         }
         
@@ -397,6 +422,204 @@ $nav_active = 'manage_teachers';
             color: #94A3B8 !important;
         }
 
+        /* Direct Dark Mode Overrides for Teacher Components */
+        html.dark-mode .teacher-card,
+        body.dark-mode .teacher-card,
+        [data-theme="dark"] .teacher-card {
+            background-color: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .teacher-card:hover,
+        body.dark-mode .teacher-card:hover,
+        [data-theme="dark"] .teacher-card:hover {
+            border-color: #F59E0B !important;
+        }
+
+        html.dark-mode .teacher-meta-head h3,
+        body.dark-mode .teacher-meta-head h3,
+        [data-theme="dark"] .teacher-meta-head h3 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .teacher-history-box,
+        body.dark-mode .teacher-history-box,
+        [data-theme="dark"] .teacher-history-box {
+            background-color: #162032 !important;
+            border: 1px solid #334155 !important;
+            color: #CBD5E1 !important;
+        }
+
+        html.dark-mode .history-toggle-title,
+        body.dark-mode .history-toggle-title,
+        [data-theme="dark"] .history-toggle-title {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .history-content,
+        body.dark-mode .history-content,
+        [data-theme="dark"] .history-content {
+            border-top: 1px dashed #334155 !important;
+        }
+
+        html.dark-mode .history-content strong,
+        body.dark-mode .history-content strong,
+        [data-theme="dark"] .history-content strong {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .class-chip,
+        body.dark-mode .class-chip,
+        [data-theme="dark"] .class-chip {
+            background-color: #0F172A !important;
+            border: 1px solid #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .class-chip.locked,
+        body.dark-mode .class-chip.locked,
+        [data-theme="dark"] .class-chip.locked {
+            background-color: #3B1212 !important;
+            border-color: #DC2626 !important;
+            color: #FCA5A5 !important;
+        }
+
+        html.dark-mode .teacher-user-tag,
+        body.dark-mode .teacher-user-tag,
+        [data-theme="dark"] .teacher-user-tag {
+            background-color: #0F172A !important;
+            border: 1px solid #334155 !important;
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .teacher-phone,
+        body.dark-mode .teacher-phone,
+        [data-theme="dark"] .teacher-phone {
+            color: #60A5FA !important;
+        }
+
+        html.dark-mode .requests-card,
+        body.dark-mode .requests-card,
+        [data-theme="dark"] .requests-card {
+            background-color: #1E293B !important;
+            border: 2px solid #F59E0B !important;
+        }
+
+        html.dark-mode .requests-card-header,
+        body.dark-mode .requests-card-header,
+        [data-theme="dark"] .requests-card-header {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .req-item,
+        body.dark-mode .req-item,
+        [data-theme="dark"] .req-item {
+            background-color: #0F172A !important;
+            border: 1px solid #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .req-info,
+        body.dark-mode .req-info,
+        [data-theme="dark"] .req-info {
+            color: #CBD5E1 !important;
+        }
+
+        html.dark-mode .req-info strong,
+        body.dark-mode .req-info strong,
+        [data-theme="dark"] .req-info strong {
+            color: #F8FAFC !important;
+        }
+
+        html.dark-mode .req-info code,
+        body.dark-mode .req-info code,
+        [data-theme="dark"] .req-info code {
+            background-color: #1E293B !important;
+            color: #FCD34D !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .req-info small,
+        body.dark-mode .req-info small,
+        [data-theme="dark"] .req-info small {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .btn-profile-link,
+        body.dark-mode .btn-profile-link,
+        [data-theme="dark"] .btn-profile-link {
+            background-color: #243247 !important;
+            color: #FCD34D !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .btn-profile-link:hover,
+        body.dark-mode .btn-profile-link:hover,
+        [data-theme="dark"] .btn-profile-link:hover {
+            background-color: #334155 !important;
+            color: #FFFFFF !important;
+        }
+
+        html.dark-mode .btn-t-edit,
+        body.dark-mode .btn-t-edit,
+        [data-theme="dark"] .btn-t-edit {
+            background-color: #3B2A0F !important;
+            color: #FCD34D !important;
+            border: 1px solid #78350F !important;
+        }
+
+        html.dark-mode .btn-t-edit:hover,
+        body.dark-mode .btn-t-edit:hover,
+        [data-theme="dark"] .btn-t-edit:hover {
+            background-color: #4D3814 !important;
+        }
+
+        html.dark-mode .btn-t-reset,
+        body.dark-mode .btn-t-reset,
+        [data-theme="dark"] .btn-t-reset {
+            background-color: #1E1B4B !important;
+            color: #A5B4FC !important;
+            border: 1px solid #3730A3 !important;
+        }
+
+        html.dark-mode .btn-t-reset:hover,
+        body.dark-mode .btn-t-reset:hover,
+        [data-theme="dark"] .btn-t-reset:hover {
+            background-color: #2D2766 !important;
+        }
+
+        html.dark-mode .btn-t-del,
+        body.dark-mode .btn-t-del,
+        [data-theme="dark"] .btn-t-del {
+            background-color: #3B1212 !important;
+            color: #FCA5A5 !important;
+            border: 1px solid #991B1B !important;
+        }
+
+        html.dark-mode .btn-t-del:hover,
+        body.dark-mode .btn-t-del:hover,
+        [data-theme="dark"] .btn-t-del:hover {
+            background-color: #501A1A !important;
+        }
+
+        html.dark-mode .content-card-header h2,
+        body.dark-mode .content-card-header h2,
+        [data-theme="dark"] .content-card-header h2 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .content-card-header,
+        body.dark-mode .content-card-header,
+        [data-theme="dark"] .content-card-header {
+            border-bottom-color: #334155 !important;
+        }
+
+        html.dark-mode .form-group label,
+        body.dark-mode .form-group label,
+        [data-theme="dark"] .form-group label {
+            color: #CBD5E1 !important;
+        }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
         body { background: var(--bg-cream); color: var(--text-main); min-height: 100vh; }
@@ -619,175 +842,321 @@ $nav_active = 'manage_teachers';
             box-shadow: 0 6px 16px rgba(218, 165, 32, 0.35);
         }
 
-        /* Teachers Grid */
+        /* Teacher Cards Grid (from Hosted Code) */
         .teachers-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
         }
+
         .teacher-card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            border: 1.5px solid var(--border-color);
+            background: white;
+            border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
-            transition: all 0.25s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 2px solid var(--gold-pale);
+            transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
+
         .teacher-card:hover {
-            border-color: var(--gold-dark);
-            box-shadow: 0 8px 20px rgba(139, 69, 19, 0.1);
+            transform: translateY(-3px);
+            border-color: var(--gold-primary);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
         }
 
-        .teacher-top {
+        .teacher-header {
             display: flex;
             align-items: center;
-            gap: 14px;
-            margin-bottom: 16px;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--gold-pale);
         }
-        .teacher-avatar-img {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--gold-primary);
-            flex-shrink: 0;
-            background: var(--gold-pale);
-        }
-        .teacher-avatar-fallback {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
+
+        .teacher-avatar {
+            width: 60px;
+            height: 60px;
             background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            color: var(--brown-dark);
-            font-size: 20px;
-            font-weight: 800;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            border: 2px solid white;
-        }
-        .teacher-meta-head h3 {
-            font-size: 16.5px;
-            font-weight: 800;
+            font-size: 24px;
+            font-weight: bold;
             color: var(--brown-dark);
+            border: 3px solid white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        
+        .teacher-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .teacher-title {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .teacher-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--brown-dark);
+            margin-bottom: 3px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-block;
+        }
+        
+        .teacher-name:hover {
+            color: var(--gold-dark);
+            text-decoration: underline;
+        }
+
+        .teacher-username {
+            color: #8B5CF6;
+            font-size: 12px;
+            font-weight: 600;
+            background: #F3F0FF;
+            padding: 2px 10px;
+            border-radius: 15px;
+            display: inline-block;
             margin-bottom: 4px;
         }
-        .teacher-user-tag {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-family: monospace;
-            background: #F3F4F6;
-            padding: 2px 8px;
-            border-radius: 6px;
-        }
+
         .teacher-phone {
-            font-size: 12.5px;
-            color: #2563EB;
-            margin-top: 4px;
-            display: block;
-            text-decoration: none;
-            font-family: monospace;
-        }
-
-        /* History Section Inside Card */
-        .teacher-history-box {
-            background: #F9FAFB;
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 16px;
-            border: 1px solid #F3F4F6;
-            font-size: 12.5px;
-        }
-        .history-toggle-title {
+            color: #666;
+            font-size: 13px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            font-weight: 700;
-            color: var(--brown-dark);
-            cursor: pointer;
-            user-select: none;
+            gap: 5px;
+            text-decoration: none;
         }
-        .history-content {
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px dashed #E5E7EB;
-        }
-        .class-chip {
-            display: inline-block;
-            background: white;
-            border: 1px solid #E5E7EB;
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 11.5px;
-            margin: 2px;
-            font-weight: 600;
-        }
-        .class-chip.locked { background: #FEE2E2; color: #991B1B; border-color: #FECACA; }
 
-        /* Action Buttons */
+        .teacher-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .status-new {
+            background: #FEF3C7;
+            color: #D97706;
+        }
+
+        .status-active {
+            background: #D1FAE5;
+            color: #059669;
+        }
+
         .teacher-actions {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            gap: 8px;
+            margin-top: 15px;
             flex-wrap: wrap;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(0,0,0,0.08);
         }
-        .btn-profile-link {
-            flex: 1;
-            background: var(--gold-pale);
-            color: var(--brown-dark);
-            padding: 8px 10px;
-            border-radius: 8px;
+
+        .btn-profile {
+            background: #8B5CF6;
+            color: white !important;
+            padding: 7px 12px;
             font-size: 12px;
-            font-weight: 700;
             text-decoration: none;
-            text-align: center;
+            border-radius: 8px;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 4px;
+            gap: 5px;
             transition: all 0.2s;
         }
-        .btn-profile-link:hover { background: var(--gold-primary); }
+        .btn-profile:hover {
+            background: #7C3AED;
+            transform: translateY(-1px);
+        }
 
-        .btn-t-edit {
+        .btn-edit {
+            background: #3B82F6;
+            color: white;
+            padding: 7px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-edit:hover {
+            background: #2563EB;
+            transform: translateY(-1px);
+        }
+
+        .btn-reset {
+            background: #F59E0B;
+            color: white;
+            padding: 7px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-reset:hover {
+            background: #D97706;
+            transform: translateY(-1px);
+        }
+
+        .btn-delete {
+            background: #EF4444;
+            color: white;
+            padding: 7px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .btn-delete:hover:not(:disabled) {
+            background: #DC2626;
+            transform: translateY(-1px);
+        }
+
+        /* Timeline Styles from Hosted Code */
+        .timeline {
+            margin-top: 15px;
+        }
+
+        .year-group {
+            margin-bottom: 15px;
+            border-left: 3px solid var(--gold-primary);
+            padding-left: 12px;
+        }
+
+        .year-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            padding: 8px 10px;
+            background: #F8F9FA;
+            border-radius: 8px;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .year-header:hover {
+            background: var(--gold-pale);
+        }
+
+        .year-badge {
+            background: var(--brown-dark);
+            color: var(--gold-primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .year-status {
+            font-size: 12px;
+            color: #059669;
+            font-weight: 700;
+        }
+
+        .toggle-icon {
+            margin-left: auto;
+            font-size: 14px;
+            color: var(--gold-dark);
+        }
+
+        .semester-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            background: #F8F9FA;
+            border-radius: 8px;
+            align-items: center;
+        }
+
+        .semester-badge {
+            min-width: 85px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .semester-1 {
+            background: #EFF6FF;
+            color: #2563EB;
+            border: 1px solid #BFDBFE;
+        }
+
+        .semester-2 {
             background: #FEF3C7;
-            color: #B45309;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
+            color: #D97706;
+            border: 1px solid #FDE68A;
         }
-        .btn-t-edit:hover { background: #FDE68A; }
 
-        .btn-t-reset {
-            background: #E0E7FF;
-            color: #3730A3;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
+        .classes-list {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
         }
-        .btn-t-reset:hover { background: #C7D2FE; }
 
-        .btn-t-del {
+        .class-tag {
+            background: white;
+            border: 1px solid var(--gold-primary);
+            color: var(--brown-dark);
+            padding: 3px 10px;
+            border-radius: 16px;
+            font-size: 11.5px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .class-tag.locked {
             background: #FEE2E2;
+            border-color: #EF4444;
             color: #DC2626;
-            border: none;
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 12px;
-            cursor: pointer;
         }
-        .btn-t-del:hover { background: #FCA5A5; }
+
+        .no-data {
+            color: #9CA3AF;
+            font-style: italic;
+            padding: 8px;
+            font-size: 12.5px;
+        }
 
         /* Modal */
         .modal-overlay {
@@ -873,7 +1242,7 @@ $nav_active = 'manage_teachers';
         <?php if (!empty($pending_requests)): ?>
         <div class="requests-card">
             <div class="requests-card-header">
-                <span>🔔</span> የጸደቁ የመረጃ ለውጥ ጥያቄዎች (<?php echo count($pending_requests); ?>)
+                <span>🔔</span> ያልጸደቁ የመረጃ ለውጥ ጥያቄዎች (<?php echo count($pending_requests); ?>)
             </div>
             <?php foreach ($pending_requests as $req): ?>
             <div class="req-item">
@@ -960,6 +1329,26 @@ $nav_active = 'manage_teachers';
             </form>
         </div>
 
+        <!-- Excel Import Card -->
+        <div class="content-card" style="border: 1.5px dashed var(--gold-dark);">
+            <div class="content-card-header">
+                <h2><span>📊</span> ከመምህራን Excel ፋይል መረጃ መጫኛ (Import Excel)</h2>
+                <?php if (file_exists(__DIR__ . '/መምህራን.xlsx')): ?>
+                <span class="header-badge" style="background: #DCFCE7; color: #166534;">✅ መምህራን.xlsx ዝግጁ ነው</span>
+                <?php endif; ?>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+                የመምህራን ዝርዝር ያለበትን <code>መምህራን.xlsx</code> ፋይል በቀጥታ መጫን ወይም አዲስ Excel (.xlsx) ፋይል መርጠው በአንድ ጊዜ መምህራንን መመዝገብ ይችላሉ።
+            </p>
+            <form method="POST" enctype="multipart/form-data" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <?php echo csrfField(); ?>
+                <input type="file" name="excel_file" accept=".xlsx,.xls,.csv" class="form-control" style="max-width: 320px;">
+                <button type="submit" name="import_excel_teachers" class="btn-primary-action" style="background: #10B981; border: none;">
+                    📥 Excel ፋይል አስመጣ (Import)
+                </button>
+            </form>
+        </div>
+
         <!-- Teachers Grid List -->
         <div class="content-card">
             <div class="content-card-header">
@@ -977,96 +1366,133 @@ $nav_active = 'manage_teachers';
                 <?php 
                 mysqli_data_seek($teachers, 0);
                 while($teacher = mysqli_fetch_assoc($teachers)): 
-                    $t_id = $teacher['id'];
-                    $t_name = $teacher['name'];
-                    $t_username = $teacher['username'];
-                    $t_phone = $teacher['phone'];
-                    $t_photo = $teacher['photo'];
-                    $t_initial = mb_substr($t_name, 0, 1, 'UTF-8');
-                    $history = $teacher_history[$t_id] ?? [];
+                    $teacher_id = $teacher['id'];
+                    $teacher_name = $teacher['name'];
+                    $teacher_username = $teacher['username'];
+                    $teacher_phone = $teacher['phone'];
+                    $teacher_photo = $teacher['photo'] ?: null;
+                    $teacher_years = $teacher_history[$teacher_id] ?? [];
+                    $has_history = !empty($teacher_years);
                 ?>
-                <div class="teacher-card" data-search="<?php echo htmlspecialchars(strtolower($t_name . ' ' . $t_username . ' ' . $t_phone)); ?>">
+                <div class="teacher-card" data-search="<?php echo htmlspecialchars(strtolower($teacher_name . ' ' . $teacher_username . ' ' . ($teacher_phone ?? ''))); ?>">
                     <div>
-                        <div class="teacher-top">
-                            <?php if ($t_photo && file_exists($t_photo)): ?>
-                                <img src="<?php echo htmlspecialchars($t_photo); ?>" class="teacher-avatar-img" alt="Photo">
-                            <?php else: ?>
-                                <div class="teacher-avatar-fallback"><?php echo htmlspecialchars($t_initial); ?></div>
-                            <?php endif; ?>
-                            <div class="teacher-meta-head">
-                                <h3><?php echo htmlspecialchars($t_name); ?></h3>
-                                <span class="teacher-user-tag">@<?php echo htmlspecialchars($t_username); ?></span>
-                                <?php if ($t_phone): ?>
-                                <a href="tel:<?php echo htmlspecialchars($t_phone); ?>" class="teacher-phone">
-                                    📞 <?php echo htmlspecialchars($t_phone); ?>
-                                </a>
+                        <div class="teacher-header">
+                            <div class="teacher-avatar">
+                                <?php if($teacher_photo && file_exists($teacher_photo)): ?>
+                                <img src="<?php echo htmlspecialchars($teacher_photo); ?>" alt="<?php echo htmlspecialchars($teacher_name); ?>" onerror="this.style.display='none'; this.parentElement.innerHTML='<?php echo mb_substr($teacher_name, 0, 1, 'UTF-8'); ?>';">
+                                <?php else: ?>
+                                <?php echo mb_substr($teacher_name, 0, 1, 'UTF-8'); ?>
                                 <?php endif; ?>
                             </div>
-                        </div>
-
-                        <!-- Teaching Assignments Overview -->
-                        <div class="teacher-history-box">
-                            <div class="history-toggle-title" onclick="toggleHistory(<?php echo $t_id; ?>)">
-                                <span>📚 የተመደቡባቸው ክፍሎች (<?php echo count($history); ?> ዓመታት)</span>
-                                <span id="toggleIcon-<?php echo $t_id; ?>">▼</span>
-                            </div>
-                            <div id="historyDetails-<?php echo $t_id; ?>" class="history-content" style="display: none;">
-                                <?php if (!empty($history)): 
-                                    foreach ($history as $yr => $sems):
-                                ?>
-                                <div style="margin-bottom: 8px;">
-                                    <strong style="color:var(--brown-dark); font-size:11.5px;">📅 <?php echo $yr; ?> ዓ.ም፦</strong>
-                                    <?php if (!empty($sems['semester1'])): ?>
-                                        <div style="margin-top:2px;">
-                                            <span style="font-size:11px; color:#666;">ሴ1:</span>
-                                            <?php foreach ($sems['semester1'] as $asg): ?>
-                                                <span class="class-chip <?php echo $asg['locked'] ? 'locked' : ''; ?>">
-                                                    <?php echo $asg['locked'] ? '🔒' : ''; ?> <?php echo htmlspecialchars($asg['class_name']); ?>
-                                                </span>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($sems['semester2'])): ?>
-                                        <div style="margin-top:2px;">
-                                            <span style="font-size:11px; color:#666;">ሴ2:</span>
-                                            <?php foreach ($sems['semester2'] as $asg): ?>
-                                                <span class="class-chip <?php echo $asg['locked'] ? 'locked' : ''; ?>">
-                                                    <?php echo $asg['locked'] ? '🔒' : ''; ?> <?php echo htmlspecialchars($asg['class_name']); ?>
-                                                </span>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
+                            <div class="teacher-title">
+                                <div>
+                                    <a href="teacher_profile.php?id=<?php echo $teacher_id; ?>" class="teacher-name">
+                                        <?php echo htmlspecialchars($teacher_name); ?>
+                                    </a>
+                                    <span class="teacher-status <?php echo $teacher['first_login'] ? 'status-new' : 'status-active'; ?>">
+                                        <?php echo $teacher['first_login'] ? '🆕 አዲስ' : '✅ ንቁ'; ?>
+                                    </span>
                                 </div>
-                                <?php endforeach; else: ?>
-                                <div style="color: #999; font-style: italic;">ምንም የተመደበ ክፍል የለም</div>
-                                <?php endif; ?>
+                                <div class="teacher-username">
+                                    @<?php echo htmlspecialchars($teacher_username); ?>
+                                </div>
+                                <div class="teacher-phone">
+                                    <span>📱</span>
+                                    <?php echo htmlspecialchars($teacher_phone ?: 'ስልክ የለም'); ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Actions -->
-                    <div class="teacher-actions">
-                        <a href="teacher_profile.php?id=<?php echo $t_id; ?>" class="btn-profile-link" title="የመምህር ሙሉ ፕሮፋይል ይመልከቱ">
-                            👤 ፕሮፋይል
-                        </a>
-                        <button onclick="editTeacher(<?php echo $t_id; ?>, '<?php echo htmlspecialchars(addslashes($t_name), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($t_username), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($t_phone ?? ''), ENT_QUOTES); ?>')" 
-                                class="btn-t-edit" title="መረጃ አርትዕ">
-                            ✏️ አርትዕ
-                        </button>
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('የ[<?php echo htmlspecialchars(addslashes($t_name), ENT_QUOTES); ?>] የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
-                            <?php echo csrfField(); ?>
-                            <input type="hidden" name="teacher_id" value="<?php echo $t_id; ?>">
-                            <button type="submit" name="reset_password" class="btn-t-reset" title="የይለፍ ቃል ወደ 123 መልስ">
-                                🔄 123
+                        <div class="teacher-actions">
+                            <a href="teacher_profile.php?id=<?php echo $teacher_id; ?>" class="btn btn-profile">
+                                👤 መገለጫ
+                            </a>
+                            
+                            <button type="button" onclick="editTeacher(<?php echo $teacher_id; ?>, '<?php echo htmlspecialchars(addslashes($teacher_name), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($teacher_username), ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($teacher_phone ?? ''), ENT_QUOTES); ?>')" 
+                                    class="btn btn-edit">
+                                ✏️ አስተካክል
                             </button>
-                        </form>
-                        <form method="POST" style="display:inline;" onsubmit="return confirm('መምህር [<?php echo htmlspecialchars(addslashes($t_name), ENT_QUOTES); ?>] መሰረዝ ይፈልጋሉ? የተያያዙ ውጤቶችና ምደባዎች ይሰረዛሉ!')">
-                            <?php echo csrfField(); ?>
-                            <input type="hidden" name="teacher_id" value="<?php echo $t_id; ?>">
-                            <button type="submit" name="delete_teacher" class="btn-t-del" title="መምህር ሰርዝ">
-                                🗑️
+                            
+                            <form method="POST" style="display: inline;" 
+                                  onsubmit="return confirm('የ[<?php echo htmlspecialchars(addslashes($teacher_name), ENT_QUOTES); ?>] የይለፍ ቃል ወደ 123 መመለስ እርግጠኛ ነዎት?')">
+                                <?php echo csrfField(); ?>
+                                <input type="hidden" name="teacher_id" value="<?php echo $teacher_id; ?>">
+                                <button type="submit" name="reset_password" class="btn btn-reset">
+                                    🔄 ይለፍ ቃል መልስ
+                                </button>
+                            </form>
+                            
+                            <?php if(!$has_history): ?>
+                            <form method="POST" style="display: inline;" 
+                                  onsubmit="return confirm('መምህር [<?php echo htmlspecialchars(addslashes($teacher_name), ENT_QUOTES); ?>] መሰረዝ ይፈልጋሉ? የተያያዙ ውጤቶችና ምደባዎች ይሰረዛሉ!')">
+                                <?php echo csrfField(); ?>
+                                <input type="hidden" name="teacher_id" value="<?php echo $teacher_id; ?>">
+                                <button type="submit" name="delete_teacher" class="btn btn-delete">
+                                    🗑️ ሰርዝ
+                                </button>
+                            </form>
+                            <?php else: ?>
+                            <button type="button" class="btn btn-delete" style="opacity: 0.55; cursor: not-allowed;" 
+                                    title="ይህ መምህር ታሪክ አለው መሰረዝ አይቻልም">
+                                🗑️ መሰረዝ አይቻልም
                             </button>
-                        </form>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Assignment History Timeline -->
+                        <div class="timeline">
+                            <?php if($has_history): ?>
+                                <?php 
+                                krsort($teacher_years);
+                                foreach($teacher_years as $year => $semesters): 
+                                    $is_current = ($year == $current_ethiopian_year);
+                                ?>
+                                <div class="year-group">
+                                    <div class="year-header" onclick="toggleYear('year-<?php echo $teacher_id . '-' . $year; ?>')">
+                                        <span class="year-badge"><?php echo $year; ?> ዓ.ም</span>
+                                        <?php if($is_current): ?>
+                                        <span class="year-status" style="color: var(--success-green); font-weight:700;">(ንቁ)</span>
+                                        <?php endif; ?>
+                                        <span class="toggle-icon" id="icon-<?php echo $teacher_id . '-' . $year; ?>"><?php echo $is_current ? '▼' : '▶'; ?></span>
+                                    </div>
+                                    
+                                    <div id="year-<?php echo $teacher_id . '-' . $year; ?>" style="display: <?php echo $is_current ? 'block' : 'none'; ?>;">
+                                        <?php if(!empty($semesters['semester1'])): ?>
+                                        <div class="semester-row">
+                                            <div class="semester-badge semester-1">ሴሚስተር 1</div>
+                                            <div class="classes-list">
+                                                <?php foreach($semesters['semester1'] as $assignment): ?>
+                                                <span class="class-tag <?php echo $assignment['locked'] ? 'locked' : ''; ?>">
+                                                    <?php if($assignment['locked']): ?>🔒 <?php endif; ?>
+                                                    <?php echo htmlspecialchars($assignment['class_name']); ?>
+                                                </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+
+                                        <?php if(!empty($semesters['semester2'])): ?>
+                                        <div class="semester-row">
+                                            <div class="semester-badge semester-2">ሴሚስተር 2</div>
+                                            <div class="classes-list">
+                                                <?php foreach($semesters['semester2'] as $assignment): ?>
+                                                <span class="class-tag <?php echo $assignment['locked'] ? 'locked' : ''; ?>">
+                                                    <?php if($assignment['locked']): ?>🔒 <?php endif; ?>
+                                                    <?php echo htmlspecialchars($assignment['class_name']); ?>
+                                                </span>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="no-data">
+                                    ይህ መምህር እስካሁን ምንም ክፍል አልተመደበም
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
                 <?php endwhile; ?>
@@ -1155,15 +1581,29 @@ $nav_active = 'manage_teachers';
             document.getElementById('rejectModal').style.display = 'none';
         }
 
+        function toggleYear(id) {
+            var el = document.getElementById(id);
+            var icon = document.getElementById(id.replace('year-', 'icon-'));
+            if (!el) return;
+            if (el.style.display === 'none' || el.style.display === '') {
+                el.style.display = 'block';
+                if (icon) icon.innerText = '▼';
+            } else {
+                el.style.display = 'none';
+                if (icon) icon.innerText = '▶';
+            }
+        }
+
         function toggleHistory(teacherId) {
             var el = document.getElementById('historyDetails-' + teacherId);
             var icon = document.getElementById('toggleIcon-' + teacherId);
+            if (!el) return;
             if (el.style.display === 'none' || el.style.display === '') {
                 el.style.display = 'block';
-                icon.innerText = '▲';
+                if (icon) icon.innerText = '▲';
             } else {
                 el.style.display = 'none';
-                icon.innerText = '▼';
+                if (icon) icon.innerText = '▼';
             }
         }
 

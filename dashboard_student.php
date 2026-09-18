@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireStudent();
 
@@ -153,11 +153,11 @@ $teacher_count = 0;
 
 foreach ($marks_rows as $row) {
     $teacher_count++;
-    $row['c1_name'] = !empty($row['component1_name']) ? $row['component1_name'] : 'Assignment';
-    $row['c2_name'] = !empty($row['component2_name']) ? $row['component2_name'] : 'Participation';
-    $row['c3_name'] = !empty($row['component3_name']) ? $row['component3_name'] : 'Attendance';
-    $row['c4_name'] = !empty($row['component4_name']) ? $row['component4_name'] : 'Mid Exam';
-    $row['c5_name'] = !empty($row['component5_name']) ? $row['component5_name'] : 'Final Exam';
+    $row['c1_name'] = getChurchComponentName($row['component1_name'] ?? '', 'የቤት ሥራ');
+    $row['c2_name'] = getChurchComponentName($row['component2_name'] ?? '', 'የክፍል ተሳትፎ');
+    $row['c3_name'] = getChurchComponentName($row['component3_name'] ?? '', 'የክፍል ክትትል');
+    $row['c4_name'] = getChurchComponentName($row['component4_name'] ?? '', 'የአጋማሽ ፈተና');
+    $row['c5_name'] = getChurchComponentName($row['component5_name'] ?? '', 'የማጠቃለያ ፈተና');
     $row['c1_max'] = !empty($row['component1_percentage']) ? $row['component1_percentage'] : 20;
     $row['c2_max'] = !empty($row['component2_percentage']) ? $row['component2_percentage'] : 20;
     $row['c3_max'] = !empty($row['component3_percentage']) ? $row['component3_percentage'] : 10;
@@ -471,12 +471,20 @@ foreach ($history_rows as $row) {
                 <table>
                     <thead><tr>
                         <th>መምህር</th>
-                        <?php $ft = $all_marks[0]; ?>
-                        <th><?php echo htmlspecialchars($ft['c1_name']); ?><br><span class="max-hint">(<?php echo $ft['c1_max']; ?>%)</span></th>
-                        <th><?php echo htmlspecialchars($ft['c2_name']); ?><br><span class="max-hint">(<?php echo $ft['c2_max']; ?>%)</span></th>
-                        <th><?php echo htmlspecialchars($ft['c3_name']); ?><br><span class="max-hint">(<?php echo $ft['c3_max']; ?>%)</span></th>
-                        <th><?php echo htmlspecialchars($ft['c4_name']); ?><br><span class="max-hint">(<?php echo $ft['c4_max']; ?>%)</span></th>
-                        <th><?php echo htmlspecialchars($ft['c5_name']); ?><br><span class="max-hint">(<?php echo $ft['c5_max']; ?>%)</span></th>
+                        <?php 
+                        $ft = $all_marks[0];
+                        $show_c1 = floatval($ft['c1_max'] ?? 0) > 0;
+                        $show_c2 = floatval($ft['c2_max'] ?? 0) > 0;
+                        $show_c3 = floatval($ft['c3_max'] ?? 0) > 0;
+                        $show_c4 = floatval($ft['c4_max'] ?? 0) > 0;
+                        $show_c5 = floatval($ft['c5_max'] ?? 0) > 0;
+                        $active_cols_count = ($show_c1 ? 1 : 0) + ($show_c2 ? 1 : 0) + ($show_c3 ? 1 : 0) + ($show_c4 ? 1 : 0) + ($show_c5 ? 1 : 0);
+                        ?>
+                        <?php if ($show_c1): ?><th><?php echo htmlspecialchars($ft['c1_name']); ?><br><span class="max-hint">(<?php echo $ft['c1_max']; ?>%)</span></th><?php endif; ?>
+                        <?php if ($show_c2): ?><th><?php echo htmlspecialchars($ft['c2_name']); ?><br><span class="max-hint">(<?php echo $ft['c2_max']; ?>%)</span></th><?php endif; ?>
+                        <?php if ($show_c3): ?><th><?php echo htmlspecialchars($ft['c3_name']); ?><br><span class="max-hint">(<?php echo $ft['c3_max']; ?>%)</span></th><?php endif; ?>
+                        <?php if ($show_c4): ?><th><?php echo htmlspecialchars($ft['c4_name']); ?><br><span class="max-hint">(<?php echo $ft['c4_max']; ?>%)</span></th><?php endif; ?>
+                        <?php if ($show_c5): ?><th><?php echo htmlspecialchars($ft['c5_name']); ?><br><span class="max-hint">(<?php echo $ft['c5_max']; ?>%)</span></th><?php endif; ?>
                         <th>ድምር</th><th>ደረጃ</th>
                     </tr></thead>
                     <tbody>
@@ -488,17 +496,22 @@ foreach ($history_rows as $row) {
                         ?>
                         <tr>
                             <td class="teacher-name-cell">👨‍🏫 <?php echo htmlspecialchars($mark['teacher_name']); ?></td>
-                            <td><?php echo $mark['assignment'] > 0 ? number_format($mark['assignment'], 1) : '-'; ?></td>
-                            <td><?php echo $mark['participation'] > 0 ? number_format($mark['participation'], 1) : '-'; ?></td>
-                            <td><?php echo $mark['attendance'] > 0 ? number_format($mark['attendance'], 1) : '-'; ?></td>
-                            <td><?php echo $mark['mid'] > 0 ? number_format($mark['mid'], 1) : '-'; ?></td>
-                            <td><?php echo $mark['final'] > 0 ? number_format($mark['final'], 1) : '-'; ?></td>
-                            <td><strong><?php echo number_format($mark['total'], 1); ?></strong></td>
-                            <td><span class="grade-badge <?php echo $gc; ?>"><?php echo getGradeStatus($mark['total']); ?></span></td>
+                            <?php
+                            // If total > 0, marks have been submitted — show actual values (even if a component is 0)
+                            // If total == 0 AND all components are 0, marks not yet entered — show '-'
+                            $has_marks = ($mark['total'] > 0 || $mark['assignment'] > 0 || $mark['participation'] > 0 || $mark['attendance'] > 0 || $mark['mid'] > 0 || $mark['final'] > 0);
+                            ?>
+                            <?php if ($show_c1): ?><td><?php echo $has_marks ? number_format($mark['assignment'], 1) : '-'; ?></td><?php endif; ?>
+                            <?php if ($show_c2): ?><td><?php echo $has_marks ? number_format($mark['participation'], 1) : '-'; ?></td><?php endif; ?>
+                            <?php if ($show_c3): ?><td><?php echo $has_marks ? number_format($mark['attendance'], 1) : '-'; ?></td><?php endif; ?>
+                            <?php if ($show_c4): ?><td><?php echo $has_marks ? number_format($mark['mid'], 1) : '-'; ?></td><?php endif; ?>
+                            <?php if ($show_c5): ?><td><?php echo $has_marks ? number_format($mark['final'], 1) : '-'; ?></td><?php endif; ?>
+                            <td><strong><?php echo $has_marks ? number_format($mark['total'], 1) : '-'; ?></strong></td>
+                            <td><?php if($has_marks): ?><span class="grade-badge <?php echo $gc; ?>"><?php echo getGradeStatus($mark['total']); ?></span><?php else: ?><span style="color:#999;">-</span><?php endif; ?></td>
                         </tr>
                         <?php endforeach; ?>
                         <tr class="total-row">
-                            <td><strong>አማካይ</strong></td><td colspan="5"></td>
+                            <td><strong>አማካይ</strong></td><td colspan="<?php echo $active_cols_count; ?>"></td>
                             <td><strong><?php echo number_format($average, 1); ?></strong></td>
                             <td><strong><?php echo getGradeStatus($average); ?></strong></td>
                         </tr>

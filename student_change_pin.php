@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($updated) {
                     $_SESSION['student_first_login'] = 0;
                     $is_first_login = false;
-                    $success = "ፒንዎ በተሳካ ሁኔታ ተቀይሯል!";
+                    $success = "ፒንዎ በትክክል ተቀይሯል!";
                     header("refresh:2;url=dashboard_student.php");
                 } else {
                     $error = "ስህተት ተከስቷል! እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።";
@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label>አዲሱን ፒን በድጋሚ ያረጋግጡ</label>
+                <label>አዲሱን ፒን በድጋሚ ያስገቡ</label>
                 <input type="password" name="confirm_pin" class="form-control" 
                        placeholder="••••" maxlength="6" pattern="[0-9]+" required>
             </div>

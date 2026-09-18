@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 requireAdmin();
 
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             auditLog($conn, 'calendar_event_created', 'calendar_events', $eventId, $title);
-            $message = "ክስተት በተሳካ ሁኔታ ተጨምሯል፤ ለመምህራንም ማሳወቂያ ተልኳል! (Event added & teachers notified!)";
+            $message = "ክስተት በትክክል ተመዝግቧል፤ ለመምህራንም ማሳወቂያ ተልኳል!";
         }
     } elseif (isset($_POST['seed_official_2019'])) {
         if (function_exists('seedOfficialCalendar2019')) {
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'calendar.php'
                 );
             }
-            $message = "የ2019 ዓ.ም ኦፊሴላዊ የትምህርት ካላንደር ሁነቶች ({$cnt}) በተሳካ ሁኔታ ተመዝግበዋል! (Official 2019 calendar seeded!)";
+            $message = "የ2019 ዓ.ም ኦፊሴላዊ የትምህርት ካላንደር ሁነቶች ({$cnt}) በትክክል ተመዝግበዋል!";
         }
     } elseif (isset($_POST['delete_event'])) {
         $eventId = intval($_POST['event_id'] ?? 0);
@@ -179,6 +179,12 @@ input, select, textarea { width:100%; padding:9px; border:1px solid #ddd; border
 <body>
 <?php include 'mobile_nav.php'; ?>
 <div class="main-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <h1 style="color:var(--brown-dark); font-size:22px; font-weight:800; margin:0;">🗓️ የካሌንደር አስተዳደር</h1>
+        <a href="calendar_view.php" class="btn" style="background:#10B981; color:white; padding:8px 16px; text-decoration:none; border-radius:8px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+            👁️ ካሌንደሩን በሙሉ ገጽ ይመልከቱ
+        </a>
+    </div>
     <?php if ($message): ?><div class="message success">✅ <?php echo htmlspecialchars($message); ?></div><?php endif; ?>
     <?php if ($error): ?><div class="message error">⚠️ <?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 
@@ -223,7 +229,24 @@ input, select, textarea { width:100%; padding:9px; border:1px solid #ddd; border
             </div>
             <div class="form-grid">
                 <div><label>ዓመተ ምሕረት *</label><input type="number" name="eth_year" required value="2019"></div>
-                <div><label>ወር (ከ1-13) *</label><input type="number" name="eth_month" min="1" max="13" required></div>
+                <div><label>ወር *</label>
+                    <select name="eth_month" required>
+                        <option value="">ወር ይምረጡ...</option>
+                        <option value="1">1 - መስከረም</option>
+                        <option value="2">2 - ጥቅምት</option>
+                        <option value="3">3 - ኅዳር</option>
+                        <option value="4">4 - ታኅሣሥ</option>
+                        <option value="5">5 - ጥር</option>
+                        <option value="6">6 - የካቲት</option>
+                        <option value="7">7 - መጋቢት</option>
+                        <option value="8">8 - ሚያዝያ</option>
+                        <option value="9">9 - ግንቦት</option>
+                        <option value="10">10 - ሰኔ</option>
+                        <option value="11">11 - ሐምሌ</option>
+                        <option value="12">12 - ነሐሴ</option>
+                        <option value="13">13 - ጳጉሜን</option>
+                    </select>
+                </div>
                 <div><label>ቀን *</label><input type="number" name="eth_day" min="1" max="30" required></div>
                 <div><label>የቀናት ማሳሰቢያ (ለምሳሌ፡ 7,3,1)</label><input type="text" name="reminder_days" placeholder="14,7,3,1,0"></div>
             </div>
