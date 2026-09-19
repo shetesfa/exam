@@ -6,6 +6,8 @@
  */
 require_once 'db.php';
 
+requireAdmin();
+
 echo "=== Starting Full Curriculum Setup (Grades 1-6) ===\n";
 
 // 1. Ensure 'ግእዝ' is in subjects table

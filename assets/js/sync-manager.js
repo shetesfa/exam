@@ -50,12 +50,12 @@ const SyncManager = {
         this._emit('syncing', { text: 'ያልተላኩ መረጃዎችን በመላክ ላይ... (Pushing changes...)', pending: dirtyAttendance.length + dirtyMarks.length });
 
         try {
-            const pushUrl = this.apiBase + 'sync_push.php?token=' + encodeURIComponent(token);
+            const pushUrl = this.apiBase + 'sync_push.php';
             const res = await fetch(pushUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                 credentials: 'same-origin',
-                body: JSON.stringify({ attendance: dirtyAttendance, marks: dirtyMarks, token: token }),
+                body: JSON.stringify({ attendance: dirtyAttendance, marks: dirtyMarks }),
             });
             const data = await res.json();
 
@@ -88,7 +88,7 @@ const SyncManager = {
                 since = '1970-01-01T00:00:00Z';
             }
 
-            const pullUrl = this.apiBase + 'sync_pull.php?since=' + encodeURIComponent(since) + '&token=' + encodeURIComponent(token);
+            const pullUrl = this.apiBase + 'sync_pull.php?since=' + encodeURIComponent(since);
             const res = await fetch(pullUrl, {
                 headers: { 'Authorization': 'Bearer ' + token },
                 credentials: 'same-origin'

@@ -5,12 +5,7 @@ header("Pragma: no-cache");
 header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 
 require_once 'db.php';
-requireLogin();
-
-if (!isTeacher()) {
-    header("Location: dashboard_admin.php");
-    exit();
-}
+requireTeacher();
 
 $teacher_id = intval($_SESSION['user_id'] ?? 0);
 $user_name = $_SESSION['user_name'] ?? 'መምህር';

@@ -1,11 +1,6 @@
 <?php
 require_once 'db.php';
-requireLogin();
-
-if (!isAdmin() && !isTeacher()) {
-    header("Location: index.php");
-    exit();
-}
+requireTeacher();
 
 $message = '';
 $error = '';

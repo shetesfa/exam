@@ -2244,6 +2244,13 @@ ALTER TABLE `teacher_class`
 --
 ALTER TABLE `teacher_documents`
   ADD CONSTRAINT `teacher_documents_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+-- MIGRATION: Add login rate limiting to users table (Phase 1.2)
+-- Adds login_attempts and locked_until columns to match student_logins pattern
+ALTER TABLE `users` 
+  ADD COLUMN `login_attempts` int(11) DEFAULT 0 AFTER `can_edit_attendance`,
+  ADD COLUMN `locked_until` timestamp NULL DEFAULT NULL AFTER `login_attempts`;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

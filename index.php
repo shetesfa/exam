@@ -26,15 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    // If CSRF token check failed (e.g. stale tab, bfcache, or browser session cookie timing),
-    // verify whether valid credentials were submitted. If credentials are correct, allow login!
-    if (!$csrf_valid && !empty($username) && !empty($password)) {
-        $candidate = dbFetchOne($conn, "SELECT id, password FROM users WHERE username = ? OR name = ?", "ss", [$username, $username]);
-        if ($candidate && password_verify($password, $candidate['password'])) {
-            $csrf_valid = true;
-        }
-    }
-
     if (!$csrf_valid) {
         $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
     } else {
@@ -61,28 +52,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if ($matched_user && password_verify($password, $matched_user['password'])) {
-                session_regenerate_id(true);
+            if ($matched_user) {
+                // Check locked
+                if (!empty($matched_user['locked_until']) && strtotime($matched_user['locked_until']) > time()) {
+                    $lock_time = date('h:i A', strtotime($matched_user['locked_until']));
+                    $error = "አካውንትዎ ተቆልፏል! እባክዎ $lock_time ድረስ ይጠብቁ።";
+                }
+                // Verify password
+                elseif (password_verify($password, $matched_user['password'])) {
+                    // Reset attempts
+                    dbExecute(
+                        $conn,
+                        "UPDATE users SET login_attempts = 0, locked_until = NULL WHERE id = ?",
+                        "i",
+                        [$matched_user['id']]
+                    );
+                    
+                    $_SESSION = [];
+                    session_regenerate_id(true);
 
-                $_SESSION['user_id'] = (int)$matched_user['id'];
-                $_SESSION['user_name'] = trim($matched_user['name']);
-                $_SESSION['username'] = trim($matched_user['username']);
-                $_SESSION['role'] = $matched_user['role'];
-                $_SESSION['first_login'] = $matched_user['first_login'];
-                $_SESSION['dark_mode'] = intval($matched_user['dark_mode'] ?? 0);
+                    $_SESSION['user_id'] = (int)$matched_user['id'];
+                    $_SESSION['user_name'] = trim($matched_user['name']);
+                    $_SESSION['username'] = trim($matched_user['username']);
+                    $_SESSION['role'] = $matched_user['role'];
+                    $_SESSION['first_login'] = $matched_user['first_login'];
+                    $_SESSION['dark_mode'] = intval($matched_user['dark_mode'] ?? 0);
 
-                if ($matched_user['first_login'] == 1 && $matched_user['role'] === 'teacher') {
-                    header("Location: change_password.php");
-                    exit();
-                } elseif ($matched_user['role'] === 'admin') {
-                    header("Location: dashboard_admin.php");
-                    exit();
-                } elseif ($matched_user['role'] === 'attendance_submitter') {
-                    header("Location: dashboard_attendance.php");
-                    exit();
+                    if ($matched_user['first_login'] == 1 && $matched_user['role'] === 'teacher') {
+                        header("Location: change_password.php");
+                        exit();
+                    } elseif ($matched_user['role'] === 'admin') {
+                        header("Location: dashboard_admin.php");
+                        exit();
+                    } elseif ($matched_user['role'] === 'attendance_submitter') {
+                        header("Location: dashboard_attendance.php");
+                        exit();
+                    } else {
+                        header("Location: dashboard_teacher.php");
+                        exit();
+                    }
                 } else {
-                    header("Location: dashboard_teacher.php");
-                    exit();
+                    // Wrong password - increment attempts
+                    $attempts = ($matched_user['login_attempts'] ?? 0) + 1;
+                    
+                    if ($attempts >= 5) {
+                        $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+                        dbExecute(
+                            $conn,
+                            "UPDATE users SET login_attempts = ?, locked_until = ? WHERE id = ?",
+                            "isi",
+                            [$attempts, $lock_time, $matched_user['id']]
+                        );
+                        $error = "በጣም ብዙ ሙከራ! አካውንትዎ ለ15 ደቂቃ ተቆልፏል።";
+                    } else {
+                        dbExecute(
+                            $conn,
+                            "UPDATE users SET login_attempts = ? WHERE id = ?",
+                            "ii",
+                            [$attempts, $matched_user['id']]
+                        );
+                        $remaining = 5 - $attempts;
+                        $error = "የተሳሳተ የይለፍ ቃል! $remaining ሙከራዎች ቀርተዋል።";
+                    }
                 }
             } else {
                 // Check if user entered a student's name

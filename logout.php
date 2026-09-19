@@ -1,14 +1,14 @@
 <?php
 require_once 'db.php';
-$_SESSION = [];
-if (ini_get("session.use_cookies")) {
-    $params = session_get_cookie_params();
-    setcookie(session_name(), '', time() - 42000,
-        $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
-    );
+
+// Revoke all offline tokens for the current user
+$user_id = intval($_SESSION['user_id'] ?? 0);
+if ($user_id > 0) {
+    dbExecute($conn, "UPDATE auth_tokens SET revoked = 1 WHERE user_id = ?", "i", [$user_id]);
 }
+
+session_start();
+$_SESSION = [];
 session_destroy();
-header("Location: index.php?msg=loggedout");
+header("Location: index.php");
 exit();
-?>

@@ -290,7 +290,7 @@ function requireLogin() {
 function requireAdmin() {
     requireLogin();
     if (!isAdmin()) {
-        header("Location: dashboard_teacher.php");
+        header("Location: index.php");
         exit();
     }
 }
@@ -298,7 +298,7 @@ function requireAdmin() {
 function requireTeacher() {
     requireLogin();
     if (!isTeacher() && !isAdmin()) {
-        header("Location: dashboard_admin.php");
+        header("Location: index.php");
         exit();
     }
 }

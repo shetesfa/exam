@@ -1,7 +1,8 @@
 <?php
 require_once 'db.php';
 
-// Access check: allow logged-in users or anyone with active session
+requireLogin();
+
 $user_id = intval($_SESSION['user_id'] ?? 0);
 $role = $_SESSION['role'] ?? 'guest';
 

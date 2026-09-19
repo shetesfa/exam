@@ -29,30 +29,25 @@ function json_error($message, $code = 400) {
  * 2. Active PHP session (logged-in browser session)
  */
 function auth_from_token($conn) {
-    // 1. Check Bearer Authorization header or token query/body parameter
-    $headers = function_exists('getallheaders') ? getallheaders() : [];
-    $authHeader = $headers['Authorization'] ?? $headers['authorization'] 
-        ?? $_SERVER['HTTP_AUTHORIZATION'] 
-        ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] 
-        ?? '';
+    // 1. Check Bearer token in Authorization header
+    $auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    $token = null;
 
-    $extractedToken = '';
-    if (preg_match('/Bearer\s+(.+)/i', $authHeader, $m)) {
-        $extractedToken = trim($m[1]);
-    } elseif (!empty($_GET['token'])) {
-        $extractedToken = trim($_GET['token']);
-    } elseif (!empty($_POST['token'])) {
-        $extractedToken = trim($_POST['token']);
+    if (preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+        $token = $matches[1];
     }
 
-    if (!empty($extractedToken)) {
-        $token = mysqli_real_escape_string($conn, $extractedToken);
-        $q = "SELECT * FROM auth_tokens WHERE token = '$token' AND revoked = 0 AND expires_at > NOW() LIMIT 1";
-        $res = mysqli_query($conn, $q);
-        if ($res && mysqli_num_rows($res) > 0) {
-            $tokenRow = mysqli_fetch_assoc($res);
-            $userId = (int)$tokenRow['user_id'];
-            $role = $tokenRow['role'];
+    if ($token) {
+        $row = dbFetchOne(
+            $conn,
+            "SELECT * FROM auth_tokens WHERE token = ? AND revoked = 0 AND expires_at > NOW() LIMIT 1",
+            "s",
+            [$token]
+        );
+
+        if ($row) {
+            $userId = (int)$row['user_id'];
+            $role = $row['role'];
 
             if ($role === 'student') {
                 $q2 = "SELECT id, name, class_id FROM students WHERE id = $userId LIMIT 1";
@@ -68,7 +63,7 @@ function auth_from_token($conn) {
         }
     }
 
-    // 2. Seamless fallback: Active PHP Session (web users calling sync while logged in)
+    // 2. Fallback: Active PHP Session (web users calling sync while logged in)
     if (function_exists('isLoggedIn') && isLoggedIn()) {
         $userId = (int)($_SESSION['user_id'] ?? 0);
         $role = $_SESSION['role'] ?? '';

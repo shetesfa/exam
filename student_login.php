@@ -73,15 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // If CSRF token check failed (e.g. stale tab, bfcache, or browser session cookie timing),
-    // verify whether valid credentials were submitted. If credentials are correct, allow login!
-    if (!$csrf_valid && $student_id > 0 && !empty($pin)) {
-        $pin_candidate = dbFetchOne($conn, "SELECT pin FROM student_logins WHERE student_id = ?", "i", [$student_id]);
-        if ($pin_candidate && !empty($pin_candidate['pin']) && password_verify($pin, $pin_candidate['pin'])) {
-            $csrf_valid = true;
-        }
-    }
-
     if (!$csrf_valid && empty($error)) {
         $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
     } elseif (empty($error)) {
@@ -115,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         [$student_id]
                     );
                     
+                    $_SESSION = [];
                     session_regenerate_id(true);
                     $_SESSION['student_id'] = $student['id'];
                     $_SESSION['student_name'] = $student['name'];
@@ -524,13 +516,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
     </script>
-    <script src="/exam/assets/js/offline-db.js"></script>
-    <script src="/exam/assets/js/sync-manager.js"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/offline-db.js"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/sync-manager.js"></script>
     <script>
         // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/exam/sw.js').catch(() => {});
+                navigator.serviceWorker.register('<?php echo BASE_URL; ?>/sw.js').catch(() => {});
             });
         }
 

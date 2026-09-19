@@ -94,9 +94,47 @@ $user = dbFetchOne(
     [$username, $username]
 );
 
-if (!$user || !password_verify($password, $user['password'])) {
+if (!$user) {
     json_error('የተሳሳተ የተጠቃሚ ስም ወይም የይለፍ ቃል!', 401);
 }
+
+// Check locked
+if (!empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
+    json_error('አካውንትዎ ለጊዜው ተቆልፏል! እባክዎ ጥቂት ቆይተው እንደገና ይሞክሩ።', 403);
+}
+
+if (!password_verify($password, $user['password'])) {
+    // Wrong password - increment attempts
+    $attempts = ($user['login_attempts'] ?? 0) + 1;
+    
+    if ($attempts >= 5) {
+        $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+        dbExecute(
+            $conn,
+            "UPDATE users SET login_attempts = ?, locked_until = ? WHERE id = ?",
+            "isi",
+            [$attempts, $lock_time, $user['id']]
+        );
+        json_error('በጣም ብዙ ሙከራ! አካውንትዎ ለ15 ደቂቃ ተቆልፏል።', 403);
+    } else {
+        dbExecute(
+            $conn,
+            "UPDATE users SET login_attempts = ? WHERE id = ?",
+            "ii",
+            [$attempts, $user['id']]
+        );
+        $remaining = 5 - $attempts;
+        json_error("የተሳሳተ የይለፍ ቃል! $remaining ሙከራዎች ቀርተዋል።", 401);
+    }
+}
+
+// Reset attempts on successful password verification
+dbExecute(
+    $conn,
+    "UPDATE users SET login_attempts = 0, locked_until = NULL WHERE id = ?",
+    "i",
+    [$user['id']]
+);
 
 // Save token
 dbExecute(

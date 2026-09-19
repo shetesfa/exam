@@ -1,10 +1,6 @@
 <?php
 require_once 'db.php';
-requireLogin();
-if (!isAdmin() && !isTeacher()) {
-    header("Location: index.php");
-    exit();
-}
+requireTeacher();
 
 $user_id = intval($_SESSION['user_id'] ?? 0);
 $user_name = $_SESSION['user_name'] ?? '';
