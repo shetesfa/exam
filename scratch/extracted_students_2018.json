@@ -1,0 +1,2801 @@
+[
+  {
+    "name": "ቴክታ ጥበብ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማዕዶት አዲሱ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሶስና ብዙነህ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አርሴማ ወንድማገኝ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አፎሚያ አሸናፊ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ብሩክ ታደሰ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "መክሊት አብርሀም",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሳሙኤል መለሰ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ልዕልት ቴዎድሮስ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አዶናይ የሺወንድም",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አርሴማ ጋዲሳ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዳግማዊት ታፈሰ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማራማዊት ታደሰ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ያፌት ፍሬው",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዳግም ጌትነት",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቃለአብ አንዳርጌ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቅዱስ ቴዎድሮስ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አናንያ ጌቱ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አዛርያ ጌቱ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ባሮክ ዮሐንስ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ክርስቲያ በሸዋ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "የአብስራ ብዙአየሁ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "በጸሎት ተስፋዬ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አፎሚያ ቴዎድሮስ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ማርካን ወደደኝ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ምህረት ጌትነት",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ያም ሀብታሙ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኤላዳ ሰሎሞን",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ማራማዊት ሳሙኤል",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አሜን መንገሻ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ብሌን ዮሐንስ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "እሌኒ ደስታው",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "የአብጸጋ ተስፋዬ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ምዕራፍ ዳንኤል",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "የአብስራ ታረቀኝ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አሉ ፍስሀ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አሜን ሰይፉ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ያሬድ ጌታቸው",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ትንሳኤ ታፈሰ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሜሎና ወንደሰን",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቃለአብ ዮሴፍ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አናኒ መላኩ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "በእምነት ይህዓለም",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቤተልሔም ቢኒያም",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መራዊት ጌታቸው",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ፍቅር እስራኤል",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ጽዮን ስንታየሁ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዜማ ካሳው",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "መራዊት ደረጄ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሩት አለባቸው",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ፍቅረማርያም ደርበው",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቢታንያ ቴዎድሮስ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አንጆሊና አንፍሬድ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቃልአብ ዮሴፍ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ማራማዊት ደረጄ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሲል አምላክ እዩኤል",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ፌቨን ሻወል",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሀሴት ቢንያም",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ብሩክ ይልቃል",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ያብስራ ብዙአየሁ",
+    "class_id": 7,
+    "current_grade": 1,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቤተልሔም ዘውገ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ናትናኤል ክንዳለም",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ራኬብ ታምሩ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሎዛ አራጋው",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ረድኤት ወንዲፍራው",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ባህራን ካልአዩ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮሴፍ ካልአዩ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አቢጌል ቢንያም",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሳምራዊት ፈቃዱ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ብሌን አበበ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ናርዶስ ኤርሚያስ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ረድኤት ኤርሚያስ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቢታንያ አዲሱ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮሀና ዮናስ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ፍራኦል ኤፍሬም",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አብርሀም ወንድማገኝ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሮዳስ ድባቡ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ብርሀን አየነው",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኤልቤታል አብርሀም",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮናታን ፍቅር",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ያዕቆብ አንዳርጌ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ናሆም አንዳርጌ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ናትናኤል ሸዋ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መባ ዮናስ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሃይማኖት መሀመድ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አብሳላት ታምራት",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መክሊት መኩሪያ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤሎን ሳሙኤል",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማኪባ ሙሉጌታ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዊንታና ታምራት",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኤፍሬም አለማየሁ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አብላካት ሰሎሞን",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ባሮክ ቅዱስ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማኪባ በላይ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ምህረት ጌትነት",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሙሴ በቀለ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "እየሩሳሌም ፍስሀ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቅዱስ አድማሱ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሲንቦኔ ያደሳ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኢዮአብ ስንታየሁ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማኪባ ጌታሁን",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሄለን ወርቁ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሜሎንያ አለባቸው",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮናስ ጉደታ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኢዮሲያስ ምህረቱ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አቤል ጌታሁን",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ማቲዮ ሳምሶን",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮስቲና እሱእንዳለው",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ጉታ ተስፋዬ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሳሙኤል ዳዊት",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አማኑኤል ፋንታሁን",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ናኦል እንዳለ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ልዑል እንዳለ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ፅዮን ታደሰ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኢዮአብ በላይ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "የአብስራ ደረጄ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ናታን ወንደሰን",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኤልናታን እንግዱ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አሜን በሪሁን",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሀሴት አበበ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮሴፍ ካሳዬ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮናስ ጎሹዬ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ባርኮት",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮሐና ጸጋዬ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮናስ",
+    "class_id": 8,
+    "current_grade": 2,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኤልዳና በላይ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ማህሌት ወንድይፍራው",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሳሙኤል ጌታቸው",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤልያና ቅዱስ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ውዳሴ የአምላክ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ፍቅር ሙሉሰው",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሚኪያስ ወንድሜነህ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮናታን ታደሰ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መሰረት አንጋው",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "የአብስራ መክብብ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቃልኪዳን አለሜ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዘሚካኤል ጸጋዬ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መክሊት አበበ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "የማርያም አሰፋ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ብሌን አይቸው",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ልዕልና ሀብታሙ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤፍረታ መሀሪ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አቤኔዘር ፍቃዱ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኪዳነ ማርያም",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "መክሊት አብርሀም",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "በረከት አብርሀም",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አሸናፊ ሲሳይ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሄመን አስናቀ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤፍራታ መስፍን",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "በእምነት ሙላቱ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቢታንያ ትዕግስቱ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አምነን ትዕግስቱ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሚካኤል ሙሉቀን",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አፎሚያ ዘመን",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሚኪያስ ቢንያም",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አክሱማዊት ፍፁምብርሀን",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መብሬ ወርቁ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮሴፍ ቴዎድሮስ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ህያብ ገ/መድኅን",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አርሴማ እንግዳወርቅ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መሳይ ወርቁ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤልያና ቅዱስ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አርሴማ ነጋሽ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ህይወት ግርማ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ማኪባ በላይ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮሀናን አማኑኤል",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሎዛ ኤፍሬም",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አፎሚያ ተስፋዬ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "በጸሎት ዳዊት",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "የታሪክ ዓለም",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኑኃሚን ጸጋዬ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሔመን ሙሉጌታ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "መክሊት ፈንታሁን",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ጽጌ አስተራዬ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮሐንስ ሐዋዝ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "እዝራ እሱእንዳለው",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ህይወት ግርማ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "የአብስራ እንዳለ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አርሴማ ደፋሩ !!!",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዮራታ አዲሱ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኪዳን አለማ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "መክሊት ዘመድነህ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሳሙኤል ጌታቸው",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "መክሊት አበበ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አሜን ፍትሀነገስት",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ጽጌሬዳ አሸናፊ",
+    "class_id": 9,
+    "current_grade": 3,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ነህምያ ታጠቅ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "የማርያም ተሰማ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮርዳኖስ ሞላ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ያፌት ቴዎድሮስ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አቤል ፍቅሬ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ደስታ እሸቱ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ይስሀቅ ጌትነት",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮዳሄ ደረጄ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሀኖት ብርሃኑ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤፍራታ ጥላሁን",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "የአምላክ ፀጋ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ብሩክታዊት መክብብ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ህይወት ዘርፉ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ፌኔት ደስታ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቃልኪዳን ታምሩ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሄለን ጌታቸው",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "በፀሎት ጥላሁን",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ትንሳኤ ተገኝ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ግሩም ታደሰ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቤተልሔም ታደሰ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "እምነት አብርሃም",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቶቢስታ በለጠ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሳሮን ኤፍሬም",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኪሩቤል አሸናፊ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቃልኪዳን መለሰ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ብሩክ አለማየሁ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤሚሊያ ኃ/ገብርኤል/ኑር",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ጋዲሳ ለማ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዛዮን ሳምሶን",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማኅሌት ኮርማ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዘሩባቤል ጥበቡ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሳሙኤል በረከት",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አላዛር ዳንኤል",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቅዱስ ስንታየሁ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቬሮኒካ ጌታቸው",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዓለምነሽ ሲሳይ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤልዳና ሰሎሞን",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ፋና መለሰ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቃልኣብ መሰለ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሚኪያስ ሽሽጉ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮርዳኖስ ሽሽጉ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሚኪያስ ጥጋቡ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሰርዴስ ዘውዴ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሱራፌል ቶማስ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ትዕግስት ደባሳ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ብሩክ አለባቸው",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኢዛና ገ/ህይወት",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አዶናይ እስራኤል",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዮሐና ቢኒያም",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኪዳኔ ግርማ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "የአምላክ ጸጋው",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሀና ቴዎድሮስ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤልዳና ወንደሰን",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ፌቨን ቀለመወርቅ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዳንኤል ወርቅነህ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሱራፌል መርሀጽድቅ",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ተመስገን ገረመው",
+    "class_id": 10,
+    "current_grade": 4,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አቤኔዘር ይልማ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ባይብል ሰጠ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኢዮሲያስ ሲሳይ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኢዩኤል አራጋው",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሔኖከ ዘውዴ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ናትናኤል ፍቃዱ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አቤል አበበ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዳዊት ብርሃኔ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "በረከት ዘርፉ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኖቤል ብርሃኔ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሊድያ ቢሆነኝ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኤፍራታ ቴዎድሮስ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሔመን ብርሃኑ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "እድላዊት ይስፋ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኑሃሚን ዮሴፍ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቅዱስ አብዮት",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "በጸሎት ተመን",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አፎሚያ ኤፍሬም",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሀመረ ሙሉቀን",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቤተልሄም ዘካርያስ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አፀደ አንዷለም",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኖላዊት ድባቡ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "የአብስራ ዘመን",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አርሴማ የሺወንድም",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "እጹብ አለማየሁ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ናትናኤል ኃ/ልዑል",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "በእምነት እስራኤል",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሰምሀል ፍፁምብርሀን",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "እየሩስ ሻንበል",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሄኖክ ኃይሉ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አሜን ሙላቱ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ድሪባ ቡጃ",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቢታንያ አብርሀም",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ህያብ ገ/ሐዋርያት",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዳዊት አንዳለው",
+    "class_id": 11,
+    "current_grade": 5,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ዳዊት አራጋው",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ኤሊያስ ኢዘዲን",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ያናዳኤል ሰይፉ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሩሀማ ቴዎድሮስ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ፂዮን ጌታቸው",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አላዛር መስፍን",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሰርካለም አድነው",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ናታኒም ደርበው",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ዘአዶናይ አምሳሉ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ልዑል መባ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቤተልሔም ጌታቸው",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ረድኤት ቴዎድሮስ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ቤተማርያም አበራ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ነብዩ ዳንኤል",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "እዮስያስ ተሰማ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማኅሌት ተስፋዬ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "በጸሎት ዋለልኝ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ረድኤት ሳሙኤል",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ኤልሳቤጥ ምስጋናው",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ማክቤል አስናቀ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "አዶናይ መስፍን",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቅድስት ዓለሙ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሀሴት መንገሻ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ብሩክ አበራ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "አልማዝ ተሰማ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሔለን ፍስሀ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቤተልሔም አምደ ብርሀን",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ሃይማኖት ዓለሙ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ሶፎንያስ ወንደሰን",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ቃልኪዳን ተስፋዬ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "new",
+    "remark": ""
+  },
+  {
+    "name": "ጽዮን ወንደሰን",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "ናታኒም ወንድምሁነኝ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  },
+  {
+    "name": "በረከት መሐመድ",
+    "class_id": 12,
+    "current_grade": 6,
+    "academic_year": 2018,
+    "parent_phone": "",
+    "promotion_status": "repeated",
+    "remark": "አልተዘዋወ"
+  }
+]

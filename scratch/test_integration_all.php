@@ -210,6 +210,22 @@ if ($sid > 0) {
 // Cleanup temporary test student
 dbExecute($conn, "DELETE FROM students WHERE name = '__Test Student__'");
 
+// --- 8. 2018 Roster Students Verification ---
+echo "\n8. 2018 Student Roster & Logins Verification\n";
+$stCountRow = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM students WHERE academic_year = 2018 AND (is_deleted = 0 OR is_deleted IS NULL)");
+$stCount = intval($stCountRow['cnt'] ?? 0);
+assert_test("Total 2018 imported students count is 311", $stCount === 311, "Found: $stCount");
+
+$stLoginCountRow = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM student_logins sl JOIN students s ON sl.student_id = s.id WHERE s.academic_year = 2018");
+$stLoginCount = intval($stLoginCountRow['cnt'] ?? 0);
+assert_test("Total 2018 student logins initialized is 311", $stLoginCount === 311, "Found: $stLoginCount");
+
+// Test default PIN verification
+$sampleStudent = dbFetchOne($conn, "SELECT sl.pin, sl.first_login FROM student_logins sl JOIN students s ON sl.student_id = s.id WHERE s.academic_year = 2018 LIMIT 1");
+$pinValid = $sampleStudent && password_verify('1234', $sampleStudent['pin']);
+assert_test("Sample student login verifies with default PIN 1234", $pinValid);
+assert_test("Sample student has first_login = 1", $sampleStudent && intval($sampleStudent['first_login']) === 1);
+
 // --- Summary ---
 echo "\n========================================\n";
 echo "Test Results: $passedTests / $totalTests passed (" . round(($passedTests / max(1, $totalTests)) * 100, 1) . "%)\n";
