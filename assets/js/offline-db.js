@@ -202,12 +202,28 @@ const OfflineDB = {
 
     // ---- Attendance: local writes + dirty queue ----
     async cacheAttendance(records) {
+        const all = await this.getAllAttendance();
         return tx('attendance', 'readwrite', (store) => {
             records.forEach((r) => {
+                const isDeleted = (r.is_deleted == 1 || r.is_deleted === true || r.status === 'remove' || r.status === 'deleted');
+                if (isDeleted) {
+                    if (r.local_uuid) {
+                        store.delete(r.local_uuid);
+                    }
+                    const sid = parseInt(r.student_id);
+                    const cid = parseInt(r.class_id);
+                    const dt = r.attendance_date;
+                    const match = all.find(x => parseInt(x.student_id) === sid && parseInt(x.class_id) === cid && x.attendance_date === dt);
+                    if (match && match.local_uuid) {
+                        store.delete(match.local_uuid);
+                    }
+                    return;
+                }
                 if (!r.local_uuid) {
                     r.local_uuid = 'srv_att_' + (r.id || (r.student_id + '_' + r.attendance_date));
                 }
                 r.dirty = false;
+                r.conflicted = false;
                 store.put(r);
             });
         });
@@ -217,8 +233,13 @@ const OfflineDB = {
             record.local_uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'att_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
         record.dirty = true;
+        record.conflicted = false;
         record.updated_at = new Date().toISOString();
-        return tx('attendance', 'readwrite', (store) => store.put(record));
+        const res = await tx('attendance', 'readwrite', (store) => store.put(record));
+        if (typeof SyncManager !== 'undefined' && SyncManager.registerBackgroundSync) {
+            SyncManager.registerBackgroundSync();
+        }
+        return res;
     },
     async deleteAttendanceLocal(studentId, classId, dateStr) {
         const sid = parseInt(studentId);
@@ -233,9 +254,14 @@ const OfflineDB = {
             attendance_date: dateStr,
             status: 'remove',
             dirty: true,
+            conflicted: false,
             updated_at: new Date().toISOString()
         };
-        return tx('attendance', 'readwrite', (store) => store.put(record));
+        const res = await tx('attendance', 'readwrite', (store) => store.put(record));
+        if (typeof SyncManager !== 'undefined' && SyncManager.registerBackgroundSync) {
+            SyncManager.registerBackgroundSync();
+        }
+        return res;
     },
     async getAllAttendance() {
         const db = await openDB();
@@ -252,7 +278,7 @@ const OfflineDB = {
     },
     async getDirtyAttendance() {
         const all = await this.getAllAttendance();
-        return all.filter((r) => r.dirty);
+        return all.filter((r) => r.dirty && !r.conflicted);
     },
     async markAttendanceSynced(localUuid) {
         return tx('attendance', 'readwrite', (store) => {
@@ -264,8 +290,24 @@ const OfflineDB = {
                         store.delete(localUuid);
                     } else {
                         rec.dirty = false;
+                        rec.conflicted = false;
+                        rec.force = false;
                         store.put(rec);
                     }
+                }
+            };
+        });
+    },
+    async markAttendanceConflicted(localUuid, serverData) {
+        return tx('attendance', 'readwrite', (store) => {
+            const req = store.get(localUuid);
+            req.onsuccess = () => {
+                const rec = req.result;
+                if (rec) {
+                    rec.dirty = false;
+                    rec.conflicted = true;
+                    rec.server_data = serverData;
+                    store.put(rec);
                 }
             };
         });
@@ -279,6 +321,7 @@ const OfflineDB = {
                     r.local_uuid = 'srv_mark_' + (r.id || (r.student_id + '_' + r.class_id + '_' + r.semester_id));
                 }
                 r.dirty = false;
+                r.conflicted = false;
                 store.put(r);
             });
         });
@@ -288,8 +331,13 @@ const OfflineDB = {
             record.local_uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'mrk_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
         record.dirty = true;
+        record.conflicted = false;
         record.updated_at = new Date().toISOString();
-        return tx('marks', 'readwrite', (store) => store.put(record));
+        const res = await tx('marks', 'readwrite', (store) => store.put(record));
+        if (typeof SyncManager !== 'undefined' && SyncManager.registerBackgroundSync) {
+            SyncManager.registerBackgroundSync();
+        }
+        return res;
     },
     async getAllMarks() {
         const db = await openDB();
@@ -306,14 +354,79 @@ const OfflineDB = {
     },
     async getDirtyMarks() {
         const all = await this.getAllMarks();
-        return all.filter((r) => r.dirty);
+        return all.filter((r) => r.dirty && !r.conflicted);
     },
     async markMarksSynced(localUuid) {
         return tx('marks', 'readwrite', (store) => {
             const req = store.get(localUuid);
             req.onsuccess = () => {
                 const rec = req.result;
-                if (rec) { rec.dirty = false; store.put(rec); }
+                if (rec) {
+                    rec.dirty = false;
+                    rec.conflicted = false;
+                    rec.force = false;
+                    store.put(rec);
+                }
+            };
+        });
+    },
+    async markMarksConflicted(localUuid, serverData) {
+        return tx('marks', 'readwrite', (store) => {
+            const req = store.get(localUuid);
+            req.onsuccess = () => {
+                const rec = req.result;
+                if (rec) {
+                    rec.dirty = false;
+                    rec.conflicted = true;
+                    rec.server_data = serverData;
+                    store.put(rec);
+                }
+            };
+        });
+    },
+    async getConflictedRecords() {
+        const [allAtt, allMarks] = await Promise.all([
+            this.getAllAttendance(),
+            this.getAllMarks()
+        ]);
+        return {
+            attendance: allAtt.filter((r) => r.conflicted),
+            marks: allMarks.filter((r) => r.conflicted)
+        };
+    },
+    async resolveConflictKeepMine(type, localUuid) {
+        const storeName = (type === 'attendance') ? 'attendance' : 'marks';
+        return tx(storeName, 'readwrite', (store) => {
+            const req = store.get(localUuid);
+            req.onsuccess = () => {
+                const rec = req.result;
+                if (rec) {
+                    rec.conflicted = false;
+                    rec.dirty = true;
+                    rec.force = true;
+                    rec.updated_at = new Date().toISOString();
+                    store.put(rec);
+                }
+            };
+        });
+    },
+    async resolveConflictKeepServer(type, localUuid) {
+        const storeName = (type === 'attendance') ? 'attendance' : 'marks';
+        return tx(storeName, 'readwrite', (store) => {
+            const req = store.get(localUuid);
+            req.onsuccess = () => {
+                const rec = req.result;
+                if (rec) {
+                    if (rec.server_data && typeof rec.server_data === 'object' && Object.keys(rec.server_data).length > 0) {
+                        const srv = rec.server_data;
+                        Object.assign(rec, srv);
+                    }
+                    rec.dirty = false;
+                    rec.conflicted = false;
+                    rec.force = false;
+                    delete rec.server_data;
+                    store.put(rec);
+                }
             };
         });
     },
@@ -342,6 +455,19 @@ const OfflineDB = {
     },
     async setLastSync(timestamp) {
         return tx('meta', 'readwrite', (store) => store.put({ key: 'last_sync', value: timestamp }));
+    },
+    async clearAll() {
+        const db = await openDB();
+        const storeNames = ['auth', 'classes', 'students', 'attendance', 'marks', 'meta'];
+        return Promise.all(storeNames.map(name => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(name, 'readwrite');
+                const store = tx.objectStore(name);
+                const req = store.clear();
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }));
     },
     async getActiveSemester() {
         const db = await openDB();

@@ -39,6 +39,7 @@ if ($userDarkModePref === 1) {
 ?>
     <script>
     (function() {
+        window.BASE_URL = <?php echo json_encode(BASE_URL); ?>;
         window.ATS_CURRENT_USER_KEY = <?php echo json_encode($currentUserKey); ?>;
         window.ATS_SERVER_DARK_ACTIVE = <?php echo $isDarkModeActive ? 'true' : 'false'; ?>;
         window.ATS_SERVER_DARK_PREF = <?php echo (int)$userDarkModePref; ?>;
@@ -87,11 +88,11 @@ if ($userDarkModePref === 1) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="አጸደ ትምህርት">
-    <link rel="manifest" href="/exam/manifest.json">
-    <link rel="apple-touch-icon" href="/exam/images/icon.png">
-    <link rel="icon" type="image/png" href="/exam/images/icon.png">
-    <link rel="stylesheet" href="/exam/assets/css/mobile.css">
-    <link rel="stylesheet" href="/exam/assets/css/dark-mode.css?v=<?php echo file_exists(__DIR__ . '/assets/css/dark-mode.css') ? filemtime(__DIR__ . '/assets/css/dark-mode.css') : 1; ?>">
+    <link rel="manifest" href="<?php echo BASE_URL; ?>manifest.json">
+    <link rel="apple-touch-icon" href="<?php echo BASE_URL; ?>images/icon.png">
+    <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>images/icon.png">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/mobile.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/dark-mode.css?v=<?php echo file_exists(__DIR__ . '/assets/css/dark-mode.css') ? filemtime(__DIR__ . '/assets/css/dark-mode.css') : 1; ?>">
 
     <!-- Offline DB, Sync Manager, Push Notifications, and Offline Calendar Alerts Scripts -->
     <?php
@@ -114,10 +115,10 @@ if ($userDarkModePref === 1) {
             localStorage.removeItem('is_children_teacher');
         }
     </script>
-    <script src="/exam/assets/js/offline-db.js"></script>
-    <script src="/exam/assets/js/sync-manager.js"></script>
-    <script src="/exam/assets/js/push-notifications.js"></script>
-    <script src="/exam/assets/js/offline-calendar-alerts.js?v=<?php echo file_exists(__DIR__ . '/assets/js/offline-calendar-alerts.js') ? filemtime(__DIR__ . '/assets/js/offline-calendar-alerts.js') : 1; ?>"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/offline-db.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/sync-manager.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/push-notifications.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/offline-calendar-alerts.js?v=<?php echo file_exists(__DIR__ . '/assets/js/offline-calendar-alerts.js') ? filemtime(__DIR__ . '/assets/js/offline-calendar-alerts.js') : 1; ?>"></script>
 
     <script>
     // Per-Account Dark Mode Toggle Handler
@@ -138,7 +139,7 @@ if ($userDarkModePref === 1) {
         localStorage.setItem(storageKey, String(targetMode));
 
         try {
-            await fetch('/exam/api/toggle_dark_mode.php', {
+            await fetch('<?php echo BASE_URL; ?>api/toggle_dark_mode.php', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
@@ -174,7 +175,7 @@ if ($userDarkModePref === 1) {
     // Service Worker registration
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/exam/sw.js', { scope: '/exam/' })
+            navigator.serviceWorker.register('<?php echo BASE_URL; ?>sw.js', { scope: '<?php echo BASE_URL; ?>' })
                 .then(reg => {
                     // Update check
                     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -287,41 +288,40 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
                         }).catch(e => console.warn("Offline auth sync:", e));
                 }
 
-                // Proactively pre-cache the real PHP dashboards so navigation offline ALWAYS serves the same PHP UI
                 if ("caches" in window && navigator.onLine) {
+                    const baseUrl = ' . json_encode(BASE_URL) . ';
                     caches.open("exam-pwa-v14").then(cache => {
+                        cache.put(baseUrl, new Response("<html><body>Offline fallback</body></html>", { headers: { "Content-Type": "text/html" } }));
                         const urlsToPrecache = [
-                            "/exam/",
-                            "/exam/index.php",
-                            "/exam/offline.html",
-                            "/exam/calendar_view.php",
-                            "/exam/print_orthodox_calendar.php",
+                            baseUrl,
+                            baseUrl + "index.php",
+                            baseUrl + "offline.html",
+                            baseUrl + "calendar_view.php",
+                            baseUrl + "print_orthodox_calendar.php",
                             window.location.pathname,
                             window.location.href
                         ];
                         const r = window.CURRENT_USER?.role;
                         if (r === "teacher") {
                             urlsToPrecache.push(
-                                "/exam/dashboard_teacher.php",
-                                "/exam/dashboard_attendance.php",
-                                "/exam/lesson_plan_editor.php",
-                                "/exam/teacher_marking_scheme.php"
+                                baseUrl + "dashboard_teacher.php",
+                                baseUrl + "dashboard_attendance.php",
+                                baseUrl + "lesson_plan_editor.php",
+                                baseUrl + "teacher_marking_scheme.php"
                             );
                         } else if (r === "admin") {
                             urlsToPrecache.push(
-                                "/exam/dashboard_admin.php",
-                                "/exam/dashboard_attendance.php",
-                                "/exam/lesson_plan_editor.php",
-                                "/exam/manage_teachers.php",
-                                "/exam/manage_classes.php",
-                                "/exam/manage_students.php"
+                                baseUrl + "dashboard_admin.php",
+                                baseUrl + "dashboard_attendance.php",
+                                baseUrl + "lesson_plan_editor.php",
+                                baseUrl + "manage_teachers.php",
+                                baseUrl + "manage_classes.php",
+                                baseUrl + "manage_students.php"
                             );
                         } else if (r === "attendance_submitter") {
-                            urlsToPrecache.push(
-                                "/exam/dashboard_attendance.php"
-                            );
+                            urlsToPrecache.push(baseUrl + "dashboard_attendance.php");
                         } else if (r === "student") {
-                            urlsToPrecache.push("/exam/dashboard_student.php");
+                            urlsToPrecache.push(baseUrl + "dashboard_student.php");
                         }
                         urlsToPrecache.forEach(u => {
                             fetch(u, { credentials: "same-origin" })
@@ -404,3 +404,88 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
 <button type="button" id="floatingDarkModeToggle" class="floating-dark-toggle" onclick="toggleDarkMode()" title="የገጽ ገጽታ ቀይር" aria-label="Toggle Dark Mode">
   <span class="floating-dark-icon">🌙</span>
 </button>
+
+<!-- Conflict Resolution Modal (Phase 2.4) -->
+<div id="atsConflictModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999999; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; border-radius:12px; max-width:550px; width:100%; max-height:85vh; overflow-y:auto; padding:20px; box-shadow:0 8px 32px rgba(0,0,0,0.3); font-family:inherit; color:#333;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">
+      <h3 style="margin:0; font-size:18px; color:#8B4513; display:flex; align-items:center; gap:8px;">⚠️ የመረጃ መደራረብ (Data Conflicts)</h3>
+      <button type="button" onclick="document.getElementById('atsConflictModal').style.display='none'" style="border:none; background:none; font-size:20px; cursor:pointer; color:#888;">&times;</button>
+    </div>
+    <p style="font-size:13px; color:#666; margin-bottom:16px;">በመሳሪያዎ የተቀመጠው መረጃ በሰርቨር ላይ ካለው ጋር ተደራርቧል። እባክዎ የሚፈልጉትን ይምረጡ፦</p>
+    <div id="atsConflictList" style="display:flex; flex-direction:column; gap:12px;"></div>
+  </div>
+</div>
+
+<script>
+window.checkAndShowConflictModal = async function() {
+    if (typeof OfflineDB === 'undefined' || !OfflineDB.getConflictedRecords) return;
+    const conflicts = await OfflineDB.getConflictedRecords();
+    const container = document.getElementById('atsConflictList');
+    const modal = document.getElementById('atsConflictModal');
+    if (!container || !modal) return;
+    
+    container.innerHTML = '';
+    const total = (conflicts.attendance?.length || 0) + (conflicts.marks?.length || 0);
+    if (total === 0) {
+        modal.style.display = 'none';
+        return;
+    }
+    
+    (conflicts.attendance || []).forEach(rec => {
+        const div = document.createElement('div');
+        div.style.cssText = 'border:1px solid #fed7aa; background:#fff7ed; padding:12px; border-radius:8px; font-size:13px;';
+        div.innerHTML = `
+            <div style="font-weight:700; margin-bottom:4px; color:#9a3412;">📅 የክትትል መረጃ (ቀን፡ ${rec.attendance_date || ''})</div>
+            <div style="color:#555; margin-bottom:8px;">
+                በመሳሪያዎ፡ <strong>${rec.status || ''}</strong> | በሰርቨር፡ <strong>${rec.server_data?.status || 'ያልታወቀ'}</strong>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" onclick="resolveConflict('attendance', '${rec.local_uuid}', true)" style="flex:1; padding:6px 12px; background:#8B4513; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px;">የእኔ ይቀመጥ</button>
+                <button type="button" onclick="resolveConflict('attendance', '${rec.local_uuid}', false)" style="flex:1; padding:6px 12px; background:#e5e7eb; color:#374151; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px;">የሰርቨሩ ይቀመጥ</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    (conflicts.marks || []).forEach(rec => {
+        const div = document.createElement('div');
+        div.style.cssText = 'border:1px solid #fed7aa; background:#fff7ed; padding:12px; border-radius:8px; font-size:13px;';
+        div.innerHTML = `
+            <div style="font-weight:700; margin-bottom:4px; color:#9a3412;">📊 የውጤት መረጃ (ተማሪ ID: ${rec.student_id || ''})</div>
+            <div style="color:#555; margin-bottom:8px;">
+                በመሳሪያዎ ድምር፡ <strong>${rec.total || 0}</strong> | በሰርቨር ድምር፡ <strong>${rec.server_data?.total || 0}</strong>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" onclick="resolveConflict('marks', '${rec.local_uuid}', true)" style="flex:1; padding:6px 12px; background:#8B4513; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px;">የእኔ ይቀመጥ</button>
+                <button type="button" onclick="resolveConflict('marks', '${rec.local_uuid}', false)" style="flex:1; padding:6px 12px; background:#e5e7eb; color:#374151; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px;">የሰርቨሩ ይቀመጥ</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    modal.style.display = 'flex';
+};
+
+window.resolveConflict = async function(type, uuid, keepMine) {
+    if (keepMine) {
+        await OfflineDB.resolveConflictKeepMine(type, uuid);
+    } else {
+        await OfflineDB.resolveConflictKeepServer(type, uuid);
+    }
+    await checkAndShowConflictModal();
+    if (typeof SyncManager !== 'undefined') {
+        SyncManager.fullSync();
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof SyncManager !== 'undefined') {
+        SyncManager.onStatusChange((status) => {
+            if (status === 'conflict') {
+                checkAndShowConflictModal();
+            }
+        });
+    }
+});
+</script>

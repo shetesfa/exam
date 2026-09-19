@@ -89,6 +89,13 @@ foreach (($body['attendance'] ?? []) as $rec) {
         continue;
     }
 
+    // Validate attendance status
+    $validStatuses = ['present', 'absent', 'permission', 'late', 'excused', 'remove', 'uncheck', 'deleted', 'clear'];
+    if (!in_array(strtolower($status), $validStatuses)) {
+        $results['attendance'][] = ['local_uuid' => $uuid, 'success' => false, 'message' => 'Invalid attendance status'];
+        continue;
+    }
+
     // Closed day check
     $closedCheck = dbFetchOne($conn, "SELECT id FROM attendance_days WHERE date_gregorian = ? AND is_school_day = 0 AND (class_id IS NULL OR class_id = ?) LIMIT 1", "si", [$date, $classId]);
     if ($closedCheck) {
@@ -97,9 +104,16 @@ foreach (($body['attendance'] ?? []) as $rec) {
     }
 
     // Conflict detection
-    $existing = dbFetchOne($conn, "SELECT last_updated FROM attendance_records WHERE student_id = ? AND class_id = ? AND attendance_date = ? LIMIT 1", "iis", [$studentId, $classId, $date]);
-    if ($existing && strtotime($existing['last_updated']) > strtotime($clientUpdatedAt)) {
-        $results['attendance'][] = ['local_uuid' => $uuid, 'success' => false, 'conflict' => true, 'message' => 'Server record is newer than offline edit'];
+    $force = !empty($rec['force']);
+    $existing = dbFetchOne($conn, "SELECT last_updated, status, student_id, class_id, attendance_date FROM attendance_records WHERE student_id = ? AND class_id = ? AND attendance_date = ? LIMIT 1", "iis", [$studentId, $classId, $date]);
+    if (!$force && $existing && !empty($existing['last_updated']) && strtotime($existing['last_updated']) > strtotime($clientUpdatedAt)) {
+        $results['attendance'][] = [
+            'local_uuid' => $uuid,
+            'success' => false,
+            'conflict' => true,
+            'server_record' => $existing,
+            'message' => 'Server record is newer than offline edit'
+        ];
         continue;
     }
 
@@ -113,12 +127,14 @@ foreach (($body['attendance'] ?? []) as $rec) {
     // Upsert attendance
     $ok = dbExecute(
         $conn,
-        "INSERT INTO attendance_records (student_id, class_id, teacher_id, attendance_date, status, marked_by, local_uuid, last_updated)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        "INSERT INTO attendance_records (student_id, class_id, teacher_id, attendance_date, status, marked_by, local_uuid, is_deleted, last_updated)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, NOW())
          ON DUPLICATE KEY UPDATE
             status = VALUES(status),
+            teacher_id = VALUES(teacher_id),
             marked_by = VALUES(marked_by),
             local_uuid = VALUES(local_uuid),
+            is_deleted = 0,
             last_updated = NOW()",
         "iiissis",
         [$studentId, $classId, $userId, $date, $status, $userId, $uuid]
@@ -183,15 +199,30 @@ foreach (($body['marks'] ?? []) as $rec) {
         continue;
     }
 
+    // Validate mark values (0-100 range)
+    if ($assignment < 0 || $assignment > 100 || $participation < 0 || $participation > 100 || 
+        $attendanceScore < 0 || $attendanceScore > 100 || $mid < 0 || $mid > 100 || 
+        $final < 0 || $final > 100) {
+        $results['marks'][] = ['local_uuid' => $uuid, 'success' => false, 'message' => 'Mark values must be between 0 and 100'];
+        continue;
+    }
+
     // Conflict detection & safe merge
+    $force = !empty($rec['force']);
     $existing = dbFetchOne(
         $conn,
-        "SELECT last_updated, assignment, participation, attendance, mid, final FROM marks WHERE student_id = ? AND class_id = ? AND semester_id = ? AND teacher_id = ? LIMIT 1",
+        "SELECT last_updated, assignment, participation, attendance, mid, final, total FROM marks WHERE student_id = ? AND class_id = ? AND semester_id = ? AND teacher_id = ? LIMIT 1",
         "iiii",
         [$studentId, $classId, $targetSemesterId, $userId]
     );
-    if ($existing && !empty($existing['last_updated']) && strtotime($existing['last_updated']) > strtotime($clientUpdatedAt)) {
-        $results['marks'][] = ['local_uuid' => $uuid, 'success' => false, 'conflict' => true, 'message' => 'Server record is newer than offline edit'];
+    if (!$force && $existing && !empty($existing['last_updated']) && strtotime($existing['last_updated']) > strtotime($clientUpdatedAt)) {
+        $results['marks'][] = [
+            'local_uuid' => $uuid,
+            'success' => false,
+            'conflict' => true,
+            'server_record' => $existing,
+            'message' => 'Server record is newer than offline edit'
+        ];
         continue;
     }
 
@@ -200,13 +231,27 @@ foreach (($body['marks'] ?? []) as $rec) {
     $attendanceScore = isset($rec['attendance']) ? floatval($rec['attendance']) : ($existing ? floatval($existing['attendance']) : 0);
     $mid = isset($rec['mid']) ? floatval($rec['mid']) : ($existing ? floatval($existing['mid']) : 0);
     $final = isset($rec['final']) ? floatval($rec['final']) : ($existing ? floatval($existing['final']) : 0);
+
+    // Retrieve marking scheme and clamp components (Phase 2.7)
+    $scheme = getMarkingScheme($conn, $userId, $classId, $targetSemesterId);
+    $maxAssignment = floatval($scheme['component1_percentage'] ?? 20);
+    $maxParticipation = floatval($scheme['component2_percentage'] ?? 20);
+    $maxAttendance = floatval($scheme['component3_percentage'] ?? 10);
+    $maxMid = floatval($scheme['component4_percentage'] ?? 25);
+    $maxFinal = floatval($scheme['component5_percentage'] ?? 25);
+
+    $assignment = min(max($assignment, 0), $maxAssignment);
+    $participation = min(max($participation, 0), $maxParticipation);
+    $attendanceScore = min(max($attendanceScore, 0), $maxAttendance);
+    $mid = min(max($mid, 0), $maxMid);
+    $final = min(max($final, 0), $maxFinal);
     $total = $assignment + $participation + $attendanceScore + $mid + $final;
 
-    // Upsert marks
+    // Upsert marks (Phase 2.5: key off unique business constraint)
     $ok = dbExecute(
         $conn,
-        "INSERT INTO marks (student_id, class_id, teacher_id, semester_id, assignment, participation, attendance, mid, final, total, local_uuid, last_updated)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        "INSERT INTO marks (student_id, class_id, teacher_id, semester_id, assignment, participation, attendance, mid, final, total, local_uuid, is_deleted, last_updated)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())
          ON DUPLICATE KEY UPDATE
             assignment = VALUES(assignment),
             participation = VALUES(participation),
@@ -215,6 +260,7 @@ foreach (($body['marks'] ?? []) as $rec) {
             final = VALUES(final),
             total = VALUES(total),
             local_uuid = VALUES(local_uuid),
+            is_deleted = 0,
             last_updated = NOW()",
         "iiiidddddds",
         [$studentId, $classId, $userId, $targetSemesterId, $assignment, $participation, $attendanceScore, $mid, $final, $total, $uuid]

@@ -112,7 +112,7 @@ if ($nav_role === 'admin') {
 <header class="site-header">
   <div class="header-content">
     <div class="logo-area">
-      <img src="/exam/images/icon.png" alt="Logo" class="logo-img" 
+      <img src="<?php echo BASE_URL; ?>images/icon.png" alt="Logo" class="logo-img" 
            onerror="this.style.display='none'">
       <div class="site-title">
         <h1>አጸደ ትጉሃን ሰንበት ትምህርት ቤት</h1>

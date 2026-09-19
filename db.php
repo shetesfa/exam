@@ -5,16 +5,21 @@ date_default_timezone_set('Africa/Addis_Ababa');
 // ============================================
 // DATABASE CONFIGURATION
 // ============================================
+/**
+ * db.php - Database connection and shared functions
+ */
+
+// Database configuration
 defined('DB_HOST') or define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 defined('DB_USER') or define('DB_USER', getenv('DB_USER') ?: 'root');
 defined('DB_PASS') or define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');  
 defined('DB_NAME') or define('DB_NAME', getenv('DB_NAME') ?: 'atsede_sunday_school'); 
 
-// Gate for internal maintenance/dev tools (fix.php, debug_students.php, etc).
-// Defaults OFF. To use a tool locally: set APP_DEBUG=1 as an environment
-// variable before starting PHP, or export APP_DEBUG=1 in your shell/XAMPP
-// config. Never enable this on a production/live server.
+// Debug mode (off by default for security)
 defined('APP_DEBUG') or define('APP_DEBUG', getenv('APP_DEBUG') === '1');
+
+// Base URL configuration (single source of truth with trailing slash)
+defined('BASE_URL') or define('BASE_URL', rtrim(getenv('BASE_URL') ?: '/exam', '/') . '/');
 
 // OpenSSL configuration fallback for Windows / XAMPP environments
 if (!getenv('OPENSSL_CONF') && file_exists('C:/xampp/apache/conf/openssl.cnf')) {
@@ -51,14 +56,17 @@ if (APP_DEBUG) {
 $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
 if (!$conn) {
-    die("Connection failed: " . mysqli_connect_error());
+    die("Database connection failed. Please check your configuration.");
 }
 
 mysqli_set_charset($conn, "utf8mb4");
 
 // Start unified session if not started
 if (session_status() === PHP_SESSION_NONE) {
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    // Detect HTTPS - check both direct HTTPS and reverse proxy headers
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+              (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
+              (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on');
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
@@ -473,7 +481,7 @@ function gregorianToEthiopian($gregorianDate = null) {
     $date = new DateTime($gregorianDate);
     $gy = (int)$date->format('Y');
     
-    $prevEthLeap = (($gy - 8) % 4 === 3);
+    $prevEthLeap = isEthiopianLeapYear($gy - 8);
     $nyDay = $prevEthLeap ? 12 : 11;
     $nyDate = new DateTime("$gy-09-$nyDay");
     
@@ -482,7 +490,7 @@ function gregorianToEthiopian($gregorianDate = null) {
         $diff = $nyDate->diff($date)->days;
     } else {
         $ey = $gy - 8;
-        $prevPrevEthLeap = (($gy - 9) % 4 === 3);
+        $prevPrevEthLeap = isEthiopianLeapYear($gy - 9);
         $prevNyDay = $prevPrevEthLeap ? 12 : 11;
         $prevNyDate = new DateTime(($gy - 1) . "-09-$prevNyDay");
         $diff = $prevNyDate->diff($date)->days;
@@ -538,10 +546,16 @@ function convertToEthiopianTime($time24) {
     return $ethiopian_hour . ':' . $minute . ' ' . $period;
 }
 
+// Unified Ethiopian leap year check
+function isEthiopianLeapYear($ethiopianYear) {
+    // Ethiopian leap years occur when year % 4 == 3 (e.g., 2011, 2015, 2019)
+    return ($ethiopianYear % 4 === 3);
+}
+
 function getEthiopianDaysInMonth($ethiopianYear, $ethiopianMonth) {
     if ($ethiopianMonth == 13) {
-        // Pagume: 6 days in leap year (ethiopianYear % 4 == 3), 5 days otherwise
-        return ($ethiopianYear % 4 === 3) ? 6 : 5;
+        // Pagume: 6 days in leap year, 5 days otherwise
+        return isEthiopianLeapYear($ethiopianYear) ? 6 : 5;
     }
     return 30;
 }
@@ -671,7 +685,7 @@ function deleteAttendanceRecord($conn, $student_id, $class_id, $date) {
     $date = date('Y-m-d', strtotime($date));
     return dbExecute(
         $conn,
-        "DELETE FROM attendance_records WHERE student_id = ? AND class_id = ? AND attendance_date = ?",
+        "UPDATE attendance_records SET is_deleted = 1, last_updated = NOW() WHERE student_id = ? AND class_id = ? AND attendance_date = ?",
         "iis",
         [$student_id, $class_id, $date]
     );
@@ -859,19 +873,38 @@ function createNotification($conn, $title, $message, $targets = [], $priority = 
  */
 function getNotificationsForUser($conn, $userId, $unreadOnly = false, $limit = 50) {
     $limit = (int)$limit;
+    
+    // Get user's role to determine which class lookups to apply
+    $user = dbFetchOne($conn, "SELECT role FROM users WHERE id = ?", "i", [$userId]);
+    $userRole = $user['role'] ?? '';
+    
     $sql = "SELECT DISTINCT n.*, (r.id IS NOT NULL) AS is_read
             FROM notifications n
             LEFT JOIN notification_reads r ON r.notification_id = n.id AND r.user_id = ?
             LEFT JOIN notification_targets t ON t.notification_id = n.id
             WHERE (
                 t.id IS NULL
-                OR t.user_id = ?
-                OR t.class_id IN (SELECT class_id FROM teacher_class WHERE teacher_id = ?)
-                OR t.class_id IN (SELECT class_id FROM attendance_assignments WHERE submitter_id = ?)
-            )";
+                OR t.user_id = ?";
+    
+    // Add role-specific class lookups
+    if ($userRole === 'teacher') {
+        $sql .= " OR t.class_id IN (SELECT class_id FROM teacher_class WHERE teacher_id = ?)";
+    } elseif ($userRole === 'attendance_submitter') {
+        $sql .= " OR t.class_id IN (SELECT class_id FROM attendance_assignments WHERE submitter_id = ?)";
+    }
+    
+    $sql .= ")";
+    
     if ($unreadOnly) $sql .= " AND r.id IS NULL";
     $sql .= " ORDER BY n.created_at DESC LIMIT $limit";
-    return dbFetchAll($conn, $sql, "iiii", [$userId, $userId, $userId, $userId]);
+    
+    // Build params based on role
+    $params = [$userId, $userId];
+    if ($userRole === 'teacher' || $userRole === 'attendance_submitter') {
+        $params[] = $userId;
+    }
+    
+    return dbFetchAll($conn, $sql, str_repeat('i', count($params)), $params);
 }
 
 function markNotificationRead($conn, $notificationId, $userId) {

@@ -74,19 +74,19 @@ if ($authUser['role'] === 'student') {
     );
 }
 
-// 3. Attendance
+// 3. Attendance (Phase 2.6: include is_deleted and pull recently deleted records so offline cache removes them)
 $attendance = [];
 if ($authUser['role'] === 'student') {
     $attendance = dbFetchAll(
         $conn,
-        "SELECT id, student_id, class_id, attendance_date, status, last_updated, local_uuid FROM attendance_records WHERE student_id = ? AND last_updated > ? AND (is_deleted = 0 OR is_deleted IS NULL)",
+        "SELECT id, student_id, class_id, attendance_date, status, last_updated, local_uuid, is_deleted FROM attendance_records WHERE student_id = ? AND last_updated > ?",
         "is",
         [$authUser['id'], $since]
     );
 } else {
     $attendance = dbFetchAll(
         $conn,
-        "SELECT id, student_id, class_id, attendance_date, status, last_updated, local_uuid FROM attendance_records WHERE last_updated > ? AND (is_deleted = 0 OR is_deleted IS NULL) $classFilter",
+        "SELECT id, student_id, class_id, attendance_date, status, last_updated, local_uuid, is_deleted FROM attendance_records WHERE last_updated > ? $classFilter",
         "s",
         [$since]
     );

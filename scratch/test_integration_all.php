@@ -127,7 +127,7 @@ $clamped = min(max($val, 0), $max);
 assert_test("Over-maximum mark value 35 is clamped to max $max", $clamped === $max);
 
 $negVal = -5.0;
-$clampedNeg = min(max($negVal, 0), $max);
+$clampedNeg = floatval(min(max($negVal, 0), $max));
 assert_test("Negative mark value -5 is clamped to 0", $clampedNeg === 0.0);
 
 // --- 5. Soft-Delete Attendance Integrity (2.6) ---

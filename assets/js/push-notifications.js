@@ -26,9 +26,10 @@ const PushNotifications = {
 
     get apiBase() {
         if (window.EXAM_API_BASE) return window.EXAM_API_BASE;
-        const path = window.location.pathname;
-        if (path.includes('/exam-main/')) return 'api/';
-        return '/exam/api/';
+        const base = (typeof window !== 'undefined' && window.BASE_URL)
+            ? window.BASE_URL.replace(/\/$/, '')
+            : (window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) || '/exam');
+        return base + '/api/';
     },
 
     async init() {

@@ -8,13 +8,15 @@
     const STORAGE_KEY = 'atsede_calendar_events';
     const NOTIFIED_KEY = 'atsede_calendar_notified_events';
 
+    const basePath = (typeof window !== 'undefined' && window.BASE_URL)
+        ? window.BASE_URL.replace(/\/$/, '')
+        : (window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) || '/exam');
+
     const OfflineCalendar = {
-        apiBase: (function() {
+        get apiBase() {
             if (window.EXAM_API_BASE) return window.EXAM_API_BASE;
-            const p = window.location.pathname;
-            if (p.includes('/exam-main/')) return 'api/';
-            return '/exam/api/';
-        })(),
+            return basePath + '/api/';
+        },
 
         async syncAndCheck() {
             if (navigator.onLine) {
@@ -115,7 +117,7 @@
                 </div>
                 ${itemsHtml}
                 <div style="margin-top:10px; display:flex; justify-content:flex-end;">
-                    <a href="/exam/calendar_view.php" style="font-size:12px; font-weight:700; color:#8B4513; text-decoration:underline;">ሙሉ ካላንደር ተመልከት &rarr;</a>
+                    <a href="${basePath}/calendar_view.php" style="font-size:12px; font-weight:700; color:#8B4513; text-decoration:underline;">ሙሉ ካላንደር ተመልከት &rarr;</a>
                 </div>
             `;
 
@@ -145,7 +147,7 @@
                     const title = isExam ? `📝 መጪ ፈተና: ${e.title}` : `📅 የካላንደር ማስታወሻ: ${e.title}`;
                     const body = e.description || `ቀን፡ ${e.ethiopian_month}/${e.ethiopian_day}/${e.ethiopian_year} ዓ.ም`;
 
-                    this.dispatchPush(title, body, `cal_${e.id}`, '/exam/calendar_view.php');
+                    this.dispatchPush(title, body, `cal_${e.id}`, `${basePath}/calendar_view.php`);
                 }
             });
 
@@ -160,16 +162,16 @@
                     navigator.serviceWorker.ready.then(reg => {
                         reg.showNotification(title, {
                             body: body,
-                            icon: '/exam/images/icon.png',
-                            badge: '/exam/images/icon.png',
+                            icon: `${basePath}/images/icon.png`,
+                            badge: `${basePath}/images/icon.png`,
                             tag: tag || 'atsede_alert',
-                            data: { url: url || '/exam/calendar_view.php' }
+                            data: { url: url || `${basePath}/calendar_view.php` }
                         });
                     });
                 } else if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification(title, {
                         body: body,
-                        icon: '/exam/images/icon.png'
+                        icon: `${basePath}/images/icon.png`
                     });
                 }
             } catch (err) {
@@ -223,7 +225,7 @@
                 localStorage.setItem(alertKey, '1');
                 const title = '⛪ አጸደ ትጉሃን ሰንበት ትምህርት ቤት';
                 const body = `እንኳን አደረሳችሁ ለ${feastName} ዕለት!`;
-                this.dispatchPush(title, body, `feast_${eth.day}`, '/exam/calendar_view.php');
+                this.dispatchPush(title, body, `feast_${eth.day}`, `${basePath}/calendar_view.php`);
             }
         },
 
@@ -251,7 +253,7 @@
                     localStorage.setItem(alertKey, '1');
                     const title = '⏰ የህፃናት ክፍል መምህራን ማስታወሻ';
                     const body = 'ልጆችዎ እየጠበቁዎት ነው ቤተክርስቲያን ይገኙ! (ትምህርት 05:00 ይጀምራል)';
-                    this.dispatchPush(title, body, 'sunday_child_teacher', '/exam/dashboard_attendance.php');
+                    this.dispatchPush(title, body, 'sunday_child_teacher', `${basePath}/dashboard_attendance.php`);
                 }
             }
         }

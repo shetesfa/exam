@@ -3,23 +3,29 @@
  * Provides offline application shell, safe caching, and Web Push notifications.
  */
 const CACHE_NAME = 'exam-pwa-v14';
+
+// Dynamic base path detection derived from registration scope
+const BASE_PATH = (self.registration && self.registration.scope)
+    ? new URL(self.registration.scope).pathname.replace(/\/$/, '')
+    : (self.location.pathname.replace(/\/sw\.js$/, '').replace(/\/$/, '') || '');
+
 const SHELL_URLS = [
-    '/exam/',
-    '/exam/index.php',
-    '/exam/manifest.json',
-    '/exam/images/icon.png',
-    '/exam/assets/css/mobile.css',
-    '/exam/assets/css/dark-mode.css',
-    '/exam/assets/js/offline-db.js',
-    '/exam/assets/js/sync-manager.js',
-    '/exam/assets/js/push-notifications.js',
-    '/exam/assets/js/offline-calendar-alerts.js',
-    '/exam/offline.html',
-    '/exam/calendar_view.php',
-    '/exam/dashboard_attendance.php',
-    '/exam/lesson_plan_editor.php',
-    '/exam/dashboard_teacher.php',
-    '/exam/print_orthodox_calendar.php'
+    BASE_PATH + '/',
+    BASE_PATH + '/index.php',
+    BASE_PATH + '/manifest.json',
+    BASE_PATH + '/images/icon.png',
+    BASE_PATH + '/assets/css/mobile.css',
+    BASE_PATH + '/assets/css/dark-mode.css',
+    BASE_PATH + '/assets/js/offline-db.js',
+    BASE_PATH + '/assets/js/sync-manager.js',
+    BASE_PATH + '/assets/js/push-notifications.js',
+    BASE_PATH + '/assets/js/offline-calendar-alerts.js',
+    BASE_PATH + '/offline.html',
+    BASE_PATH + '/calendar_view.php',
+    BASE_PATH + '/dashboard_attendance.php',
+    BASE_PATH + '/lesson_plan_editor.php',
+    BASE_PATH + '/dashboard_teacher.php',
+    BASE_PATH + '/print_orthodox_calendar.php'
 ];
 
 self.addEventListener('install', (event) => {
@@ -55,8 +61,6 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Navigation requests (HTML / PHP): Network first, with dynamic page caching!
-    // When online: fetch and cache the exact page.
-    // When offline: serve the EXACT cached REAL PHP PAGE so the UI is 100% identical to online!
     if (event.request.mode === 'navigate' || url.pathname.endsWith('.php') || url.pathname.endsWith('/')) {
         event.respondWith(
             fetch(event.request)
@@ -64,9 +68,16 @@ self.addEventListener('fetch', (event) => {
                     if (resp && resp.status === 200) {
                         const clone = resp.clone();
                         caches.open(CACHE_NAME).then((c) => {
-                            // Store under exact request URL and clean pathname
+                            // Always store under exact request URL (with query string)
                             c.put(event.request, clone.clone());
-                            c.put(url.pathname, clone);
+
+                            // Only store under clean pathname if request has no content-affecting query params
+                            const meaningfulParams = ['semester_id', 'class_id', 'student_id', 'm', 'y', 'q', 'id'];
+                            const hasMeaningful = meaningfulParams.some((p) => url.searchParams.has(p));
+                            if (!hasMeaningful) {
+                                const cleanUrl = new URL(url.pathname, self.location.origin);
+                                c.put(cleanUrl, clone);
+                            }
                         });
                     }
                     return resp;
@@ -84,52 +95,8 @@ self.addEventListener('fetch', (event) => {
                     match = await caches.match(url.pathname, { ignoreSearch: true });
                     if (match) return match;
 
-                    // 4. Route-aware fallback to the REAL cached PHP page:
-                    if (url.pathname.includes('calendar')) {
-                        match = await caches.match('/exam/calendar_view.php', { ignoreSearch: true });
-                        if (match) return match;
-                    }
-                    if (url.pathname.includes('lesson_plan') || url.pathname.includes('plan')) {
-                        match = await caches.match('/exam/lesson_plan_editor.php', { ignoreSearch: true });
-                        if (match) return match;
-                    }
-                    if (url.pathname.includes('print_orthodox')) {
-                        match = await caches.match('/exam/print_orthodox_calendar.php', { ignoreSearch: true });
-                        if (match) return match;
-                    }
-                    if (url.pathname.includes('attendance')) {
-                        match = await caches.match('/exam/dashboard_attendance.php', { ignoreSearch: true });
-                        if (match) return match;
-                    }
-                    if (url.pathname.includes('teacher') || url.pathname.includes('mark')) {
-                        match = await caches.match('/exam/dashboard_teacher.php', { ignoreSearch: true });
-                        if (match) return match;
-                    }
-                    if (url.pathname.includes('admin') || url.pathname.includes('manage_')) {
-                        match = await caches.match('/exam/dashboard_admin.php', { ignoreSearch: true });
-                        if (match) return match;
-                    }
-                    if (url.pathname.includes('student')) {
-                        match = await caches.match('/exam/dashboard_student.php', { ignoreSearch: true });
-                        if (match) return match;
-                    }
-
-                    // 5. Fallback to any cached real PHP dashboard
-                    const realDashboards = [
-                        '/exam/dashboard_teacher.php',
-                        '/exam/dashboard_attendance.php',
-                        '/exam/dashboard_admin.php',
-                        '/exam/dashboard_student.php',
-                        '/exam/index.php',
-                        '/exam/login.php'
-                    ];
-                    for (const rd of realDashboards) {
-                        match = await caches.match(rd, { ignoreSearch: true });
-                        if (match) return match;
-                    }
-
-                    // 6. Only as absolute fallback if zero PHP pages were ever cached
-                    return caches.match('/exam/offline.html');
+                    // 4. Fallback strictly to offline.html — NEVER guess another role's dashboard
+                    return caches.match(BASE_PATH + '/offline.html');
                 })
         );
         return;
@@ -151,6 +118,22 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ============================================
+// BACKGROUND SYNC (Phase 2.3)
+// ============================================
+
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'exam-sync' || event.tag === 'sync-changes') {
+        event.waitUntil(
+            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+                windowClients.forEach((client) => {
+                    client.postMessage({ type: 'BACKGROUND_SYNC' });
+                });
+            })
+        );
+    }
+});
+
+// ============================================
 // WEB PUSH NOTIFICATIONS
 // ============================================
 
@@ -158,9 +141,9 @@ self.addEventListener('push', (event) => {
     let payload = {
         title: '⛪ አጸደ ትጉሃን ሰንበት ትምህርት ቤት',
         body: 'አዲስ ማሳወቂያ ደርሶዎታል!',
-        url: '/exam/notifications.php',
-        icon: '/exam/images/icon.png',
-        badge: '/exam/images/icon.png'
+        url: BASE_PATH + '/notifications.php',
+        icon: BASE_PATH + '/images/icon.png',
+        badge: BASE_PATH + '/images/icon.png'
     };
 
     if (event.data) {
@@ -174,11 +157,11 @@ self.addEventListener('push', (event) => {
 
     const options = {
         body: payload.body,
-        icon: payload.icon || '/exam/images/icon.png',
-        badge: payload.badge || '/exam/images/icon.png',
+        icon: payload.icon || BASE_PATH + '/images/icon.png',
+        badge: payload.badge || BASE_PATH + '/images/icon.png',
         vibrate: [200, 100, 200],
         data: {
-            url: payload.url || '/exam/notifications.php'
+            url: payload.url || BASE_PATH + '/notifications.php'
         },
         actions: [
             { action: 'open', title: 'ክፈት' }
@@ -192,12 +175,12 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const targetUrl = event.notification.data?.url || '/exam/notifications.php';
+    const targetUrl = event.notification.data?.url || BASE_PATH + '/notifications.php';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
             for (let client of windowClients) {
-                if (client.url.includes('/exam/') && 'focus' in client) {
+                if (client.url.includes(BASE_PATH) && 'focus' in client) {
                     client.navigate(targetUrl);
                     return client.focus();
                 }

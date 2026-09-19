@@ -638,12 +638,12 @@ $nav_active = 'dashboard_attendance';
 
     <div id="toast" class="toast"></div>
 
-    <script src="/exam/assets/js/offline-db.js"></script>
-    <script src="/exam/assets/js/sync-manager.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/offline-db.js"></script>
+    <script src="<?php echo BASE_URL; ?>assets/js/sync-manager.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/exam/sw.js').catch(() => {});
+                navigator.serviceWorker.register('<?php echo BASE_URL; ?>sw.js', { scope: '<?php echo BASE_URL; ?>' }).catch(() => {});
             });
         }
 

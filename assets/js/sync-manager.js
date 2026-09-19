@@ -5,18 +5,29 @@
 const SyncManager = {
     get apiBase() {
         if (window.EXAM_API_BASE) return window.EXAM_API_BASE;
-        const path = window.location.pathname;
-        if (path.includes('/exam-main/')) {
-            return 'api/';
-        }
-        return '/exam/api/';
+        const base = (typeof window !== 'undefined' && window.BASE_URL)
+            ? window.BASE_URL.replace(/\/$/, '')
+            : (window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) || '/exam');
+        return base + '/api/';
     },
 
     _syncing: false,
+    _lastSyncTime: 0,
+    _minSyncInterval: 30000, // 30 seconds minimum between full syncs
     listeners: [],
 
     onStatusChange(fn) { this.listeners.push(fn); },
     _emit(status, details) { this.listeners.forEach((fn) => fn(status, details)); },
+
+    registerBackgroundSync() {
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            navigator.serviceWorker.ready.then((reg) => {
+                return reg.sync.register('exam-sync');
+            }).catch((e) => {
+                console.warn('[SyncManager] Background Sync registration failed:', e);
+            });
+        }
+    },
 
     /** Real connectivity check — checks if local or remote server responds to ping */
     async isReallyOnline() {
@@ -60,17 +71,28 @@ const SyncManager = {
             const data = await res.json();
 
             let pushed = 0, conflicts = 0;
-            (data.results?.attendance || []).forEach((r) => {
-                if (r.success) { OfflineDB.markAttendanceSynced(r.local_uuid); pushed++; }
-                if (r.conflict) conflicts++;
-            });
-            (data.results?.marks || []).forEach((r) => {
-                if (r.success) { OfflineDB.markMarksSynced(r.local_uuid); pushed++; }
-                if (r.conflict) conflicts++;
-            });
+            for (const r of (data.results?.attendance || [])) {
+                if (r.success) {
+                    await OfflineDB.markAttendanceSynced(r.local_uuid);
+                    pushed++;
+                } else if (r.conflict) {
+                    conflicts++;
+                    await OfflineDB.markAttendanceConflicted(r.local_uuid, r.server_record || {});
+                }
+            }
+            for (const r of (data.results?.marks || [])) {
+                if (r.success) {
+                    await OfflineDB.markMarksSynced(r.local_uuid);
+                    pushed++;
+                } else if (r.conflict) {
+                    conflicts++;
+                    await OfflineDB.markMarksConflicted(r.local_uuid, r.server_record || {});
+                }
+            }
 
             return { success: true, pushed, conflicts };
         } catch (err) {
+            this.registerBackgroundSync();
             return { success: false, error: err.message };
         }
     },
@@ -80,7 +102,6 @@ const SyncManager = {
         if (!token) return { success: false, message: 'Not logged in' };
 
         try {
-            // Check if local cache has classes/students. If empty, pull from 1970 to re-populate
             const existingClasses = await OfflineDB.getAllClasses();
             const existingStudents = await OfflineDB.getAllStudents();
             let since = await OfflineDB.getLastSync();
@@ -115,15 +136,24 @@ const SyncManager = {
     /** Call this on page load, after saving offline records, or when 'online' event fires */
     async fullSync() {
         if (this._syncing) return;
+        
+        const pending = await OfflineDB.getPendingCounts();
+        const now = Date.now();
+        // Throttle only if there are NO pending dirty records and last sync was within 30s
+        if (pending.total === 0 && (now - this._lastSyncTime < this._minSyncInterval)) {
+            return { success: false, throttled: true };
+        }
+        
         this._syncing = true;
+        this._lastSyncTime = now;
         this._emit('syncing', { text: 'መረጃዎችን በማመሳሰል ላይ...' });
         try {
             const online = await this.isReallyOnline();
             if (!online) { 
-                const pending = await OfflineDB.getPendingCounts();
+                const pendingNow = await OfflineDB.getPendingCounts();
                 this._emit('offline', {
-                    text: pending.total > 0 ? `Offline (${pending.total} ያልተላኩ)` : 'Offline',
-                    pending: pending.total
+                    text: pendingNow.total > 0 ? `Offline (${pendingNow.total} ያልተላኩ)` : 'Offline',
+                    pending: pendingNow.total
                 }); 
                 return { success: false, offline: true }; 
             }
@@ -131,19 +161,19 @@ const SyncManager = {
             const pushResult = await this.pushChanges();
             const pullResult = await this.pullChanges();
 
-            const pending = await OfflineDB.getPendingCounts();
+            const pendingAfter = await OfflineDB.getPendingCounts();
 
             if (pushResult.conflicts > 0) {
                 this._emit('conflict', {
                     text: `⚠️ ${pushResult.conflicts} መረጃዎች ክለሳ ያስፈልጋቸዋል`,
                     conflicts: pushResult.conflicts,
-                    pending: pending.total
+                    pending: pendingAfter.total
                 });
             } else {
                 this._emit('synced', {
-                    text: pending.total > 0 ? `ተመሳስሏል (${pending.total} ያልተላኩ)` : 'ሁሉም ተመሳስሏል',
+                    text: pendingAfter.total > 0 ? `ተመሳስሏል (${pendingAfter.total} ያልተላኩ)` : 'ሁሉም ተመሳስሏል',
                     pushed: pushResult.pushed || 0,
-                    pending: pending.total
+                    pending: pendingAfter.total
                 });
             }
             return { success: true, pushResult, pullResult };
@@ -170,6 +200,16 @@ window.addEventListener('offline', () => {
         });
     });
 });
+
+// Background Sync trigger from Service Worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'BACKGROUND_SYNC') {
+            console.log('[SyncManager] Background sync triggered by SW message');
+            SyncManager.fullSync();
+        }
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     SyncManager.fullSync();

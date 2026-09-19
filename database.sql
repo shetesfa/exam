@@ -2251,6 +2251,16 @@ ALTER TABLE `users`
   ADD COLUMN `login_attempts` int(11) DEFAULT 0 AFTER `can_edit_attendance`,
   ADD COLUMN `locked_until` timestamp NULL DEFAULT NULL AFTER `login_attempts`;
 
+-- MIGRATION: Remove UNIQUE constraint on local_uuid and update marks unique key (Phase 2.5)
+-- local_uuid UNIQUE constraint causes duplicate key errors on retry
+-- Real uniqueness is already enforced by business logic constraints
+ALTER TABLE `attendance_records` DROP INDEX `local_uuid_unique`;
+ALTER TABLE `marks` DROP INDEX `local_uuid_unique`;
+ALTER TABLE `marks` ADD INDEX `idx_teacher` (`teacher_id`);
+ALTER TABLE `marks` DROP INDEX `unique_teacher_student_semester`;
+ALTER TABLE `marks` ADD UNIQUE KEY `unique_teacher_student_semester` (`teacher_id`, `student_id`, `class_id`, `semester_id`);
+ALTER TABLE `marks` DROP INDEX `idx_teacher`;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
