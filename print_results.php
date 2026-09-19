@@ -15,6 +15,10 @@ if ($semester_id <= 0) {
     $current_semester = dbFetchOne($conn, "SELECT * FROM semesters WHERE id = ?", "i", [$semester_id]);
 }
 
+$is_admin = function_exists('isAdmin') ? isAdmin() : (($_SESSION['user_role'] ?? '') === 'admin');
+$results_published = $current_semester && !empty($current_semester['results_published']);
+$can_view_results = $is_admin || $results_published;
+
 // Get all semesters for dropdown
 $all_semesters = dbQuery($conn, "SELECT * FROM semesters ORDER BY id DESC");
 
@@ -658,6 +662,19 @@ $nav_active = 'print_results';
 <body>
     <?php include 'mobile_nav.php'; ?>
     <div class="print-container">
+        <?php if (!$results_published): ?>
+        <div class="no-print" style="background: #FFFBEB; color: #92400E; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #F59E0B; font-size: 14px;">
+            ⚠️ <?php echo $is_admin ? 'ማሳሰቢያ፦ የዚህ ሴሚስተር ውጤት ለተማሪዎች ገና ይፋ አልተደረገም (ውጤት ገና አልተለቀቀም)።' : 'ውጤት ገና አልተለቀቀም! እባክዎ አስተዳዳሪውን ይጠይቁ።'; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!$can_view_results): ?>
+        <div class="empty-state" style="padding: 60px 20px; text-align: center; background: white; border-radius: 8px;">
+            <span style="font-size: 48px;">🔒</span>
+            <h3 style="margin-top: 16px; font-size: 20px; color: #4B5563;">ውጤት ገና አልተለቀቀም</h3>
+            <p style="color: #6B7280; margin-top: 8px;">የዚህ ሴሚስተር ውጤት በትምህርት ክፍሉ ይፋ ሲደረግ እዚህ ይታያል።</p>
+        </div>
+        <?php else: ?>
         <!-- Header with Logo -->
         <div class="header">
             <div class="header-content">
@@ -997,6 +1014,7 @@ $nav_active = 'print_results';
             <div>የታተመበት ቀን: <?php echo date('d/m/Y'); ?></div>
             <div>የትምህርት ክፍል ፊርማ: _________________</div>
         </div>
+        <?php endif; // can_view_results ?>
     </div>
 
     <script>

@@ -97,7 +97,10 @@ $marks = [];
 if ($authUser['role'] === 'student') {
     $marks = dbFetchAll(
         $conn,
-        "SELECT id, student_id, class_id, semester_id, assignment, participation, attendance, mid, final, total, last_updated, local_uuid FROM marks WHERE student_id = ? AND last_updated > ? AND (is_deleted = 0 OR is_deleted IS NULL)",
+        "SELECT m.id, m.student_id, m.class_id, m.semester_id, m.assignment, m.participation, m.attendance, m.mid, m.final, m.total, m.last_updated, m.local_uuid 
+         FROM marks m
+         JOIN semesters s ON m.semester_id = s.id
+         WHERE m.student_id = ? AND s.results_published = 1 AND m.last_updated > ? AND (m.is_deleted = 0 OR m.is_deleted IS NULL)",
         "is",
         [$authUser['id'], $since]
     );

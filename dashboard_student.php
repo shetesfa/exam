@@ -22,7 +22,7 @@ $amharic_days = [
 // Get ALL semesters
 $all_semesters = dbFetchAll(
     $conn,
-    "SELECT DISTINCT sem.id, sem.name, sem.status, sem.ethiopian_year, sem.semester_number
+    "SELECT DISTINCT sem.id, sem.name, sem.status, sem.ethiopian_year, sem.semester_number, sem.results_published
      FROM semesters sem
      WHERE sem.id IN (
          SELECT DISTINCT m.semester_id FROM marks m WHERE m.student_id = ?
@@ -234,14 +234,14 @@ $history_rows = dbFetchAll(
     $conn,
     "SELECT 
         sem.id as semester_id, sem.name as semester_name, sem.ethiopian_year,
-        sem.semester_number, sem.status,
+        sem.semester_number, sem.status, sem.results_published,
         COUNT(DISTINCT u.id) as teacher_count,
         AVG(COALESCE(m.total, 0)) as avg_total, SUM(COALESCE(m.total, 0)) as total_marks
      FROM semesters sem
      JOIN teacher_class tc ON tc.semester_id = sem.id AND tc.class_id = ?
      JOIN users u ON tc.teacher_id = u.id
      LEFT JOIN marks m ON m.student_id = ? AND m.semester_id = sem.id AND m.teacher_id = u.id
-     GROUP BY sem.id, sem.name, sem.ethiopian_year, sem.semester_number, sem.status
+     GROUP BY sem.id, sem.name, sem.ethiopian_year, sem.semester_number, sem.status, sem.results_published
      ORDER BY sem.ethiopian_year DESC, sem.semester_number ASC",
     "ii",
     [$student_class_id, $student_id]
@@ -453,10 +453,11 @@ foreach ($history_rows as $row) {
         </div>
         <?php endif; ?>
 
+        <?php $is_published = !empty($selected_semester['results_published']); ?>
         <div class="stats-grid">
-            <div class="stat-card"><div class="stat-value"><?php echo number_format($average, 1); ?>%</div><div class="stat-label">የእኔ አማካይ</div></div>
-            <div class="stat-card"><div class="stat-value"><?php echo number_format($class_average, 1); ?>%</div><div class="stat-label">የክፍል አማካይ</div></div>
-            <div class="stat-card"><div class="stat-value">#<?php echo $rank; ?>/<?php echo $total_students; ?></div><div class="stat-label">ደረጃ</div></div>
+            <div class="stat-card"><div class="stat-value"><?php echo $is_published ? (number_format($average, 1) . '%') : '-'; ?></div><div class="stat-label">የእኔ አማካይ</div></div>
+            <div class="stat-card"><div class="stat-value"><?php echo $is_published ? (number_format($class_average, 1) . '%') : '-'; ?></div><div class="stat-label">የክፍል አማካይ</div></div>
+            <div class="stat-card"><div class="stat-value"><?php echo $is_published ? ('#' . $rank . '/' . $total_students) : '-'; ?></div><div class="stat-label">ደረጃ</div></div>
             <div class="stat-card"><div class="stat-value"><?php echo $attendance_summary['present'] ?? 0; ?></div><div class="stat-label">ቀናት ተገኝቻለሁ</div></div>
         </div>
 
@@ -466,7 +467,13 @@ foreach ($history_rows as $row) {
                 📊 ውጤቶቼ
                 <?php if ($selected_semester): ?><span style="font-size:14px; color:#666;">- <?php echo htmlspecialchars($selected_semester['name']); ?></span><?php endif; ?>
             </div>
-            <?php if (!empty($all_marks)): ?>
+            <?php if (!$is_published): ?>
+                <div class="empty-state" style="padding: 40px 20px; text-align: center;">
+                    <span class="icon" style="font-size: 48px;">🔒</span>
+                    <h3 style="margin-top: 16px; color: var(--text-muted); font-size: 18px;">ውጤት ገና አልተለቀቀም</h3>
+                    <p style="color: var(--text-muted); margin-top: 8px; font-size: 14px;">ውጤት በትምህርት ክፍሉ ይፋ ሲደረግ እዚህ ይታያል።</p>
+                </div>
+            <?php elseif (!empty($all_marks)): ?>
             <div class="table-responsive">
                 <table>
                     <thead><tr>
@@ -602,10 +609,14 @@ foreach ($history_rows as $row) {
                             <div style="font-size:11px; color:#666; margin-top:4px;">👨‍🏫 <?php echo $hist['teacher_count']; ?> መምህራን</div>
                         </div>
                         <div class="history-marks">
-                            <div class="history-avg"><?php echo number_format($hist['avg_total'], 1); ?>%</div>
-                            <?php $hg = $hist['avg_total']; $hc = 'grade-satisfactory';
-                            if ($hg >= 85) $hc = 'grade-excellent'; elseif ($hg >= 70) $hc = 'grade-good'; elseif ($hg < 50) $hc = 'grade-poor'; ?>
-                            <span class="grade-badge <?php echo $hc; ?>"><?php echo getGradeStatus($hg); ?></span>
+                            <?php if (!empty($hist['results_published'])): ?>
+                                <div class="history-avg"><?php echo number_format($hist['avg_total'], 1); ?>%</div>
+                                <?php $hg = $hist['avg_total']; $hc = 'grade-satisfactory';
+                                if ($hg >= 85) $hc = 'grade-excellent'; elseif ($hg >= 70) $hc = 'grade-good'; elseif ($hg < 50) $hc = 'grade-poor'; ?>
+                                <span class="grade-badge <?php echo $hc; ?>"><?php echo getGradeStatus($hg); ?></span>
+                            <?php else: ?>
+                                <div style="font-size:12px; color:#999; margin-bottom:4px;">🔒 ውጤት ገና አልተለቀቀም</div>
+                            <?php endif; ?>
                             <br><a href="?semester_id=<?php echo $hist['semester_id']; ?>" class="view-btn">👁️ ዝርዝር</a>
                         </div>
                     </div>

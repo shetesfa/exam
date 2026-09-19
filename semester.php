@@ -74,6 +74,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: semester.php?opened=1");
             exit();
         }
+
+        if (isset($_POST['toggle_results'])) {
+            $semester_id = intval($_POST['semester_id'] ?? 0);
+            
+            if ($semester_id > 0) {
+                $sem = dbFetchOne($conn, "SELECT id, name, results_published FROM semesters WHERE id = ?", "i", [$semester_id]);
+                if ($sem) {
+                    $new_status = empty($sem['results_published']) ? 1 : 0;
+                    if ($new_status === 1) {
+                        dbExecute($conn, "UPDATE semesters SET results_published = 1, results_published_at = NOW() WHERE id = ?", "i", [$semester_id]);
+                        auditLog($conn, 'results_published', 'semesters', $semester_id, 'ውጤት ይፋ ተደርጓል: ' . ($sem['name'] ?? ''));
+                    } else {
+                        dbExecute($conn, "UPDATE semesters SET results_published = 0, results_published_at = NULL WHERE id = ?", "i", [$semester_id]);
+                        auditLog($conn, 'results_hidden', 'semesters', $semester_id, 'ውጤት ተደብቋል: ' . ($sem['name'] ?? ''));
+                    }
+                    header("Location: semester.php?results_toggled=1");
+                    exit();
+                }
+            }
+        }
     }
 }
 
@@ -83,6 +103,9 @@ if(isset($_GET['closed']) && $_GET['closed'] == 1) {
 }
 if(isset($_GET['opened']) && $_GET['opened'] == 1) {
     $message = "ሴሚስተር በትክክል ተከፍቷል!";
+}
+if(isset($_GET['results_toggled']) && $_GET['results_toggled'] == 1) {
+    $message = "የውጤት ማሳየት ሁኔታ በትክክል ተቀይሯል!";
 }
 
 // Get ALL semesters for current Ethiopian year
@@ -627,6 +650,13 @@ $nav_active = 'semester';
                     <?php endif; ?>
 
                     <?php if($sem1): ?>
+                        <form method="POST" style="flex:0;" onsubmit="return confirm('<?php echo !empty($sem1['results_published']) ? 'ውጤት መደበቅ እርግጠኛ ነዎት?' : 'ውጤት ይፋ ማድረግ እርግጠኛ ነዎት? ተማሪዎች ውጤታቸውን ማየት ይችላሉ!'; ?>')">
+                            <?php echo csrfField(); ?>
+                            <input type="hidden" name="semester_id" value="<?php echo $sem1['id']; ?>">
+                            <button type="submit" name="toggle_results" class="btn-history-link" title="ውጤት ማሳየት ሁኔታ ቀይር" style="<?php echo !empty($sem1['results_published']) ? 'background:#e0f2fe; color:#0369a1; border-color:#bae6fd;' : 'background:#fef3c7; color:#92400e; border-color:#fde68a;'; ?>">
+                                <?php echo !empty($sem1['results_published']) ? '👁️ ውጤት ደብቅ' : '📢 ውጤት ይፋ አድርግ'; ?>
+                            </button>
+                        </form>
                         <a href="semester_history.php?id=<?php echo $sem1['id']; ?>" class="btn-history-link">
                             📊 ዝርዝር
                         </a>
@@ -680,6 +710,13 @@ $nav_active = 'semester';
                     <?php endif; ?>
 
                     <?php if($sem2): ?>
+                        <form method="POST" style="flex:0;" onsubmit="return confirm('<?php echo !empty($sem2['results_published']) ? 'ውጤት መደበቅ እርግጠኛ ነዎት?' : 'ውጤት ይፋ ማድረግ እርግጠኛ ነዎት? ተማሪዎች ውጤታቸውን ማየት ይችላሉ!'; ?>')">
+                            <?php echo csrfField(); ?>
+                            <input type="hidden" name="semester_id" value="<?php echo $sem2['id']; ?>">
+                            <button type="submit" name="toggle_results" class="btn-history-link" title="ውጤት ማሳየት ሁኔታ ቀይር" style="<?php echo !empty($sem2['results_published']) ? 'background:#e0f2fe; color:#0369a1; border-color:#bae6fd;' : 'background:#fef3c7; color:#92400e; border-color:#fde68a;'; ?>">
+                                <?php echo !empty($sem2['results_published']) ? '👁️ ውጤት ደብቅ' : '📢 ውጤት ይፋ አድርግ'; ?>
+                            </button>
+                        </form>
                         <a href="semester_history.php?id=<?php echo $sem2['id']; ?>" class="btn-history-link">
                             📊 ዝርዝር
                         </a>

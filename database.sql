@@ -2261,6 +2261,10 @@ ALTER TABLE `marks` DROP INDEX `unique_teacher_student_semester`;
 ALTER TABLE `marks` ADD UNIQUE KEY `unique_teacher_student_semester` (`teacher_id`, `student_id`, `class_id`, `semester_id`);
 ALTER TABLE `marks` DROP INDEX `idx_teacher`;
 
+-- MIGRATION: Add results_published flag to semesters (Phase 3.1)
+-- Allows admin to control when student marks are visible to students
+ALTER TABLE `semesters` ADD COLUMN `results_published` tinyint(1) NOT NULL DEFAULT 0 AFTER `status`, ADD COLUMN `results_published_at` datetime NULL AFTER `results_published`;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
