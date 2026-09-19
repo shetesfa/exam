@@ -130,14 +130,22 @@ $negVal = -5.0;
 $clampedNeg = floatval(min(max($negVal, 0), $max));
 assert_test("Negative mark value -5 is clamped to 0", $clampedNeg === 0.0);
 
+$studentMarksSource = file_get_contents(__DIR__ . '/../student_marks.php');
+assert_test("student_marks.php checks !is_array(\$marks)", strpos($studentMarksSource, 'if (!is_array($marks)) continue;') !== false);
+assert_test("student_marks.php surfaces clamping with Amharic message", strpos($studentMarksSource, 'አንዳንድ ውጤቶች ከከፍተኛው በላይ ስለነበሩ ተስተካክለዋል።') !== false);
+
 // --- 5. Soft-Delete Attendance Integrity (2.6) ---
 echo "\n5. Soft-Delete Attendance Record Check\n";
-// Insert temporary attendance record for test
+$dummyClass = dbFetchOne($conn, "SELECT id FROM classes LIMIT 1");
+$cid = $dummyClass ? intval($dummyClass['id']) : 1;
+
+// Insert a temporary test student for integration tests
+dbExecute($conn, "INSERT INTO students (name, class_id, is_deleted) VALUES ('__Test Student__', ?, 0)", "i", [$cid]);
+$dummyStudent = dbFetchOne($conn, "SELECT id, class_id FROM students WHERE name = '__Test Student__' ORDER BY id DESC LIMIT 1");
+$sid = $dummyStudent ? intval($dummyStudent['id']) : 0;
+
 $testDate = '2026-09-01';
-$dummyStudent = dbFetchOne($conn, "SELECT id, class_id FROM students WHERE (is_deleted = 0 OR is_deleted IS NULL) LIMIT 1");
-if ($dummyStudent) {
-    $sid = intval($dummyStudent['id']);
-    $cid = intval($dummyStudent['class_id']);
+if ($sid > 0) {
     saveAttendance($conn, $sid, $cid, 1, $testDate, 'present', 1);
     
     // Delete via deleteAttendanceRecord
@@ -150,6 +158,57 @@ if ($dummyStudent) {
     // Cleanup test record
     dbExecute($conn, "DELETE FROM attendance_records WHERE student_id = ? AND class_id = ? AND attendance_date = ?", "iis", [$sid, $cid, $testDate]);
 }
+
+// --- 6. Role-Aware Notifications for Students (4.10) ---
+echo "\n6. Role-Aware Notifications (Student & Teacher)\n";
+if ($sid > 0) {
+    $notifs = getNotificationsForUser($conn, $sid, false, 10);
+    assert_test("getNotificationsForUser succeeds for student caller", is_array($notifs));
+}
+
+// --- 7. Student Dashboard Queries & Syntax (4.2, 4.3, 4.4, 4.5) ---
+echo "\n7. Student Dashboard Queries & Syntax\n";
+if ($sid > 0) {
+    $semRow = dbFetchOne($conn, "SELECT id, start_date, end_date FROM semesters ORDER BY id DESC LIMIT 1");
+    if ($semRow) {
+        $semId = intval($semRow['id']);
+        $rank_row = dbFetchOne(
+            $conn,
+            "SELECT COUNT(*) + 1 as student_rank FROM (
+                SELECT s.id, AVG(COALESCE(m.total, 0)) as avg_mark
+                FROM students s
+                JOIN teacher_class tc ON s.class_id = tc.class_id AND tc.semester_id = ?
+                LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = ? AND m.teacher_id = tc.teacher_id AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
+                WHERE s.class_id = ? AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
+                GROUP BY s.id
+                HAVING AVG(COALESCE(m.total, 0)) > ?
+            ) as better_students",
+            "iiid",
+            [$semId, $semId, $cid, 75.0]
+        );
+        assert_test("Student rank query with 'student_rank' alias executes without error", is_array($rank_row) && isset($rank_row['student_rank']));
+        
+        // Test scoped attendance query
+        $attScoped = dbFetchOne(
+            $conn,
+            "SELECT 
+                SUM(CASE WHEN ar.status = 'present' THEN 1 ELSE 0 END) as present,
+                COUNT(*) as total_days
+             FROM attendance_records ar
+             JOIN semesters sem ON sem.id = ?
+             WHERE ar.student_id = ? AND ar.class_id = ?
+               AND (ar.is_deleted = 0 OR ar.is_deleted IS NULL)
+               AND (sem.start_date IS NULL OR ar.attendance_date >= sem.start_date)
+               AND (sem.end_date IS NULL OR ar.attendance_date <= sem.end_date)",
+            "iii",
+            [$semId, $sid, $cid]
+        );
+        assert_test("Semester-scoped attendance query executes without error", is_array($attScoped) && isset($attScoped['total_days']));
+    }
+}
+
+// Cleanup temporary test student
+dbExecute($conn, "DELETE FROM students WHERE name = '__Test Student__'");
 
 // --- Summary ---
 echo "\n========================================\n";

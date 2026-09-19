@@ -57,9 +57,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marks'])) {
     $success_count = 0;
     $error_count = 0;
     
+    $clamped_count = 0;
+    
     // Process each student's marks
     if (isset($_POST['marks']) && is_array($_POST['marks'])) {
         foreach ($_POST['marks'] as $student_id => $marks) {
+            // 4.8: Verify $marks is an array
+            if (!is_array($marks)) continue;
+
             $student_id = intval($student_id);
             // Validate student belongs to class
             $student_check = dbFetchOne(
@@ -70,18 +75,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marks'])) {
             );
             if (!$student_check) continue;
             
-            $assignment = isset($marks['assignment']) && $marks['assignment'] !== '' ? floatval($marks['assignment']) : 0;
-            $participation = isset($marks['participation']) && $marks['participation'] !== '' ? floatval($marks['participation']) : 0;
-            $attendance = isset($marks['attendance']) && $marks['attendance'] !== '' ? floatval($marks['attendance']) : 0;
-            $mid = isset($marks['mid']) && $marks['mid'] !== '' ? floatval($marks['mid']) : 0;
-            $final = isset($marks['final']) && $marks['final'] !== '' ? floatval($marks['final']) : 0;
+            $raw_assignment = isset($marks['assignment']) && $marks['assignment'] !== '' ? floatval($marks['assignment']) : 0;
+            $raw_participation = isset($marks['participation']) && $marks['participation'] !== '' ? floatval($marks['participation']) : 0;
+            $raw_attendance = isset($marks['attendance']) && $marks['attendance'] !== '' ? floatval($marks['attendance']) : 0;
+            $raw_mid = isset($marks['mid']) && $marks['mid'] !== '' ? floatval($marks['mid']) : 0;
+            $raw_final = isset($marks['final']) && $marks['final'] !== '' ? floatval($marks['final']) : 0;
             
+            // 4.9: Track if any value was above the maximum and got clamped
+            if ($raw_assignment > $max_assign || $raw_participation > $max_part || $raw_attendance > $max_att || $raw_mid > $max_mid || $raw_final > $max_final) {
+                $clamped_count++;
+            }
+
             // Validate ranges
-            $assignment = min(max($assignment, 0), $max_assign);
-            $participation = min(max($participation, 0), $max_part);
-            $attendance = min(max($attendance, 0), $max_att);
-            $mid = min(max($mid, 0), $max_mid);
-            $final = min(max($final, 0), $max_final);
+            $assignment = min(max($raw_assignment, 0), $max_assign);
+            $participation = min(max($raw_participation, 0), $max_part);
+            $attendance = min(max($raw_attendance, 0), $max_att);
+            $mid = min(max($raw_mid, 0), $max_mid);
+            $final = min(max($raw_final, 0), $max_final);
             $total = $assignment + $participation + $attendance + $mid + $final;
             
             $saved = dbExecute(
@@ -112,6 +122,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marks'])) {
             $_SESSION['error'] = "የአንዳንድ ተማሪዎችን ውጤት በማስቀመጥ ላይ ስህተት ተከስቷል!";
         } else {
             $_SESSION['success'] = "የ{$success_count} ተማሪዎች ውጤት በትክክል ተቀምጧል!";
+            if ($clamped_count > 0) {
+                $_SESSION['success'] .= " አንዳንድ ውጤቶች ከከፍተኛው በላይ ስለነበሩ ተስተካክለዋል።";
+            }
         }
     }
 }

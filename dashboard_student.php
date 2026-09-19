@@ -3,9 +3,18 @@ require_once 'db.php';
 requireStudent();
 
 $student_id = intval($_SESSION['student_id']);
+// 4.7: Fresh lookup of student's class from database
+$student_db = dbFetchOne($conn, "SELECT s.class_id, c.name as class_name FROM students s LEFT JOIN classes c ON s.class_id = c.id WHERE s.id = ?", "i", [$student_id]);
+if ($student_db && !empty($student_db['class_id'])) {
+    $student_class_id = intval($student_db['class_id']);
+    $student_class = $student_db['class_name'] ?? '';
+    $_SESSION['student_class_id'] = $student_class_id;
+    $_SESSION['student_class'] = $student_class;
+} else {
+    $student_class_id = intval($_SESSION['student_class_id'] ?? 0);
+    $student_class = $_SESSION['student_class'] ?? '';
+}
 $student_name = $_SESSION['student_name'] ?? 'ተማሪ';
-$student_class_id = intval($_SESSION['student_class_id'] ?? 0);
-$student_class = $_SESSION['student_class'] ?? '';
 
 // Ethiopian months
 $ethiopian_months = [
@@ -22,10 +31,10 @@ $amharic_days = [
 // Get ALL semesters
 $all_semesters = dbFetchAll(
     $conn,
-    "SELECT DISTINCT sem.id, sem.name, sem.status, sem.ethiopian_year, sem.semester_number, sem.results_published
+    "SELECT DISTINCT sem.id, sem.name, sem.status, sem.ethiopian_year, sem.semester_number, sem.results_published, sem.start_date, sem.end_date
      FROM semesters sem
      WHERE sem.id IN (
-         SELECT DISTINCT m.semester_id FROM marks m WHERE m.student_id = ?
+         SELECT DISTINCT m.semester_id FROM marks m WHERE m.student_id = ? AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
          UNION
          SELECT DISTINCT tc.semester_id FROM teacher_class tc WHERE tc.class_id = ?
      )
@@ -35,8 +44,19 @@ $all_semesters = dbFetchAll(
     [$student_id, $student_class_id]
 );
 
-$selected_semester_id = isset($_GET['semester_id']) ? intval($_GET['semester_id']) : 
-                        (!empty($all_semesters) ? $all_semesters[0]['id'] : 0);
+// 4.6: Validate semester_id GET parameter against the student's actual accessible semesters
+$valid_semester_ids = !empty($all_semesters) ? array_column($all_semesters, 'id') : [];
+$requested_sem_id = isset($_GET['semester_id']) ? intval($_GET['semester_id']) : 0;
+
+if (!empty($valid_semester_ids)) {
+    if ($requested_sem_id > 0 && in_array($requested_sem_id, $valid_semester_ids)) {
+        $selected_semester_id = $requested_sem_id;
+    } else {
+        $selected_semester_id = $valid_semester_ids[0];
+    }
+} else {
+    $selected_semester_id = 0;
+}
 
 $selected_semester = null;
 foreach ($all_semesters as $sem) {
@@ -130,7 +150,7 @@ $today_year = $today_eth['year'];
 
 // Get marks
 $marks_query = "SELECT 
-                u.name as teacher_name, u.id as teacher_id,
+                u.name as teacher_name, u.id as teacher_id, m.id as marks_row_id,
                 COALESCE(m.assignment, 0) as assignment, COALESCE(m.participation, 0) as participation,
                 COALESCE(m.attendance, 0) as attendance, COALESCE(m.mid, 0) as mid,
                 COALESCE(m.final, 0) as final, COALESCE(m.total, 0) as total,
@@ -141,7 +161,7 @@ $marks_query = "SELECT
                 ms.component5_name, ms.component5_percentage
                 FROM teacher_class tc
                 JOIN users u ON tc.teacher_id = u.id
-                LEFT JOIN marks m ON m.student_id = ? AND m.teacher_id = u.id AND m.semester_id = ?
+                LEFT JOIN marks m ON m.student_id = ? AND m.teacher_id = u.id AND m.semester_id = ? AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
                 LEFT JOIN marking_schemes ms ON ms.teacher_id = u.id AND ms.class_id = tc.class_id AND ms.semester_id = ?
                 WHERE tc.class_id = ? AND tc.semester_id = ?
                 ORDER BY u.name";
@@ -169,50 +189,61 @@ foreach ($marks_rows as $row) {
 
 $average = $teacher_count > 0 ? round($overall_total / $teacher_count, 1) : 0;
 
-// Get student rank
+// Get student rank (MySQL 8 reserved word safe alias)
 $rank_row = dbFetchOne(
     $conn,
-    "SELECT COUNT(*) + 1 as rank FROM (
+    "SELECT COUNT(*) + 1 as student_rank FROM (
         SELECT s.id, AVG(COALESCE(m.total, 0)) as avg_mark
         FROM students s
         JOIN teacher_class tc ON s.class_id = tc.class_id AND tc.semester_id = ?
-        LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = ? AND m.teacher_id = tc.teacher_id
-        WHERE s.class_id = ?
+        LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = ? AND m.teacher_id = tc.teacher_id AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
+        WHERE s.class_id = ? AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
         GROUP BY s.id
         HAVING AVG(COALESCE(m.total, 0)) > ?
     ) as better_students",
     "iiid",
     [$selected_semester_id, $selected_semester_id, $student_class_id, $average]
 );
-$rank = $rank_row ? $rank_row['rank'] : 1;
+$rank = $rank_row ? intval($rank_row['student_rank'] ?? 1) : 1;
 
 $tot_row = dbFetchOne($conn, "SELECT COUNT(*) as total FROM students WHERE class_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)", "i", [$student_class_id]);
 $total_students = $tot_row ? $tot_row['total'] : 0;
 
-// Get attendance data
+// Get attendance data scoped to selected semester
 $attendance_data = [];
 $att_rows = dbFetchAll(
     $conn,
-    "SELECT attendance_date, status FROM attendance_records 
-     WHERE student_id = ? AND class_id = ? ORDER BY attendance_date",
-    "ii",
-    [$student_id, $student_class_id]
+    "SELECT ar.attendance_date, ar.status 
+     FROM attendance_records ar
+     JOIN semesters sem ON sem.id = ?
+     WHERE ar.student_id = ? AND ar.class_id = ?
+       AND (ar.is_deleted = 0 OR ar.is_deleted IS NULL)
+       AND (sem.start_date IS NULL OR ar.attendance_date >= sem.start_date)
+       AND (sem.end_date IS NULL OR ar.attendance_date <= sem.end_date)
+     ORDER BY ar.attendance_date",
+    "iii",
+    [$selected_semester_id, $student_id, $student_class_id]
 );
 foreach ($att_rows as $att_row) {
     $attendance_data[$att_row['attendance_date']] = $att_row['status'];
 }
 
-// Get attendance summary
+// Get attendance summary scoped to selected semester
 $att_summary = dbFetchOne(
     $conn,
     "SELECT 
-        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-        SUM(CASE WHEN status = 'permission' THEN 1 ELSE 0 END) as permission,
+        SUM(CASE WHEN ar.status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN ar.status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN ar.status = 'permission' THEN 1 ELSE 0 END) as permission,
         COUNT(*) as total_days
-     FROM attendance_records WHERE student_id = ? AND class_id = ?",
-    "ii",
-    [$student_id, $student_class_id]
+     FROM attendance_records ar
+     JOIN semesters sem ON sem.id = ?
+     WHERE ar.student_id = ? AND ar.class_id = ?
+       AND (ar.is_deleted = 0 OR ar.is_deleted IS NULL)
+       AND (sem.start_date IS NULL OR ar.attendance_date >= sem.start_date)
+       AND (sem.end_date IS NULL OR ar.attendance_date <= sem.end_date)",
+    "iii",
+    [$selected_semester_id, $student_id, $student_class_id]
 );
 $attendance_summary = $att_summary ?: ['present' => 0, 'absent' => 0, 'permission' => 0, 'total_days' => 0];
 
@@ -222,8 +253,8 @@ $class_avg_row = dbFetchOne(
     "SELECT AVG(COALESCE(m.total, 0)) as class_avg
      FROM students s
      JOIN teacher_class tc ON s.class_id = tc.class_id AND tc.semester_id = ?
-     LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = ? AND m.teacher_id = tc.teacher_id
-     WHERE s.class_id = ?",
+     LEFT JOIN marks m ON s.id = m.student_id AND m.semester_id = ? AND m.teacher_id = tc.teacher_id AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
+     WHERE s.class_id = ? AND (s.is_deleted = 0 OR s.is_deleted IS NULL)",
     "iii",
     [$selected_semester_id, $selected_semester_id, $student_class_id]
 );
@@ -240,7 +271,7 @@ $history_rows = dbFetchAll(
      FROM semesters sem
      JOIN teacher_class tc ON tc.semester_id = sem.id AND tc.class_id = ?
      JOIN users u ON tc.teacher_id = u.id
-     LEFT JOIN marks m ON m.student_id = ? AND m.semester_id = sem.id AND m.teacher_id = u.id
+     LEFT JOIN marks m ON m.student_id = ? AND m.semester_id = sem.id AND m.teacher_id = u.id AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
      GROUP BY sem.id, sem.name, sem.ethiopian_year, sem.semester_number, sem.status, sem.results_published
      ORDER BY sem.ethiopian_year DESC, sem.semester_number ASC",
     "ii",
@@ -504,9 +535,8 @@ foreach ($history_rows as $row) {
                         <tr>
                             <td class="teacher-name-cell">👨‍🏫 <?php echo htmlspecialchars($mark['teacher_name']); ?></td>
                             <?php
-                            // If total > 0, marks have been submitted — show actual values (even if a component is 0)
-                            // If total == 0 AND all components are 0, marks not yet entered — show '-'
-                            $has_marks = ($mark['total'] > 0 || $mark['assignment'] > 0 || $mark['participation'] > 0 || $mark['attendance'] > 0 || $mark['mid'] > 0 || $mark['final'] > 0);
+                            // Check whether a marks record exists (even if all scores are legitimately 0)
+                            $has_marks = !empty($mark['marks_row_id']);
                             ?>
                             <?php if ($show_c1): ?><td><?php echo $has_marks ? number_format($mark['assignment'], 1) : '-'; ?></td><?php endif; ?>
                             <?php if ($show_c2): ?><td><?php echo $has_marks ? number_format($mark['participation'], 1) : '-'; ?></td><?php endif; ?>

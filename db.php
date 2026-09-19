@@ -56,7 +56,9 @@ if (APP_DEBUG) {
 $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
 if (!$conn) {
-    die("Database connection failed. Please check your configuration.");
+    error_log("DB connection failed: " . mysqli_connect_error());
+    http_response_code(500);
+    die(APP_DEBUG ? ("Connection failed: " . mysqli_connect_error()) : "እባክዎ እንደገና ይሞክሩ። ችግሩ ከቀጠለ ትምህርት ክፍልን ያነጋግሩ።");
 }
 
 mysqli_set_charset($conn, "utf8mb4");
@@ -65,8 +67,8 @@ mysqli_set_charset($conn, "utf8mb4");
 if (session_status() === PHP_SESSION_NONE) {
     // Detect HTTPS - check both direct HTTPS and reverse proxy headers
     $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
-              (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
-              (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on');
+              ((isset($_SERVER['HTTP_X_FORWARDED_PROTO']) ? strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) : '') === 'https') ||
+              ((isset($_SERVER['HTTP_X_FORWARDED_SSL']) ? strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) : '') === 'on');
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
@@ -461,12 +463,18 @@ function saveMarkingScheme($conn, $teacher_id, $class_id, $semester_id, $data) {
 // ETHIOPIAN CALENDAR FUNCTIONS
 // ============================================
 
+// Unified Ethiopian leap year check
+function isEthiopianLeapYear($ethiopianYear) {
+    // Ethiopian leap years occur when year % 4 == 3 (e.g., 2011, 2015, 2019)
+    return ($ethiopianYear % 4 === 3);
+}
+
 function ethiopianToGregorian($ethYear, $ethMonth, $ethDay) {
     $ethYear = intval($ethYear);
     $ethMonth = intval($ethMonth);
     $ethDay = intval($ethDay);
     $gregYear = $ethYear + 7;
-    $newYearDay = (($ethYear - 1) % 4 === 3) ? 12 : 11;
+    $newYearDay = isEthiopianLeapYear($ethYear - 1) ? 12 : 11;
     $startDate = new DateTime("$gregYear-09-$newYearDay");
     
     $daysOffset = ($ethMonth - 1) * 30 + ($ethDay - 1);
@@ -544,12 +552,6 @@ function convertToEthiopianTime($time24) {
     if ($ethiopian_hour == 0) $ethiopian_hour = 12;
     $period = ($hour < 12) ? 'ጠዋት' : 'ማታ';
     return $ethiopian_hour . ':' . $minute . ' ' . $period;
-}
-
-// Unified Ethiopian leap year check
-function isEthiopianLeapYear($ethiopianYear) {
-    // Ethiopian leap years occur when year % 4 == 3 (e.g., 2011, 2015, 2019)
-    return ($ethiopianYear % 4 === 3);
 }
 
 function getEthiopianDaysInMonth($ethiopianYear, $ethiopianMonth) {
@@ -873,10 +875,24 @@ function createNotification($conn, $title, $message, $targets = [], $priority = 
  */
 function getNotificationsForUser($conn, $userId, $unreadOnly = false, $limit = 50) {
     $limit = (int)$limit;
+    $userId = (int)$userId;
     
     // Get user's role to determine which class lookups to apply
     $user = dbFetchOne($conn, "SELECT role FROM users WHERE id = ?", "i", [$userId]);
     $userRole = $user['role'] ?? '';
+    
+    $studentClassId = null;
+    if (empty($userRole)) {
+        // Check if student caller
+        $student = dbFetchOne($conn, "SELECT class_id FROM students WHERE id = ?", "i", [$userId]);
+        if ($student) {
+            $userRole = 'student';
+            $studentClassId = $student['class_id'];
+        }
+    } elseif ($userRole === 'student') {
+        $student = dbFetchOne($conn, "SELECT class_id FROM students WHERE id = ?", "i", [$userId]);
+        $studentClassId = $student['class_id'] ?? null;
+    }
     
     $sql = "SELECT DISTINCT n.*, (r.id IS NOT NULL) AS is_read
             FROM notifications n
@@ -886,23 +902,26 @@ function getNotificationsForUser($conn, $userId, $unreadOnly = false, $limit = 5
                 t.id IS NULL
                 OR t.user_id = ?";
     
+    $params = [$userId, $userId];
+    
     // Add role-specific class lookups
     if ($userRole === 'teacher') {
         $sql .= " OR t.class_id IN (SELECT class_id FROM teacher_class WHERE teacher_id = ?)";
+        $params[] = $userId;
     } elseif ($userRole === 'attendance_submitter') {
         $sql .= " OR t.class_id IN (SELECT class_id FROM attendance_assignments WHERE submitter_id = ?)";
+        $params[] = $userId;
+    } elseif ($userRole === 'student') {
+        if ($studentClassId !== null) {
+            $sql .= " OR t.class_id = ?";
+            $params[] = (int)$studentClassId;
+        }
     }
     
     $sql .= ")";
     
     if ($unreadOnly) $sql .= " AND r.id IS NULL";
     $sql .= " ORDER BY n.created_at DESC LIMIT $limit";
-    
-    // Build params based on role
-    $params = [$userId, $userId];
-    if ($userRole === 'teacher' || $userRole === 'attendance_submitter') {
-        $params[] = $userId;
-    }
     
     return dbFetchAll($conn, $sql, str_repeat('i', count($params)), $params);
 }

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'db.php';
 
 if (!isLoggedIn() && !isStudent()) {
@@ -10,16 +10,18 @@ if (!isLoggedIn() && !isStudent()) {
 // teacher_class / attendance_assignments). Students don't have a `users`
 // row, so for now the student view shows only untargeted (ALL) notices.
 $user_id = intval($_SESSION['user_id'] ?? 0);
+$student_id = intval($_SESSION['student_id'] ?? 0);
 $is_student = isStudent() && !$user_id;
+$active_id = $is_student ? $student_id : $user_id;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_student) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (verifyCsrfToken($_POST['csrf_token'] ?? '')) {
         if (isset($_POST['mark_read'])) {
-            markNotificationRead($conn, intval($_POST['notification_id'] ?? 0), $user_id);
+            markNotificationRead($conn, intval($_POST['notification_id'] ?? 0), $active_id);
         } elseif (isset($_POST['mark_all_read'])) {
-            $unread = getNotificationsForUser($conn, $user_id, true, 200);
+            $unread = getNotificationsForUser($conn, $active_id, true, 200);
             foreach ($unread as $n) {
-                markNotificationRead($conn, $n['id'], $user_id);
+                markNotificationRead($conn, $n['id'], $active_id);
             }
         }
     }
@@ -27,11 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_student) {
     exit();
 }
 
-$notifications = $is_student
-    ? dbFetchAll($conn, "SELECT n.*, 0 as is_read FROM notifications n
-                          LEFT JOIN notification_targets t ON t.notification_id = n.id
-                          WHERE t.id IS NULL ORDER BY n.created_at DESC LIMIT 50")
-    : getNotificationsForUser($conn, $user_id, false, 50);
+$notifications = getNotificationsForUser($conn, $active_id, false, 50);
 
 $unread_count = 0;
 foreach ($notifications as $n) if (!$n['is_read']) $unread_count++;
