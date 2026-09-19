@@ -1,0 +1,4 @@
+﻿# Applied Migrations Log
+2026-09-19: Phase 1.2 — Add login rate limiting to users table (login_attempts INT DEFAULT 0, locked_until DATETIME NULL). Applied and verified; runner script run_migration.php removed.
+2026-09-19: Phase 2.5 — Remove UNIQUE constraint on local_uuid in attendance_records and marks, update marks unique key to (teacher_id, student_id, class_id, semester_id). Applied and verified; runner script run_migration_2_5.php removed.
+2026-09-19: Phase 3.1 — Add results visibility control to semesters (results_published TINYINT(1) DEFAULT 0, results_published_at DATETIME NULL). Applied and verified; runner script run_migration_3_1.php removed.
