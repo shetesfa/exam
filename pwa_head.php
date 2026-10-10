@@ -89,10 +89,32 @@ if ($userDarkModePref === 1) {
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="አጸደ ትምህርት">
     <link rel="manifest" href="<?php echo BASE_URL; ?>manifest.json">
-    <link rel="apple-touch-icon" href="<?php echo BASE_URL; ?>images/icon.png">
-    <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>images/icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="<?php echo BASE_URL; ?>images/icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="<?php echo BASE_URL; ?>images/icon-512.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="<?php echo BASE_URL; ?>images/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="<?php echo BASE_URL; ?>images/icon-512.png">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/mobile.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/dark-mode.css?v=<?php echo file_exists(__DIR__ . '/assets/css/dark-mode.css') ? filemtime(__DIR__ . '/assets/css/dark-mode.css') : 1; ?>">
+    <!-- Inline PWA install banner styles — always available on every page -->
+    <style>
+    #pwa-install-banner{display:none;position:fixed;bottom:0;left:0;right:0;background:#5C2607;color:#fff;padding:12px 18px;justify-content:space-between;align-items:center;gap:10px;z-index:99999;box-shadow:0 -4px 20px rgba(0,0,0,.35);border-top:3px solid #FFD700;font-family:'Segoe UI',Nyala,sans-serif;}
+    #pwa-install-banner.show{display:flex;}
+    #pwa-install-banner p{font-size:13px;line-height:1.4;margin:0;flex:1;}
+    #pwa-install-banner p strong{color:#FFD700;}
+    #pwa-install-btn{background:#FFD700;color:#5C2607;border:none;padding:9px 18px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:13px;}
+    #pwa-dismiss-btn{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:22px;padding:2px 6px;flex-shrink:0;}
+    #ios-install-tip{display:none;position:fixed;bottom:0;left:0;right:0;background:#5C2607;color:#fff;padding:14px 18px;z-index:99999;box-shadow:0 -4px 20px rgba(0,0,0,.35);border-top:3px solid #FFD700;font-family:'Segoe UI',Nyala,sans-serif;text-align:center;}
+    #ios-install-tip.show{display:block;}
+    #ios-install-tip p{font-size:13px;line-height:1.8;margin:0 0 8px;}
+    #ios-install-tip strong{color:#FFD700;}
+    #ios-tip-close{background:none;border:1px solid rgba(255,255,255,.5);color:#fff;padding:5px 16px;border-radius:6px;cursor:pointer;font-size:12px;}
+    </style>
+    <!-- iOS "Add to Home Screen" tip banner (shown once per session on Safari) -->
+    <div id="ios-install-tip">
+      <p>📱 <strong>በ iPhone/iPad:</strong> ወደ ስልክ ለመጫን → ከስር <strong>Share ⎋</strong> ይጫኑ → <strong>«Add to Home Screen»</strong> ይምረጡ</p>
+      <button id="ios-tip-close" onclick="document.getElementById('ios-install-tip').classList.remove('show');try{sessionStorage.setItem('ats_ios_tip','1')}catch(e){}">ገባኝ ✓</button>
+    </div>
+
 
     <!-- Offline DB, Sync Manager, Push Notifications, and Offline Calendar Alerts Scripts -->
     <?php
@@ -184,26 +206,68 @@ if ($userDarkModePref === 1) {
         });
     }
 
-    // PWA Install prompt
+    // PWA Install prompt — works on ALL pages (login + dashboard)
     let _deferredPWA = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault(); _deferredPWA = e;
-        const b = document.getElementById('pwa-install-banner');
-        if (b) b.classList.add('show');
-    });
-    function installPWA() {
-        if (!_deferredPWA) return;
-        _deferredPWA.prompt();
-        _deferredPWA.userChoice.then(() => {
-            _deferredPWA = null;
-            const b = document.getElementById('pwa-install-banner');
-            if (b) b.classList.remove('show');
+    const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const _isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    // Show iOS tip once per session on Safari (iOS doesn't fire beforeinstallprompt)
+    if (_isIOS && !_isInStandaloneMode) {
+        window.addEventListener('load', function() {
+            try {
+                if (sessionStorage.getItem('ats_ios_tip') !== '1') {
+                    const tip = document.getElementById('ios-install-tip');
+                    if (tip) setTimeout(function(){ tip.classList.add('show'); }, 1500);
+                }
+            } catch(e) {}
         });
     }
-    function dismissPWA() {
-        const b = document.getElementById('pwa-install-banner');
-        if (b) b.classList.remove('show');
+
+    function getOrCreateInstallBanner() {
+        let b = document.getElementById('pwa-install-banner');
+        if (!b) {
+            b = document.createElement('div');
+            b.id = 'pwa-install-banner';
+            // Inline styles as fallback (CSS already in <style> block above)
+            b.style.cssText = 'display:none;position:fixed;bottom:0;left:0;right:0;background:#5C2607;color:#fff;padding:12px 18px;justify-content:space-between;align-items:center;gap:10px;z-index:99999;box-shadow:0 -4px 20px rgba(0,0,0,.35);border-top:3px solid #FFD700;';
+            b.innerHTML = '<p style="margin:0;flex:1;font-size:13px;">📱 <strong style="color:#FFD700;">አፕሊኬሽን</strong> ወደ ስልክዎ ይጫኑ!</p>' +
+                          '<button id="pwa-install-btn" onclick="installPWA()" style="background:#FFD700;color:#5C2607;border:none;padding:9px 18px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:13px;">⬇️ ጫን</button>' +
+                          '<button id="pwa-dismiss-btn" onclick="dismissPWA()" aria-label="Dismiss" style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:22px;padding:2px 6px;">✕</button>';
+            document.body ? document.body.appendChild(b) : document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(b); });
+        }
+        return b;
     }
+
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        _deferredPWA = e;
+        try { if (sessionStorage.getItem('atsede_pwa_dismissed') === '1') return; } catch(err) {}
+        if (_isInStandaloneMode) return; // already installed
+        const b = getOrCreateInstallBanner();
+        if (b) { b.style.display = 'flex'; b.classList.add('show'); }
+    });
+
+    window.installPWA = function() {
+        if (!_deferredPWA) return;
+        _deferredPWA.prompt();
+        _deferredPWA.userChoice.then(function() {
+            _deferredPWA = null;
+            const b = document.getElementById('pwa-install-banner');
+            if (b) { b.classList.remove('show'); b.style.display = 'none'; }
+        });
+    };
+
+    window.dismissPWA = function() {
+        const b = document.getElementById('pwa-install-banner');
+        if (b) { b.classList.remove('show'); b.style.display = 'none'; }
+        try { sessionStorage.setItem('atsede_pwa_dismissed', '1'); } catch(e) {}
+    };
+
+    // App installed event — hide banner
+    window.addEventListener('appinstalled', function() {
+        const b = document.getElementById('pwa-install-banner');
+        if (b) { b.classList.remove('show'); b.style.display = 'none'; }
+    });
 
     // Hamburger nav toggle
     function toggleMobileNav() {
@@ -223,6 +287,7 @@ if ($userDarkModePref === 1) {
         }
     });
     </script>
+
 
 <?php
 // Session to IndexedDB sync bridge (runs on every authenticated page visit)
@@ -259,12 +324,20 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
             if ($currSem) {
                 $clientUserData['active_semester'] = $currSem;
             }
-            if ($bridgeRole === 'teacher') {
+            // Include assigned class_ids for teacher and attendance_submitter (needed for offline filtering)
+            if ($bridgeRole === 'teacher' || $bridgeRole === 'attendance_submitter') {
                 $assignedClassIds = [];
                 $semId = $currSem ? (int)$currSem['id'] : 0;
-                $tClasses = dbFetchAll($conn, "SELECT class_id FROM teacher_class WHERE teacher_id = ?" . ($semId ? " AND semester_id = $semId" : ""), "i", [$bridgeUserId]);
-                foreach ($tClasses as $tc) {
-                    $assignedClassIds[] = (int)$tc['class_id'];
+                // Teacher: from teacher_class (AND attendance_assignments if any)
+                if ($bridgeRole === 'teacher') {
+                    $tClasses = dbFetchAll($conn, "SELECT class_id FROM teacher_class WHERE teacher_id = ?" . ($semId ? " AND semester_id = $semId" : ""), "i", [$bridgeUserId]);
+                    foreach ($tClasses as $tc) $assignedClassIds[] = (int)$tc['class_id'];
+                }
+                // Both roles: also include attendance_assignments classes
+                $aaClasses = dbFetchAll($conn, "SELECT class_id FROM attendance_assignments WHERE submitter_id = ?" . ($semId ? " AND semester_id = $semId" : ""), "i", [$bridgeUserId]);
+                foreach ($aaClasses as $aa) {
+                    $cid = (int)$aa['class_id'];
+                    if (!in_array($cid, $assignedClassIds)) $assignedClassIds[] = $cid;
                 }
                 $clientUserData['class_ids'] = $assignedClassIds;
             }
@@ -290,7 +363,7 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
 
                 if ("caches" in window && navigator.onLine) {
                     const baseUrl = ' . json_encode(BASE_URL) . ';
-                    caches.open("exam-pwa-v14").then(cache => {
+                    caches.open("exam-pwa-v15").then(cache => {
                         cache.put(baseUrl, new Response("<html><body>Offline fallback</body></html>", { headers: { "Content-Type": "text/html" } }));
                         const urlsToPrecache = [
                             baseUrl,

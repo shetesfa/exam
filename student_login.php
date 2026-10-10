@@ -516,15 +516,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
     </script>
-    <script src="<?php echo BASE_URL; ?>/assets/js/offline-db.js"></script>
-    <script src="<?php echo BASE_URL; ?>/assets/js/sync-manager.js"></script>
     <script>
-        // Register Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('<?php echo BASE_URL; ?>/sw.js').catch(() => {});
-            });
-        }
+        // (offline-db.js, sync-manager.js and SW already registered by pwa_head.php)
 
         // Offline-aware search handler
         searchStudents = async function(query) {

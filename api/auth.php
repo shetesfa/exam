@@ -144,17 +144,34 @@ dbExecute(
     [$user['id'], $token, $user['role'], $expiresAt]
 );
 
+// Build user response object
+$userResponse = [
+    'id'                  => (int)$user['id'],
+    'name'                => trim($user['name'] ?? ''),
+    'username'            => trim($user['username'] ?? ''),
+    'role'                => $user['role'],
+    'first_login'         => (int)$user['first_login'],
+    'can_edit_marks'      => (int)$user['can_edit_marks'],
+    'can_edit_attendance' => (int)$user['can_edit_attendance'],
+];
+
+// For attendance_submitter: include their assigned class_ids so offline filtering works
+if ($user['role'] === 'attendance_submitter') {
+    // Get current semester id
+    $currSem = getCurrentSemester($conn);
+    $semId = $currSem ? (int)$currSem['id'] : 0;
+    $classRows = dbFetchAll(
+        $conn,
+        "SELECT class_id FROM attendance_assignments WHERE submitter_id = ?" . ($semId ? " AND semester_id = $semId" : ""),
+        "i",
+        [$user['id']]
+    );
+    $userResponse['class_ids'] = array_map(fn($r) => (int)$r['class_id'], $classRows);
+}
+
 json_out([
-    'success' => true,
-    'token' => $token,
+    'success'    => true,
+    'token'      => $token,
     'expires_at' => $expiresAt,
-    'user' => [
-        'id' => (int)$user['id'],
-        'name' => trim($user['name'] ?? ''),
-        'username' => trim($user['username'] ?? ''),
-        'role' => $user['role'],
-        'first_login' => (int)$user['first_login'],
-        'can_edit_marks' => (int)$user['can_edit_marks'],
-        'can_edit_attendance' => (int)$user['can_edit_attendance'],
-    ],
+    'user'       => $userResponse,
 ]);

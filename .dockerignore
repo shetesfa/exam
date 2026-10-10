@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+*.sql
+*.docx
+*.xlsx
+zip/
+exam-main/
+scratch/
+Dockerfile
+.dockerignore

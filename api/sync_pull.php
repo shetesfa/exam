@@ -20,9 +20,15 @@ $semesterId = $currentSemester ? (int)$currentSemester['id'] : 0;
 $classIds = [];
 switch ($authUser['role']) {
     case 'teacher':
-        $q = "SELECT class_id FROM teacher_class WHERE teacher_id = ? AND semester_id = ?";
-        $rows = dbFetchAll($conn, $q, "ii", [$authUser['id'], $semesterId]);
-        foreach ($rows as $r) $classIds[] = (int)$r['class_id'];
+        // Classes from teacher_class (teaching)
+        $tcRows = dbFetchAll($conn, "SELECT class_id FROM teacher_class WHERE teacher_id = ? AND semester_id = ?", "ii", [$authUser['id'], $semesterId]);
+        foreach ($tcRows as $r) $classIds[] = (int)$r['class_id'];
+        // ALSO include any classes explicitly assigned in attendance_assignments
+        $aaRows = dbFetchAll($conn, "SELECT class_id FROM attendance_assignments WHERE submitter_id = ? AND semester_id = ?", "ii", [$authUser['id'], $semesterId]);
+        foreach ($aaRows as $r) {
+            $cid = (int)$r['class_id'];
+            if (!in_array($cid, $classIds)) $classIds[] = $cid;
+        }
         break;
 
     case 'attendance_submitter':
@@ -42,12 +48,13 @@ switch ($authUser['role']) {
 
 if ($authUser['role'] !== 'admin' && empty($classIds)) {
     json_out([
-        'success' => true,
-        'classes' => [],
-        'students' => [],
-        'attendance' => [],
-        'marks' => [],
-        'server_time' => date('c')
+        'success'         => true,
+        'classes'         => [],
+        'students'        => [],
+        'attendance'      => [],
+        'marks'           => [],
+        'active_semester' => $currentSemester,
+        'server_time'     => date('c')
     ]);
 }
 
@@ -74,19 +81,29 @@ if ($authUser['role'] === 'student') {
     );
 }
 
-// 3. Attendance (Phase 2.6: include is_deleted and pull recently deleted records so offline cache removes them)
+// 3. Attendance (include marked_by so all teachers in same class can see who recorded it)
 $attendance = [];
 if ($authUser['role'] === 'student') {
     $attendance = dbFetchAll(
         $conn,
-        "SELECT id, student_id, class_id, attendance_date, status, last_updated, local_uuid, is_deleted FROM attendance_records WHERE student_id = ? AND last_updated > ?",
+        "SELECT ar.id, ar.student_id, ar.class_id, ar.attendance_date, ar.status,
+                ar.last_updated, ar.local_uuid, ar.is_deleted,
+                ar.marked_by, u.name AS marker_name
+         FROM attendance_records ar
+         LEFT JOIN users u ON ar.marked_by = u.id
+         WHERE ar.student_id = ? AND ar.last_updated > ?",
         "is",
         [$authUser['id'], $since]
     );
 } else {
     $attendance = dbFetchAll(
         $conn,
-        "SELECT id, student_id, class_id, attendance_date, status, last_updated, local_uuid, is_deleted FROM attendance_records WHERE last_updated > ? $classFilter",
+        "SELECT ar.id, ar.student_id, ar.class_id, ar.attendance_date, ar.status,
+                ar.last_updated, ar.local_uuid, ar.is_deleted,
+                ar.marked_by, u.name AS marker_name
+         FROM attendance_records ar
+         LEFT JOIN users u ON ar.marked_by = u.id
+         WHERE ar.last_updated > ? $classFilter",
         "s",
         [$since]
     );

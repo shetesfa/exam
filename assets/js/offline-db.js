@@ -46,9 +46,16 @@ async function tx(storeName, mode, fn) {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, mode);
         const store = transaction.objectStore(storeName);
-        const result = fn(store);
-        transaction.oncomplete = () => resolve(result);
+        let requestResult;
+        try {
+            requestResult = fn(store);
+        } catch (e) {
+            reject(e);
+            return;
+        }
+        transaction.oncomplete = () => resolve(requestResult instanceof IDBRequest ? requestResult.result : requestResult);
         transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error || new Error('IDB transaction aborted'));
     });
 }
 

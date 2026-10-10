@@ -14,12 +14,34 @@ defined('DB_HOST') or define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 defined('DB_USER') or define('DB_USER', getenv('DB_USER') ?: 'root');
 defined('DB_PASS') or define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');  
 defined('DB_NAME') or define('DB_NAME', getenv('DB_NAME') ?: 'atsede_sunday_school'); 
+defined('DB_PORT') or define('DB_PORT', getenv('DB_PORT') ? intval(getenv('DB_PORT')) : 3306);
+defined('DB_SSL')  or define('DB_SSL', getenv('DB_SSL') === '1' || getenv('DB_SSL') === 'true');
 
 // Debug mode (off by default for security)
 defined('APP_DEBUG') or define('APP_DEBUG', getenv('APP_DEBUG') === '1');
 
-// Base URL configuration (single source of truth with trailing slash)
-defined('BASE_URL') or define('BASE_URL', rtrim(getenv('BASE_URL') ?: '/exam', '/') . '/');
+// Base URL configuration — fully automatic, works on localhost, IP, and any hosting.
+// Auto-detects: scheme (http/https), hostname, and subfolder path.
+// Override by setting BASE_URL environment variable (e.g. in .env or hosting panel).
+if (!defined('BASE_URL')) {
+    if (getenv('BASE_URL')) {
+        // Manual override wins (useful for reverse proxies / CDN / hosting panels)
+        define('BASE_URL', rtrim(getenv('BASE_URL'), '/') . '/');
+    } elseif (isset($_SERVER['HTTP_HOST'])) {
+        // Auto-detect scheme
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                  ? 'https' : 'http';
+        // Auto-detect subfolder: find this file's directory relative to the web root
+        $docRoot = rtrim(str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT'])), '/');
+        $appDir  = rtrim(str_replace('\\', '/', realpath(__DIR__)), '/');
+        $subPath = '/' . trim(str_replace($docRoot, '', $appDir), '/');
+        if ($subPath !== '/') { $subPath .= '/'; }
+        define('BASE_URL', $scheme . '://' . $_SERVER['HTTP_HOST'] . $subPath);
+    } else {
+        // CLI / cron fallback — no HTTP request available
+        define('BASE_URL', '/exam/');
+    }
+}
 
 // OpenSSL configuration fallback for Windows / XAMPP environments
 if (!getenv('OPENSSL_CONF') && file_exists('C:/xampp/apache/conf/openssl.cnf')) {
@@ -53,9 +75,24 @@ if (APP_DEBUG) {
 }
 
 // Create connection
-$conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-
+$conn = mysqli_init();
 if (!$conn) {
+    error_log("mysqli_init failed");
+    http_response_code(500);
+    die("እባክዎ እንደገና ይሞክሩ። ችግሩ ከቀጠለ ትምህርት ክፍልን ያነጋግሩ።");
+}
+
+if (defined('DB_SSL') && DB_SSL) {
+    $caPath = getenv('MYSQL_ATTR_SSL_CA') ?: (file_exists('/etc/ssl/certs/ca-certificates.crt') ? '/etc/ssl/certs/ca-certificates.crt' : null);
+    if ($caPath) {
+        mysqli_ssl_set($conn, NULL, NULL, $caPath, NULL, NULL);
+    }
+    $connected = @mysqli_real_connect($conn, DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT, NULL, MYSQLI_CLIENT_SSL);
+} else {
+    $connected = @mysqli_real_connect($conn, DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+}
+
+if (!$connected) {
     error_log("DB connection failed: " . mysqli_connect_error());
     http_response_code(500);
     die(APP_DEBUG ? ("Connection failed: " . mysqli_connect_error()) : "እባክዎ እንደገና ይሞክሩ። ችግሩ ከቀጠለ ትምህርት ክፍልን ያነጋግሩ።");
@@ -234,11 +271,14 @@ function canTeacherMarkClassAttendance($conn, $userId, $classId, $semesterId = n
     if (!$userId || !$classId) return false;
     if (isAdmin()) return true;
 
-    // Check if user is admin in DB
+    // Always check role from DB — works both with and without an active PHP session (token API calls)
     $userRow = dbFetchOne($conn, "SELECT role FROM users WHERE id = ?", "i", [$userId]);
-    if ($userRow && $userRow['role'] === 'admin') return true;
-    
-    // Check if explicitly assigned in attendance_assignments
+    if (!$userRow) return false;
+    $dbRole = $userRow['role'];
+
+    if ($dbRole === 'admin') return true;
+
+    // Check if explicitly assigned in attendance_assignments (works for teacher & attendance_submitter)
     if ($semesterId) {
         $aa = dbFetchOne(
             $conn,
@@ -256,12 +296,12 @@ function canTeacherMarkClassAttendance($conn, $userId, $classId, $semesterId = n
         );
         if ($aa) return true;
     }
-    
-    // Dedicated attendance submitter role cannot write classes not assigned in attendance_assignments
-    if (isAttendanceSubmitter()) return false;
-    
+
+    // Dedicated attendance_submitter role: must be in attendance_assignments (already checked above)
+    if ($dbRole === 'attendance_submitter' || isAttendanceSubmitter()) return false;
+
     // Check teacher assignment in teacher_class
-    $tcSql = "SELECT tc.id, g.division_id, g.level_number 
+    $tcSql = "SELECT tc.id, g.division_id, g.level_number
               FROM teacher_class tc
               JOIN classes c ON tc.class_id = c.id
               LEFT JOIN grades g ON c.grade_id = g.id
@@ -275,12 +315,12 @@ function canTeacherMarkClassAttendance($conn, $userId, $classId, $semesterId = n
     }
     $tc = dbFetchOne($conn, $tcSql, $types, $params);
     if (!$tc) return false;
-    
+
     // Children division (division_id = 1 or level <= 6) can always record attendance
     if (intval($tc['division_id']) === 1 || (intval($tc['level_number']) > 0 && intval($tc['level_number']) <= 6)) {
         return true;
     }
-    
+
     // Youth division can write if admin enabled it
     $setting = dbFetchOne($conn, "SELECT setting_value FROM settings WHERE setting_key = 'youth_can_write_attendance'");
     return ($setting && trim($setting['setting_value']) === '1');

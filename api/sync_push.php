@@ -23,22 +23,21 @@ if ($userRole === 'student') {
     json_error('Students are read-only and cannot push updates', 403);
 }
 
-// Check role permissions from database
+// Check role permissions — works via token (no PHP session) or session
 $canEditAttendance = false;
 $canEditMarks = false;
 
 if ($userRole === 'admin') {
     $canEditAttendance = true;
     $canEditMarks = true;
-} else {
+} elseif ($userRole === 'attendance_submitter') {
+    // attendance_submitter: can record attendance only, no marks
+    $canEditAttendance = true;
+    $canEditMarks = false;
+} elseif ($userRole === 'teacher') {
     $userRow = dbFetchOne($conn, "SELECT can_edit_marks, can_edit_attendance FROM users WHERE id = ?", "i", [$userId]);
-    if ($userRole === 'teacher') {
-        $canEditMarks = $userRow ? (bool)$userRow['can_edit_marks'] : true;
-        $canEditAttendance = canMarkAttendance($conn, $userId, $semesterId);
-    } elseif ($userRole === 'attendance_submitter') {
-        $canEditAttendance = true;
-        $canEditMarks = false;
-    }
+    $canEditMarks = $userRow ? (bool)$userRow['can_edit_marks'] : true;
+    $canEditAttendance = canMarkAttendance($conn, $userId, $semesterId);
 }
 
 // 1. Process Attendance Push

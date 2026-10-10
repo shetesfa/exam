@@ -1,0 +1,26 @@
+# Disable directory listing
+Options -Indexes
+
+# Set default document
+DirectoryIndex index.php index.html
+
+# UTF-8 Encoding default
+AddDefaultCharset UTF-8
+
+# Service Worker header - ensure fresh sw.js
+<Files "sw.js">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+</Files>
+
+# Manifest JSON header
+<Files "manifest.json">
+    Header set Content-Type "application/manifest+json; charset=utf-8"
+</Files>
+
+# Protect sensitive files
+<FilesMatch "(\.env|\.sql|\.git|\.md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

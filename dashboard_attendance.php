@@ -638,14 +638,8 @@ $nav_active = 'dashboard_attendance';
 
     <div id="toast" class="toast"></div>
 
-    <script src="<?php echo BASE_URL; ?>assets/js/offline-db.js"></script>
-    <script src="<?php echo BASE_URL; ?>assets/js/sync-manager.js"></script>
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('<?php echo BASE_URL; ?>sw.js', { scope: '<?php echo BASE_URL; ?>' }).catch(() => {});
-            });
-        }
+        // (offline-db.js, sync-manager.js and SW registration already done by pwa_head.php)
 
         const classId = <?php echo $selected_class_id ?: 0; ?>;
         const lastRemovalTimestamps = {};
@@ -672,7 +666,7 @@ $nav_active = 'dashboard_attendance';
             toast.style.background = '#4B5563';
             toast.classList.add('show');
 
-            // Offline IndexedDB deletion
+            // STEP 1: Save removal to IndexedDB first
             if (window.OfflineDB && OfflineDB.deleteAttendanceLocal) {
                 try {
                     await OfflineDB.deleteAttendanceLocal(studentId, classId, date);
@@ -681,6 +675,7 @@ $nav_active = 'dashboard_attendance';
                 }
             }
 
+            // STEP 2: Try server
             const fd = new FormData();
             fd.append('ajax_save_attendance', '1');
             fd.append('student_id', studentId);
@@ -688,26 +683,25 @@ $nav_active = 'dashboard_attendance';
             fd.append('attendance_date', date);
             fd.append('status', 'remove');
 
-            fetch(window.location.href, { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(d => {
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 4000);
+                const res = await fetch(window.location.href, { method: 'POST', body: fd, signal: controller.signal });
+                clearTimeout(timer);
+                const d = await res.json();
                 if (d.success) {
-                    toast.textContent = '🗑️ አቴንዳንሱ ተሰርዟል! (ያልተሞላ ሆነ)';
+                    toast.textContent = '🗑️ አቴንዳንሱ ተሰርዟል!';
                     toast.style.background = '#4B5563';
-                    if (window.SyncManager && SyncManager.pushChanges) {
-                        SyncManager.pushChanges();
-                    }
                 } else {
                     toast.textContent = '❌ ስህተት ተከስቷል!';
                     toast.style.background = '#EF4444';
                 }
-                setTimeout(() => toast.classList.remove('show'), 2000);
-            })
-            .catch(() => {
-                toast.textContent = '💾 Offline ተሰርዟል!';
+            } catch (_) {
+                // Offline — removal already queued in IndexedDB
+                toast.textContent = '💾 Offline ተሰርዟል — ኢንተርኔት ሲገናኝ ይተላለፋል!';
                 toast.style.background = '#3B82F6';
-                setTimeout(() => toast.classList.remove('show'), 2000);
-            });
+            }
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         async function saveAtt(studentId, date, status, el, ev) {
@@ -751,7 +745,7 @@ $nav_active = 'dashboard_attendance';
                 status: status
             };
 
-            // Always store to IndexedDB for seamless offline resilience
+            // STEP 1: Always save to IndexedDB first (guarantees offline resilience)
             if (window.OfflineDB && OfflineDB.saveAttendanceLocal) {
                 try {
                     await OfflineDB.saveAttendanceLocal(attRecord);
@@ -760,6 +754,7 @@ $nav_active = 'dashboard_attendance';
                 }
             }
 
+            // STEP 2: Try to push to server
             const fd = new FormData();
             fd.append('ajax_save_attendance', '1');
             fd.append('student_id', studentId);
@@ -767,27 +762,42 @@ $nav_active = 'dashboard_attendance';
             fd.append('attendance_date', date);
             fd.append('status', status);
 
-            fetch(window.location.href, { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(d => {
-                if(d.success) {
-                    toast.textContent = '✅ ተቀምጧል & ተመሳስሏል!';
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 4000);
+                const res = await fetch(window.location.href, { method: 'POST', body: fd, signal: controller.signal });
+                clearTimeout(timer);
+                const d = await res.json();
+                if (d.success) {
+                    toast.textContent = '✅ ተቀምጧል!';
                     toast.style.background = '#10B981';
-                    if (window.SyncManager && SyncManager.pushChanges) {
-                        SyncManager.pushChanges();
+                    // Mark as synced in IndexedDB
+                    if (window.OfflineDB && OfflineDB.markAttendanceSynced) {
+                        OfflineDB.markAttendanceSynced(localUuid);
                     }
                 } else {
-                    toast.textContent = '❌ ስህተት!';
+                    const msgs = {
+                        'unauthorized_class': '🚫 ይህን ክፍል ለማስቀመጥ አልተፈቀደልዎትም!',
+                        'semester_closed': '🔒 ሴሚስተሩ ተዘጋ!',
+                        'locked': '🔒 ምዝገባ ተቆልፏል!',
+                        'future': '⛔ የወደፊት ቀን ማስቀመጥ አይቻልም!',
+                        'closed': '📅 ይህ ቀን ክፍት ቀን አይደለም!',
+                    };
+                    toast.textContent = msgs[d.message] || ('❌ ስህተት: ' + (d.message || 'unknown'));
                     toast.style.background = '#EF4444';
+                    // Revert UI
                     cell.querySelectorAll('.att-dot').forEach(d => d.classList.remove('active'));
+                    // Remove from local DB too
+                    if (window.OfflineDB && OfflineDB.deleteAttendanceLocal) {
+                        OfflineDB.deleteAttendanceLocal(studentId, classId, date);
+                    }
                 }
-                setTimeout(() => toast.classList.remove('show'), 2000);
-            })
-            .catch(() => {
-                toast.textContent = '💾 Offline ተቀምጧል!';
+            } catch (_) {
+                // Network error = offline — data already saved to IndexedDB, auto-syncs when online
+                toast.textContent = '💾 Offline ተቀምጧል — ኢንተርኔት ሲገናኝ ይተላለፋል!';
                 toast.style.background = '#3B82F6';
-                setTimeout(() => toast.classList.remove('show'), 2000);
-            });
+            }
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         document.addEventListener('DOMContentLoaded', async () => {

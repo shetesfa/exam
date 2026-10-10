@@ -12,20 +12,21 @@
 <script>
 // Role-aware auto-forward to real cached PHP dashboard if available
 if ('caches' in window && typeof OfflineDB !== 'undefined') {
+    const basePath = window.location.pathname.replace(/\/offline\.html$/, '').replace(/\/$/, '');
     OfflineDB.getAuth().then(auth => {
         if (auth && auth.user) {
             const role = auth.user.role;
             if (role === 'teacher') {
-                caches.match('/exam/dashboard_teacher.php', { ignoreSearch: true }).then(match => {
-                    if (match) window.location.replace('/exam/dashboard_teacher.php');
+                caches.match(basePath + '/dashboard_teacher.php', { ignoreSearch: true }).then(match => {
+                    if (match) window.location.replace(basePath + '/dashboard_teacher.php');
                 }).catch(() => {});
             } else if (role === 'attendance_submitter') {
-                caches.match('/exam/dashboard_attendance.php', { ignoreSearch: true }).then(match => {
-                    if (match) window.location.replace('/exam/dashboard_attendance.php');
+                caches.match(basePath + '/dashboard_attendance.php', { ignoreSearch: true }).then(match => {
+                    if (match) window.location.replace(basePath + '/dashboard_attendance.php');
                 }).catch(() => {});
             } else if (role === 'admin') {
-                caches.match('/exam/dashboard_admin.php', { ignoreSearch: true }).then(match => {
-                    if (match) window.location.replace('/exam/dashboard_admin.php');
+                caches.match(basePath + '/dashboard_admin.php', { ignoreSearch: true }).then(match => {
+                    if (match) window.location.replace(basePath + '/dashboard_admin.php');
                 }).catch(() => {});
             }
         }
