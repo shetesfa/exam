@@ -112,7 +112,7 @@ if ($nav_role === 'admin') {
 <header class="site-header">
   <div class="header-content">
     <div class="logo-area">
-      <img src="<?php echo BASE_URL; ?>images/icon.png" alt="Logo" class="logo-img" 
+      <img src="images/icon.png" alt="Logo" class="logo-img" 
            style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #FFD700;flex-shrink:0;"
            onerror="this.style.display='none'">
       <div class="site-title">

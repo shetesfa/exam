@@ -88,13 +88,13 @@ if ($userDarkModePref === 1) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="አጸደ ትምህርት">
-    <link rel="manifest" href="<?php echo BASE_URL; ?>manifest.json">
-    <link rel="apple-touch-icon" sizes="192x192" href="<?php echo BASE_URL; ?>images/icon-192.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="<?php echo BASE_URL; ?>images/icon-512.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="<?php echo BASE_URL; ?>images/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="<?php echo BASE_URL; ?>images/icon-512.png">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/mobile.css?v=<?php echo file_exists(__DIR__ . '/assets/css/mobile.css') ? filemtime(__DIR__ . '/assets/css/mobile.css') : time(); ?>">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/dark-mode.css?v=<?php echo file_exists(__DIR__ . '/assets/css/dark-mode.css') ? filemtime(__DIR__ . '/assets/css/dark-mode.css') : 1; ?>">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="images/icon-512.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="images/icon-512.png">
+    <link rel="stylesheet" href="assets/css/mobile.css?v=<?php echo file_exists(__DIR__ . '/assets/css/mobile.css') ? filemtime(__DIR__ . '/assets/css/mobile.css') : time(); ?>">
+    <link rel="stylesheet" href="assets/css/dark-mode.css?v=<?php echo file_exists(__DIR__ . '/assets/css/dark-mode.css') ? filemtime(__DIR__ . '/assets/css/dark-mode.css') : time(); ?>">
     <!-- Inline PWA install banner styles — always available on every page -->
     <style>
     #pwa-install-banner{display:none;position:fixed;bottom:0;left:0;right:0;background:#5C2607;color:#fff;padding:12px 18px;justify-content:space-between;align-items:center;gap:10px;z-index:99999;box-shadow:0 -4px 20px rgba(0,0,0,.35);border-top:3px solid #FFD700;font-family:'Segoe UI',Nyala,sans-serif;}
