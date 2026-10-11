@@ -83,7 +83,7 @@ $classes_query = "SELECT c.*,
                   LEFT JOIN divisions d ON g.division_id = d.id
                   LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                   LEFT JOIN teacher_class tc ON c.id = tc.class_id
-                  GROUP BY c.id
+                  GROUP BY c.id, g.name_am, g.level_number, d.code, d.name_am, d.sort_order
                   ORDER BY d.sort_order, g.level_number, c.name";
 $classes = mysqli_query($conn, $classes_query);
 

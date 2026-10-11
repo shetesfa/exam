@@ -74,7 +74,7 @@ if ($teacher_id && $semester_id) {
                               LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                               WHERE tc.teacher_id = ? 
                               AND tc.semester_id = ?
-                              GROUP BY c.id
+                              GROUP BY c.id, tc.id
                               ORDER BY c.name";
     $teacher_classes = dbFetchAll($conn, $teacher_classes_query, "ii", [$teacher_id, $semester_id]);
 }

@@ -52,7 +52,7 @@ $teachers = mysqli_query($conn, $teachers_query);
 
 // Get classes with student counts
 $classes_query = "SELECT c.*, COUNT(s.id) as student_count,
-                  tc.teacher_id, u.name as teacher_name
+                  MAX(tc.teacher_id) as teacher_id, MAX(u.name) as teacher_name
                   FROM classes c
                   LEFT JOIN students s ON c.id = s.class_id AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
                   LEFT JOIN teacher_class tc ON c.id = tc.class_id " . 

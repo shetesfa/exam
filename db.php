@@ -99,6 +99,7 @@ if (!$connected) {
 }
 
 mysqli_set_charset($conn, "utf8mb4");
+@mysqli_query($conn, "SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''))");
 
 // Start unified session if not started
 if (session_status() === PHP_SESSION_NONE) {
