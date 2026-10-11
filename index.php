@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['first_login'] = $matched_user['first_login'];
                     $_SESSION['dark_mode'] = intval($matched_user['dark_mode'] ?? 0);
 
-                    if ($matched_user['first_login'] == 1 && $matched_user['role'] === 'teacher') {
+                    if ($matched_user['first_login'] == 1 && $matched_user['role'] !== 'admin') {
                         header("Location: change_password.php");
                         exit();
                     } elseif ($matched_user['role'] === 'admin') {
