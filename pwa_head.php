@@ -93,7 +93,7 @@ if ($userDarkModePref === 1) {
     <link rel="apple-touch-icon" sizes="512x512" href="<?php echo BASE_URL; ?>images/icon-512.png">
     <link rel="icon" type="image/png" sizes="192x192" href="<?php echo BASE_URL; ?>images/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="<?php echo BASE_URL; ?>images/icon-512.png">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/mobile.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/mobile.css?v=<?php echo file_exists(__DIR__ . '/assets/css/mobile.css') ? filemtime(__DIR__ . '/assets/css/mobile.css') : time(); ?>">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/dark-mode.css?v=<?php echo file_exists(__DIR__ . '/assets/css/dark-mode.css') ? filemtime(__DIR__ . '/assets/css/dark-mode.css') : 1; ?>">
     <!-- Inline PWA install banner styles — always available on every page -->
     <style>

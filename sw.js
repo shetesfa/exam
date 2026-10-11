@@ -2,7 +2,7 @@
  * sw.js - Service Worker for PWA (v4)
  * Provides offline application shell, safe caching, and Web Push notifications.
  */
-const CACHE_NAME = 'exam-pwa-v15';
+const CACHE_NAME = 'exam-pwa-v16';
 
 // Dynamic base path detection derived from registration scope
 const BASE_PATH = (self.registration && self.registration.scope)
