@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Wrong PIN
                     $attempts = ($student['login_attempts'] ?? 0) + 1;
                     
-                    if ($attempts >= 5) {
+                    if ($attempts >= 10) {
                         $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
                         dbExecute(
                             $conn,
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             "ii",
                             [$attempts, $student_id]
                         );
-                        $remaining = 5 - $attempts;
+                        $remaining = 10 - $attempts;
                         $error = "የተሳሳተ ፒን! $remaining ሙከራዎች ቀርተዋል።";
                     }
                 }

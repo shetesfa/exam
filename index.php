@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Wrong password - increment attempts
                     $attempts = ($matched_user['login_attempts'] ?? 0) + 1;
                     
-                    if ($attempts >= 5) {
+                    if ($attempts >= 10) {
                         $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
                         dbExecute(
                             $conn,
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             "ii",
                             [$attempts, $matched_user['id']]
                         );
-                        $remaining = 5 - $attempts;
+                        $remaining = 10 - $attempts;
                         $error = "የተሳሳተ የይለፍ ቃል! $remaining ሙከራዎች ቀርተዋል።";
                     }
                 }
