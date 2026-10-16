@@ -16,3 +16,20 @@ uploads/**
 !uploads/**/
 !uploads/**/.htaccess
 !uploads/**/.gitkeep
+
+# Sensitive & Large Dumps
+*.sql
+!database.sql
+
+# Office & PDF Documents
+*.docx
+*.xlsx
+*.pdf
+
+# Cookies and session caches
+*cookie*.txt
+cookies.txt
+
+# Temporary folders & scratch scripts
+zip/
+scratch/

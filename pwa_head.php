@@ -363,7 +363,7 @@ if (isset($conn) && function_exists('isLoggedIn') && function_exists('isStudent'
 
                 if ("caches" in window && navigator.onLine) {
                     const baseUrl = ' . json_encode(BASE_URL) . ';
-                    caches.open("exam-pwa-v15").then(cache => {
+                    caches.open("exam-pwa-v16").then(cache => {
                         cache.put(baseUrl, new Response("<html><body>Offline fallback</body></html>", { headers: { "Content-Type": "text/html" } }));
                         const urlsToPrecache = [
                             baseUrl,

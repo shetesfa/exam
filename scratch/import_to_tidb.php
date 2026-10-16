@@ -35,16 +35,20 @@ if (!$connected) {
 }
 echo "✓ Successfully connected to TiDB!\n\n";
 
-echo "2. Creating database `$dbname` if not exists...\n";
-if (!mysqli_query($conn, "CREATE DATABASE IF NOT EXISTS `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")) {
+echo "2. Re-creating database `$dbname`...\n";
+mysqli_query($conn, "DROP DATABASE IF EXISTS `$dbname`");
+if (!mysqli_query($conn, "CREATE DATABASE `$dbname` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")) {
     die("Failed to create database: " . mysqli_error($conn) . "\n");
 }
 if (!mysqli_select_db($conn, $dbname)) {
     die("Failed to select database: " . mysqli_error($conn) . "\n");
 }
-echo "✓ Database selected.\n\n";
+echo "✓ Clean database selected.\n\n";
 
-$sqlFile = dirname(__DIR__) . '/atsede_sunday_school (28).sql';
+$sqlFile = dirname(__DIR__) . '/scratch/tidb_dump_utf8.sql';
+if (!file_exists($sqlFile)) {
+    $sqlFile = dirname(__DIR__) . '/scratch/tidb_dump.sql';
+}
 if (!file_exists($sqlFile)) {
     die("SQL file not found at: $sqlFile\n");
 }
@@ -53,33 +57,52 @@ echo "3. Reading SQL file (" . round(filesize($sqlFile) / 1024, 1) . " KB)...\n"
 $sqlContent = file_get_contents($sqlFile);
 
 echo "4. Executing SQL commands...\n";
-// Execute multi query
-if (mysqli_multi_query($conn, $sqlContent)) {
-    $executed = 0;
-    do {
-        $executed++;
-        if ($result = mysqli_store_result($conn)) {
-            mysqli_free_result($result);
-        }
-    } while (mysqli_more_results($conn) && mysqli_next_result($conn));
-    
-    if (mysqli_errno($conn)) {
-        echo "Warning during execution: " . mysqli_error($conn) . "\n";
-    } else {
-        echo "✓ All SQL commands executed successfully ($executed query blocks)!\n";
+// Split into queries safely
+$lines = explode("\n", $sqlContent);
+$query = '';
+$executedCount = 0;
+$errorCount = 0;
+
+mysqli_query($conn, "SET FOREIGN_KEY_CHECKS=0");
+
+foreach ($lines as $line) {
+    $trimmed = trim($line);
+    if ($trimmed === '' || str_starts_with($trimmed, '--') || str_starts_with($trimmed, '/*')) {
+        continue;
     }
-} else {
-    echo "Execution failed: " . mysqli_error($conn) . "\n";
+    $query .= $line . "\n";
+    if (str_ends_with($trimmed, ';')) {
+        if (mysqli_query($conn, $query)) {
+            $executedCount++;
+        } else {
+            $err = mysqli_error($conn);
+            // Ignore minor notices
+            if (!str_contains($err, 'already exists')) {
+                echo "Warning on query: " . substr(trim($query), 0, 80) . "... -> $err\n";
+                $errorCount++;
+            }
+        }
+        $query = '';
+    }
 }
 
-echo "\n5. Verifying imported tables in `$dbname`...\n";
+mysqli_query($conn, "SET FOREIGN_KEY_CHECKS=1");
+
+echo "✓ Finished executing queries ($executedCount successful, $errorCount warnings)!\n\n";
+
+echo "5. Verifying imported tables in `$dbname`...\n";
 $tablesResult = mysqli_query($conn, "SHOW TABLES");
 $tables = [];
 while ($row = mysqli_fetch_row($tablesResult)) {
     $tables[] = $row[0];
 }
 echo "Imported tables count: " . count($tables) . "\n";
-echo "Tables: " . implode(', ', $tables) . "\n\n";
+echo "Tables list:\n";
+foreach ($tables as $t) {
+    $cntRes = mysqli_query($conn, "SELECT COUNT(*) FROM `$t`");
+    $cntRow = $cntRes ? mysqli_fetch_row($cntRes) : [0];
+    echo "  - $t: " . $cntRow[0] . " rows\n";
+}
 
-echo "=== TiDB IMPORT COMPLETED SUCCESSFULLY! ===\n";
+echo "\n=== TiDB IMPORT COMPLETED SUCCESSFULLY! ===\n";
 mysqli_close($conn);
