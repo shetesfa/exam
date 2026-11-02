@@ -197,7 +197,7 @@ if ($userDarkModePref === 1) {
     // Service Worker registration
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('<?php echo BASE_URL; ?>sw.js', { scope: '<?php echo BASE_URL; ?>' })
+            navigator.serviceWorker.register('<?php echo BASE_URL; ?>sw.js?v=<?php echo file_exists(__DIR__ . "/sw.js") ? filemtime(__DIR__ . "/sw.js") : "19"; ?>', { scope: '<?php echo BASE_URL; ?>' })
                 .then(reg => {
                     // Update check
                     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });

@@ -10,7 +10,7 @@
  *   - meta        : sync cursor (last successful pull timestamp)
  */
 const DB_NAME = 'exam_offline_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -34,6 +34,9 @@ function openDB() {
             }
             if (!db.objectStoreNames.contains('meta')) {
                 db.createObjectStore('meta', { keyPath: 'key' });
+            }
+            if (!db.objectStoreNames.contains('exams')) {
+                db.createObjectStore('exams', { keyPath: 'local_id' });
             }
         };
         req.onsuccess = () => resolve(req.result);
@@ -465,7 +468,7 @@ const OfflineDB = {
     },
     async clearAll() {
         const db = await openDB();
-        const storeNames = ['auth', 'classes', 'students', 'attendance', 'marks', 'meta'];
+        const storeNames = ['auth', 'classes', 'students', 'attendance', 'marks', 'meta', 'exams'];
         return Promise.all(storeNames.map(name => {
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(name, 'readwrite');
@@ -476,6 +479,25 @@ const OfflineDB = {
             });
         }));
     },
+        // ---- Offline Exam Storage ----
+    async saveOfflineExam(exam) {
+        if (!exam.local_id) exam.local_id = 'exam_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        exam.updated_at = new Date().toISOString();
+        return tx('exams', 'readwrite', (store) => store.put(exam));
+    },
+    async getOfflineExams() {
+        const db = await openDB();
+        return new Promise((resolve) => {
+            if (!db.objectStoreNames.contains('exams')) return resolve([]);
+            const req = db.transaction('exams', 'readonly').objectStore('exams').getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => resolve([]);
+        });
+    },
+    async deleteOfflineExam(localId) {
+        return tx('exams', 'readwrite', (store) => store.delete(localId));
+    },
+
     async getActiveSemester() {
         const db = await openDB();
         return new Promise((resolve) => {

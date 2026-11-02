@@ -2,8 +2,8 @@
 require_once 'db.php';
 ensureExamTablesExist($conn);
 
-// Allow teachers, admins, and authenticated users to view print
-if (empty($_SESSION['user_id']) && empty($_SESSION['role'])) {
+// Authentication check
+if (empty($_SESSION['user_id']) && empty($_SESSION['role']) && empty($_SESSION['student_id'])) {
     header("Location: index.php");
     exit();
 }
@@ -13,12 +13,12 @@ if ($exam_id <= 0) {
     die("ትክክለኛ የፈተና መለያ አልተገኘም!");
 }
 
-// Fetch exam details
+// Fetch exam details with safe LEFT JOIN
 $exam = dbFetchOne($conn, 
-    "SELECT e.*, c.name as class_name, u.name as teacher_name 
+    "SELECT e.*, COALESCE(c.name, 'ያልታወቀ ክፍል') as class_name, COALESCE(u.name, 'ያልታወቀ መምህር') as teacher_name 
      FROM exams e 
-     JOIN classes c ON e.class_id = c.id 
-     JOIN users u ON e.teacher_id = u.id 
+     LEFT JOIN classes c ON e.class_id = c.id 
+     LEFT JOIN users u ON e.teacher_id = u.id 
      WHERE e.id = ?", 
     "i", [$exam_id]
 );
@@ -36,29 +36,29 @@ $questions = dbFetchAll($conn,
 // Show Answer Key flag
 $show_key = isset($_GET['key']) && $_GET['key'] == '1';
 
-// Calculate totals
+// Calculate totals safely
 $total_marks = 0;
 foreach ($questions as $q) {
-    $total_marks += floatval($q['marks']);
+    $total_marks += floatval($q['marks'] ?? 0);
 }
 if ($total_marks == 0) {
-    $total_marks = floatval($exam['total_marks']);
+    $total_marks = floatval($exam['total_marks'] ?? 100);
 }
 
 // Prepare Exam Title from user's template
-$ethiopian_year = $exam['ethiopian_year'];
-$class_name = $exam['class_name'];
-$subject_name = $exam['subject_name'];
-$semester_name = ($exam['semester_id'] == 2) ? 'የ2ኛመንፈቀ ዓመት' : 'የ1ኛመንፈቀ ዓመት';
+$ethiopian_year = $exam['ethiopian_year'] ?? 2018;
+$class_name = $exam['class_name'] ?? 'ክፍል';
+$subject_name = $exam['subject_name'] ?? 'ትምህርት';
+$semester_name = (($exam['semester_id'] ?? 1) == 2) ? 'የ2ኛመንፈቀ ዓመት' : 'የ1ኛመንፈቀ ዓመት';
 
 $exam_type_text = 'የአጋማሽ ፈተና';
-if ($exam['exam_type'] === 'final') {
+if (($exam['exam_type'] ?? '') === 'final') {
     $exam_type_text = 'የማጠቃለያ ፈተና';
-} elseif ($exam['exam_type'] === 'quiz') {
+} elseif (($exam['exam_type'] ?? '') === 'quiz') {
     $exam_type_text = 'የክፍል ፈተና';
 }
 
-$official_title = !empty($exam['title']) ? $exam['title'] : 
+$official_title = !empty($exam['title']) ? (string)$exam['title'] : 
     "የአያት መካነ ሰማዕት ቅዱስ ጊዮርጊስ ቅድስት ኪዳነ ምሕረት ወአቡነ ሀብተማርያም ቤተ ክርስቲያን አጸደ ትጉሃን ሰንበት ትምህርት ቤት የ{$ethiopian_year} ዓ.ም የ{$class_name} የ{$subject_name} {$semester_name} {$exam_type_text}";
 
 // Ensure the church and school full prefix exists if title is simple
@@ -66,14 +66,14 @@ if (strpos($official_title, 'አጸደ ትጉሃን') === false) {
     $official_title = "የአያት መካነ ሰማዕት ቅዱስ ጊዮርጊስ ቅድስት ኪዳነ ምሕረት ወአቡነ ሀብተማርያም ቤተ ክርስቲያን አጸደ ትጉሃን ሰንበት ትምህርት ቤት " . $official_title;
 }
 
-$page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam['subject_name'];
+$page_title = "የፈተና ወረቀት - " . $class_name . " " . $subject_name;
 ?>
 <!DOCTYPE html>
 <html lang="am">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($page_title); ?></title>
+    <title><?php echo htmlspecialchars((string)$page_title); ?></title>
     <link rel="icon" type="image/png" href="images/icon.png">
     <style>
         @page {
@@ -93,16 +93,18 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             padding: 20px 0;
             font-size: 14pt;
             line-height: 1.5;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        /* Screen toolbar (hidden when printing) */
+        /* Screen toolbar */
         .no-print-bar {
             max-width: 210mm;
             margin: 0 auto 16px auto;
             background: #ffffff;
             padding: 12px 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -116,15 +118,16 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             align-items: center;
             gap: 6px;
             padding: 8px 16px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            border-radius: 6px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            border-radius: 8px;
             cursor: pointer;
             text-decoration: none;
             border: 1px solid transparent;
             transition: all 0.2s;
         }
 
+        .btn:hover { transform: translateY(-1px); }
         .btn-print { background: #1e3a8a; color: #ffffff; }
         .btn-print:hover { background: #172554; }
         .btn-key { background: #8B4513; color: #ffffff; }
@@ -139,12 +142,12 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             margin: 0 auto;
             background: #ffffff;
             padding: 16mm 20mm;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 0 16px rgba(0, 0, 0, 0.12);
             position: relative;
         }
 
         /* ==============================================================
-           OFFICIAL EXAM HEADER (EXACTLY MATCHING USER'S ATTACHED IMAGE)
+           OFFICIAL EXAM HEADER (EXACT USER SPEC FROM IMAGE)
            ============================================================== */
         .official-header {
             width: 100%;
@@ -199,7 +202,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             justify-content: space-between;
             width: 100%;
             font-size: 1.15rem;
-            font-weight: 700;
+            font-weight: 800;
             color: #000000;
             margin-bottom: 8px;
             padding: 0 2px;
@@ -227,7 +230,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             margin-bottom: 2px;
         }
 
-        /* Thick Brown Divider (Matches User Sample #8B4513) */
+        /* Thick Brown Divider (#8B4513) */
         .brown-divider {
             width: 100%;
             height: 5px;
@@ -253,7 +256,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             align-items: center;
             justify-content: space-between;
             font-size: 0.95rem;
-            font-weight: 700;
+            font-weight: 800;
             border-top: 1px dashed #475569;
             border-bottom: 1px dashed #475569;
             padding: 6px 10px;
@@ -264,17 +267,15 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             font-size: 0.98rem;
             font-style: italic;
             margin-bottom: 16px;
-            padding: 4px 8px;
+            padding: 6px 10px;
             background: #fafafa;
-            border-left: 3px solid #8B4513;
+            border-left: 3.5px solid #8B4513;
         }
 
-        /* ==============================================================
-           QUESTIONS SECTION
-           ============================================================== */
+        /* Questions Section */
         .section-header {
             font-size: 1.15rem;
-            font-weight: 800;
+            font-weight: 900;
             margin-top: 20px;
             margin-bottom: 10px;
             color: #000000;
@@ -298,7 +299,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
         }
 
         .q-number {
-            font-weight: 800;
+            font-weight: 900;
             min-width: 28px;
         }
 
@@ -308,7 +309,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
         }
 
         .q-mark-badge {
-            font-weight: 700;
+            font-weight: 800;
             white-space: nowrap;
             font-size: 0.92rem;
         }
@@ -319,7 +320,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             min-width: 80px;
             border-bottom: 1px solid #000000;
             text-align: center;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         /* Choice options layout */
@@ -339,7 +340,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
         }
 
         .choice-letter {
-            font-weight: 800;
+            font-weight: 900;
         }
 
         /* Matching table */
@@ -363,7 +364,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
         .matching-mid {
             width: 10%;
             text-align: center;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .matching-right {
@@ -394,20 +395,16 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             margin-left: 8px;
         }
 
-        /* Footer watermark/info */
         .exam-footer-note {
             margin-top: 30px;
             text-align: center;
             font-size: 0.85rem;
-            font-weight: 700;
+            font-weight: 800;
             border-top: 1px solid #000000;
             padding-top: 8px;
             color: #333333;
         }
 
-        /* ==============================================================
-           PRINT MEDIA QUERIES (OPTIMIZED FOR CLEAN A4 PAPER)
-           ============================================================== */
         @media print {
             body {
                 background: #ffffff;
@@ -458,14 +455,14 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             <span style="font-weight:700; color:#1e3a8a; font-size:1.05rem;">
                 📄 የፈተና ወረቀት ማተሚያ
             </span>
-            <span style="background:#e2e8f0; padding:3px 8px; border-radius:4px; font-size:0.85rem; font-weight:600;">
-                <?php echo htmlspecialchars($exam['class_name'] . ' - ' . $exam['subject_name']); ?>
+            <span style="background:#e2e8f0; padding:3px 8px; border-radius:6px; font-size:0.85rem; font-weight:700;">
+                <?php echo htmlspecialchars((string)($exam['class_name'] . ' - ' . $exam['subject_name'])); ?>
             </span>
         </div>
 
         <div style="display:flex; align-items:center; gap:8px;">
             <button onclick="window.print()" class="btn btn-print">
-                🖨️ ፈተናውን አትም (Print Exam)
+                🖨️ ፈተናውን አትም (Print)
             </button>
             <?php if ($show_key): ?>
                 <a href="exam_print.php?id=<?php echo $exam_id; ?>" class="btn btn-back">
@@ -487,23 +484,19 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
              ========================================== -->
         <header class="official-header">
             <div class="header-top-row">
-                <!-- Left: Amharic Name -->
                 <div class="header-amharic">
                     አጸደ ትጉሃን ሰንበት ትምህርት ቤት
                 </div>
 
-                <!-- Center: Round Sunday School Logo -->
                 <div class="header-logo-box">
                     <img src="images/icon.png" alt="አርማ" onerror="this.style.display='none'">
                 </div>
 
-                <!-- Right: English Name -->
                 <div class="header-english">
                     Atsede Teguhan Sunday School
                 </div>
             </div>
 
-            <!-- Student Name, Class, Christian Name Line -->
             <div class="student-info-row">
                 <div class="info-field field-name">
                     <span class="info-label">ስም</span>
@@ -511,9 +504,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
                 </div>
                 <div class="info-field field-class">
                     <span class="info-label">ክፍል</span>
-                    <div class="info-line" style="text-align:center; font-weight:800;">
-                        <!-- Leave blank for student to fill, or print class name -->
-                    </div>
+                    <div class="info-line" style="text-align:center; font-weight:800;"></div>
                 </div>
                 <div class="info-field field-chr-name">
                     <span class="info-label">የክርስትና ስም</span>
@@ -521,19 +512,17 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
                 </div>
             </div>
 
-            <!-- Thick Brown Line -->
             <div class="brown-divider"></div>
 
-            <!-- Centered Official Exam Title -->
             <div class="exam-main-title">
-                <?php echo htmlspecialchars($official_title); ?>
+                <?php echo htmlspecialchars((string)$official_title); ?>
             </div>
         </header>
 
         <!-- Sub Info & Instructions -->
         <div class="exam-sub-bar">
             <div>
-                <span>የተፈቀደው ሰዓት፦ <strong><?php echo $exam['duration_minutes']; ?> ደቂቃ</strong></span>
+                <span>የተፈቀደው ሰዓት፦ <strong><?php echo intval($exam['duration_minutes'] ?? 60); ?> ደቂቃ</strong></span>
             </div>
             <div>
                 <span>ጠቅላላ ነጥብ፦ <strong><?php echo $total_marks; ?>%</strong></span>
@@ -542,7 +531,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
 
         <?php if (!empty($exam['instructions'])): ?>
             <div class="exam-instructions-box">
-                <strong>አጠቃላይ መመሪያ፦</strong> <?php echo nl2br(htmlspecialchars($exam['instructions'])); ?>
+                <strong>አጠቃላይ መመሪያ፦</strong> <?php echo nl2br(htmlspecialchars((string)$exam['instructions'])); ?>
             </div>
         <?php endif; ?>
 
@@ -557,44 +546,43 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
 
             <?php foreach ($questions as $q): ?>
                 <?php 
-                    // Section title grouping
-                    if (!empty($q['section_title']) && $q['section_title'] !== $current_section) {
-                        $current_section = $q['section_title'];
-                        echo '<div class="section-header">' . htmlspecialchars($current_section) . '</div>';
+                    $sec = (string)($q['section_title'] ?? '');
+                    if (!empty($sec) && $sec !== $current_section) {
+                        $current_section = $sec;
+                        echo '<div class="section-header">' . htmlspecialchars((string)$current_section) . '</div>';
                     }
 
-                    $q_type = $q['question_type'];
-                    $q_marks = floatval($q['marks']);
+                    $q_type = $q['question_type'] ?? 'choice';
+                    $q_marks = floatval($q['marks'] ?? 1.0);
                     $opts = !empty($q['options_json']) ? json_decode($q['options_json'], true) : [];
+                    if (!is_array($opts)) $opts = [];
                 ?>
 
                 <div class="question-item">
-                    <!-- Question Text & Mark -->
                     <div class="q-text-row">
                         <div class="q-number"><?php echo $q_counter; ?>.</div>
                         <div class="q-body">
-                            <?php echo htmlspecialchars($q['question_text']); ?>
+                            <?php echo htmlspecialchars((string)$q['question_text']); ?>
 
                             <?php if ($q_type === 'true_false'): ?>
-                                <span style="margin-left: 10px;">( <span class="tf-answer-blank"><?php if ($show_key && !empty($q['correct_answer'])) echo htmlspecialchars($q['correct_answer']); ?></span> )</span>
+                                <span style="margin-left: 10px;">( <span class="tf-answer-blank"><?php if ($show_key && !empty($q['correct_answer'])) echo htmlspecialchars((string)$q['correct_answer']); ?></span> )</span>
                             <?php elseif ($q_type === 'blank'): ?>
                                 <?php if ($show_key && !empty($q['correct_answer'])): ?>
-                                    <span class="key-indicator">መልስ፦ <?php echo htmlspecialchars($q['correct_answer']); ?></span>
+                                    <span class="key-indicator">መልስ፦ <?php echo htmlspecialchars((string)$q['correct_answer']); ?></span>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
                         <div class="q-mark-badge">(<?php echo $q_marks; ?> ነጥብ)</div>
                     </div>
 
-                    <!-- Type Specific Rendering -->
                     <?php if ($q_type === 'choice' && !empty($opts)): ?>
                         <div class="choice-grid">
                             <?php foreach ($opts as $letter => $val): ?>
-                                <?php if (trim($val) === '') continue; ?>
+                                <?php if (trim((string)$val) === '') continue; ?>
                                 <div class="choice-option">
-                                    <span class="choice-letter"><?php echo htmlspecialchars($letter); ?>.</span>
-                                    <span><?php echo htmlspecialchars($val); ?></span>
-                                    <?php if ($show_key && $q['correct_answer'] === $letter): ?>
+                                    <span class="choice-letter"><?php echo htmlspecialchars((string)$letter); ?>.</span>
+                                    <span><?php echo htmlspecialchars((string)$val); ?></span>
+                                    <?php if ($show_key && ($q['correct_answer'] ?? '') === $letter): ?>
                                         <span class="key-indicator">✓ ትክክለኛ</span>
                                     <?php endif; ?>
                                 </div>
@@ -605,13 +593,13 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
                             <?php foreach ($opts as $pair): ?>
                                 <tr>
                                     <td class="matching-left">
-                                        <?php echo htmlspecialchars($pair['num'] ?? ''); ?>. <?php echo htmlspecialchars($pair['left'] ?? ''); ?>
+                                        <?php echo htmlspecialchars((string)($pair['num'] ?? '')); ?>. <?php echo htmlspecialchars((string)($pair['left'] ?? '')); ?>
                                     </td>
                                     <td class="matching-mid">
-                                        ( <?php echo ($show_key ? '<strong>' . htmlspecialchars($pair['right'] ?? '') . '</strong>' : '______'); ?> )
+                                        ( <?php echo ($show_key ? '<strong>' . htmlspecialchars((string)($pair['right'] ?? '')) . '</strong>' : '______'); ?> )
                                     </td>
                                     <td class="matching-right">
-                                        <?php echo htmlspecialchars($pair['right'] ?? ''); ?>
+                                        <?php echo htmlspecialchars((string)($pair['right'] ?? '')); ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -627,7 +615,7 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
                         </div>
                         <?php if ($show_key && !empty($q['correct_answer'])): ?>
                             <div style="margin-left: 28px; margin-top: 4px;">
-                                <span class="key-indicator">የመምህሩ የመልስ ቁልፍ፦ <?php echo htmlspecialchars($q['correct_answer']); ?></span>
+                                <span class="key-indicator">የመምህሩ የመልስ ቁልፍ፦ <?php echo htmlspecialchars((string)$q['correct_answer']); ?></span>
                             </div>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -637,7 +625,6 @@ $page_title = "የፈተና ወረቀት - " . $exam['class_name'] . " " . $exam
             <?php endforeach; ?>
         </main>
 
-        <!-- Official Bottom Note -->
         <footer class="exam-footer-note">
             <span>«እግዚአብሔር አምላክ ማስተዋሉን ያድላችሁ!»</span>
         </footer>
