@@ -548,7 +548,22 @@ $nav_active = 'dashboard_teacher';
 
         <?php if(!empty($teacher_classes) && $selected_class): ?>
             
-            <div class="classes-bar">
+            <!-- Teacher Exam Authoring Quick Card -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color:white; border-radius:16px; padding:15px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; box-shadow:0 4px 12px rgba(30,58,138,0.2);">
+            <div>
+                <h3 style="margin:0 0 4px 0; font-size:15px; color:#FFD700; display:flex; align-items:center; gap:8px;">
+                    📝 የፈተና ጥያቄዎች ዝግጅት ማዕከል
+                </h3>
+                <p style="margin:0; font-size:12px; opacity:0.9;">
+                    የፈተና ጥያቄዎችን በምርጫ፣ በእውነት/ሐሰት፣ በአዛምድ እና በክፍት ጥያቄ ያዘጋጁ፤ ለትምህርት ክፍል ይላኩ።
+                </p>
+            </div>
+            <a href="exam_author.php" style="background:#FFD700; color:#8B4513; padding:8px 16px; border-radius:20px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                ✍️ ፈተና አዘጋጅ / እይ
+            </a>
+        </div>
+
+        <div class="classes-bar">
                 <h3>📚 የተመደቡባቸው ክፍሎች (<?php echo count($teacher_classes); ?>)</h3>
                 <div class="class-buttons">
                     <?php foreach($teacher_classes as $class): ?>

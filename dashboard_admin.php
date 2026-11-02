@@ -74,6 +74,10 @@ if ($semester_id > 0) {
     $recent_marks = dbQuery($conn, $marks_query, "i", [$semester_id]);
 }
 
+$pending_exams_count = 0;
+$pex = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM exams WHERE status = 'submitted'");
+if ($pex) $pending_exams_count = intval($pex['cnt']);
+
 $nav_active = 'dashboard_admin';
 ?>
 <!DOCTYPE html>
@@ -326,6 +330,26 @@ $nav_active = 'dashboard_admin';
             በ<?php echo $d; ?> ቀን ውስጥ
         </div>
         <?php endif; ?>
+
+        <!-- Exam Section Admin Quick Banner -->
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color:white; border-radius:14px; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 14px rgba(30,58,138,0.2);">
+            <div>
+                <h3 style="margin:0 0 4px 0; font-size:16px; color:#FFD700; display:flex; align-items:center; gap:8px;">
+                    📑 የፈተናዎች ግምገማ፣ ማጽደቂያና ማተሚያ
+                </h3>
+                <p style="margin:0; font-size:12px; opacity:0.9;">
+                    መምህራን ያዘጋጇቸውን ፈተናዎች ይገምግሙ፣ ያጽድቁ፤ በተዘጋጀው ይፋዊ ራስጌ በቀጥታ ያትሙ።
+                </p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="exam_admin_manage.php" style="background:#FFD700; color:#8B4513; padding:8px 16px; border-radius:20px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                    👁️ ፈተናዎችን እይ / አትም
+                </a>
+                <a href="exam_author.php?action=new" style="background:white; color:#1e3a8a; padding:8px 16px; border-radius:20px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                    ➕ አዲስ ፈተና
+                </a>
+            </div>
+        </div>
 
         <!-- Teachers Section -->
         <div class="section">

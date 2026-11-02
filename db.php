@@ -207,6 +207,22 @@ function dbFetchOne($conn, $sql, $types = "", $params = []) {
     return mysqli_fetch_assoc($result);
 }
 
+function dbInsert($conn, $sql, $types = "", $params = []) {
+    if (empty($params)) {
+        $res = mysqli_query($conn, $sql);
+        return $res ? mysqli_insert_id($conn) : false;
+    }
+    $stmt = mysqli_prepare($conn, $sql);
+    if (!$stmt) return false;
+    if (!empty($types) && !empty($params)) {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+    }
+    $success = mysqli_stmt_execute($stmt);
+    $insertId = $success ? mysqli_insert_id($conn) : false;
+    mysqli_stmt_close($stmt);
+    return $insertId;
+}
+
 function dbExecute($conn, $sql, $types = "", $params = []) {
     if (empty($params)) {
         return mysqli_query($conn, $sql);
@@ -1290,4 +1306,56 @@ function checkAutomatedSchoolAlerts($conn) {
     }
     return true;
 }
+
+function ensureExamTablesExist($conn) {
+    static $checked = false;
+    if ($checked) return true;
+    $checked = true;
+
+    $sql1 = "CREATE TABLE IF NOT EXISTS `exams` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `teacher_id` INT NOT NULL,
+        `class_id` INT NOT NULL,
+        `subject_name` VARCHAR(150) NOT NULL,
+        `semester_id` INT NOT NULL,
+        `ethiopian_year` INT NOT NULL DEFAULT 2018,
+        `exam_type` VARCHAR(50) NOT NULL DEFAULT 'mid',
+        `title` VARCHAR(255) NOT NULL,
+        `instructions` TEXT NULL,
+        `total_marks` DECIMAL(5,2) NOT NULL DEFAULT 100.00,
+        `duration_minutes` INT NOT NULL DEFAULT 60,
+        `status` ENUM('draft', 'submitted', 'approved', 'revision_requested') NOT NULL DEFAULT 'draft',
+        `admin_feedback` TEXT NULL,
+        `reviewed_by` INT NULL,
+        `reviewed_at` DATETIME NULL,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX (`teacher_id`),
+        INDEX (`class_id`),
+        INDEX (`semester_id`),
+        INDEX (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+
+    $sql2 = "CREATE TABLE IF NOT EXISTS `exam_questions` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `exam_id` INT NOT NULL,
+        `section_title` VARCHAR(150) NULL,
+        `question_type` ENUM('choice', 'true_false', 'matching', 'workout', 'blank') NOT NULL DEFAULT 'choice',
+        `question_text` TEXT NOT NULL,
+        `options_json` LONGTEXT NULL,
+        `correct_answer` TEXT NULL,
+        `marks` DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+        `order_num` INT NOT NULL DEFAULT 1,
+        `blank_lines` INT NOT NULL DEFAULT 3,
+        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (`exam_id`),
+        INDEX (`order_num`),
+        CONSTRAINT `fk_exam_questions_exam` FOREIGN KEY (`exam_id`) REFERENCES `exams` (`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+
+    @mysqli_query($conn, $sql1);
+    @mysqli_query($conn, $sql2);
+    return true;
+}
+
 ?>

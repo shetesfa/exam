@@ -31,6 +31,7 @@ if ($nav_role === 'admin') {
         ['url' => 'attendance_controller.php',        'icon' => '📊', 'label' => 'የአቴንዳንስ መቆጣጠሪያ',     'key' => 'attendance_controller',        'category' => 'አቴንዳንስና ክትትል'],
         ['url' => 'teacher_marks_viewer.php',         'icon' => '👁️', 'label' => 'የመምህራን ውጤት',         'key' => 'teacher_marks_viewer',         'category' => 'ውጤትና ምዘና'],
         ['url' => 'print_results.php',                'icon' => '🖨️', 'label' => 'ውጤት ማተሚያ',           'key' => 'print_results',                'category' => 'ውጤትና ምዘና'],
+        ['url' => 'exam_admin_manage.php',            'icon' => '📑', 'label' => 'የፈተና ዝግጅትና ማተሚያ', 'key' => 'exam_admin_manage',     'category' => 'ውጤትና ምዘና'],
         ['url' => 'manage_users.php',                 'icon' => '👤', 'label' => 'ተጠቃሚዎች',              'key' => 'manage_users',                 'category' => 'ተጠቃሚዎችና ስርዓት'],
         ['url' => 'admin_settings.php',               'icon' => '⚙️', 'label' => 'ቅንብሮች',                'key' => 'admin_settings',               'category' => 'ተጠቃሚዎችና ስርዓት'],
         
@@ -79,6 +80,7 @@ if ($nav_role === 'admin') {
         ['url' => 'dashboard_teacher.php',        'icon' => '🏠', 'label' => 'ዳሽቦርድ',      'key' => 'dashboard_teacher'],
         $attendance_item,
         ['url' => 'teacher_marking_scheme.php',   'icon' => '📐', 'label' => 'የውጤት መስፈርት',   'key' => 'teacher_marking_scheme'],
+        ['url' => 'exam_author.php',              'icon' => '📝', 'label' => 'የፈተና ዝግጅት',     'key' => 'exam_author'],
         ['url' => 'teacher_profile.php',          'icon' => '👤', 'label' => 'መረጃዬ',        'key' => 'teacher_profile'],
     ];
     if ($can_plan) {
