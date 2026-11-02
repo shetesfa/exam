@@ -405,6 +405,56 @@ $page_title = "የፈተና ወረቀት - " . $class_name . " " . $subject_name
             color: #333333;
         }
 
+        @media screen and (max-width: 768px) {
+            body {
+                padding: 10px 6px;
+                font-size: 11.5pt;
+            }
+            .no-print-bar {
+                padding: 10px 12px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .no-print-bar > div {
+                justify-content: space-between;
+                width: 100%;
+            }
+            .exam-page {
+                width: 100% !important;
+                min-height: auto !important;
+                padding: 14px 12px !important;
+                border-radius: 10px;
+            }
+            .header-top-row {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+            .header-amharic, .header-english {
+                text-align: center;
+                font-size: 1.15rem;
+            }
+            .student-info-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .info-field.field-class {
+                margin: 0;
+            }
+            .choice-grid {
+                grid-template-columns: 1fr;
+                margin-left: 12px;
+            }
+            .matching-table {
+                margin-left: 0;
+                font-size: 0.95rem;
+            }
+            .workout-lines {
+                margin-left: 10px;
+            }
+        }
+
         @media print {
             body {
                 background: #ffffff;

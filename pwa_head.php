@@ -119,7 +119,7 @@ if ($userDarkModePref === 1) {
     <!-- Offline DB, Sync Manager, Push Notifications, and Offline Calendar Alerts Scripts -->
     <?php
     // Automated check for Church Feasts & Sunday 04:50 Children Teacher alerts
-    if (isset($conn) && function_exists('checkAutomatedSchoolAlerts')) {
+    if (!empty($_SESSION['user_id']) && isset($conn) && function_exists('checkAutomatedSchoolAlerts')) {
         @checkAutomatedSchoolAlerts($conn);
     }
     $is_child_t = false;

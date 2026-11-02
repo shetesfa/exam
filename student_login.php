@@ -1,6 +1,5 @@
 <?php
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Pragma: no-cache");
+// Fast response headers
 require_once 'db.php';
 
 // Redirect if already logged in as student
@@ -51,7 +50,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'search') {
 }
 
 // Handle login
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$is_ajax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') || (isset($_POST['ajax']) && $_POST['ajax'] === '1');
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $submitted_token = $_POST['csrf_token'] ?? '';
     $csrf_valid = verifyCsrfToken($submitted_token);
 
@@ -123,6 +124,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['dark_mode'] = intval($student['dark_mode'] ?? 0);
                         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                         
+                        if ($is_ajax) {
+                            header('Content-Type: application/json');
+                            $redir = (($student['first_login'] ?? 1) == 1) ? 'student_change_pin.php' : 'dashboard_student.php';
+                            echo json_encode(['success' => true, 'redirect' => $redir, 'student' => ['id' => $student['id'], 'name' => $student['name'], 'role' => 'student']]);
+                            exit();
+                        }
                         if (($student['first_login'] ?? 1) == 1) {
                             header("Location: student_change_pin.php");
                         } else {
@@ -161,6 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = "እባክዎ ስምዎን መርጠው ፒን ያስገቡ!";
         }
+    }
+    if ($is_ajax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => $error]);
+        exit();
     }
 }
 ?>
@@ -586,58 +598,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         };
 
-        // Cache student login online & handle offline submit
+        // Fast Instant AJAX Student Login & Seamless Offline Fallback
         const studentLoginForm = document.getElementById('loginForm');
+        const loginBtn = document.querySelector('.btn-login');
         if (studentLoginForm) {
-            let isSubmitting = false;
             studentLoginForm.addEventListener('submit', async function(e) {
-                if (isSubmitting) return;
                 e.preventDefault();
-
-                const studentId = document.getElementById('studentIdInput').value;
-                const name = document.getElementById('searchInput').value;
-                const pin = document.getElementById('pinInput').value;
-
-                // Probe if local or remote server is reachable
-                let isServerUp = false;
-                try {
-                    const controller = new AbortController();
-                    const t = setTimeout(() => controller.abort(), 1200);
-                    const ping = await fetch('api/ping.php?t=' + Date.now(), { method: 'GET', cache: 'no-store', signal: controller.signal });
-                    clearTimeout(t);
-                    isServerUp = ping.ok;
-                } catch (_) {
-                    isServerUp = false;
+                if (loginBtn) {
+                    loginBtn.disabled = true;
+                    loginBtn.innerText = 'በመግባት ላይ... ⏳';
                 }
 
-                if (isServerUp) {
-                    // Server reachable: cache credentials in background for future PWA use
-                    try {
-                        const authRes = await fetch('api/auth.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ student_name: name, pin: pin, is_student: true })
-                        });
-                        const authData = await authRes.json();
-                        if (authData.success && authData.token) {
-                            await OfflineDB.saveAuth(authData.user, authData.token, authData.expires_at);
-                        }
-                    } catch (_) {}
+                const formData = new FormData(studentLoginForm);
+                formData.append('ajax', '1');
+                const studentId = document.getElementById('studentIdInput')?.value || '';
+                const name = document.getElementById('searchInput')?.value || '';
+                const pin = document.getElementById('pinInput')?.value || '';
 
-                    // Submit form normally to PHP
-                    isSubmitting = true;
-                    studentLoginForm.submit();
-                } else {
-                    // Server unreachable: attempt offline login
+                try {
+                    const res = await fetch('student_login.php', {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.redirect) {
+                            if (loginBtn) loginBtn.innerText = 'ተሳክቷል! በማስገባት ላይ... ✓';
+                            if (typeof OfflineDB !== 'undefined' && data.student) {
+                                try {
+                                    await OfflineDB.saveAuth(data.student, 'student_token_' + data.student.id, null);
+                                } catch (_) {}
+                            }
+                            window.location.href = data.redirect;
+                            return;
+                        } else {
+                            alert(data.message || 'የተሳሳተ ፒን ወይም ተማሪ አልተመረጠም!');
+                            if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = 'ግባ'; }
+                            return;
+                        }
+                    }
+                } catch (_) {}
+
+                // Offline fallback
+                if (typeof OfflineDB !== 'undefined') {
                     const auth = await OfflineDB.getAuth();
                     if (auth && auth.user && auth.user.role === 'student' && auth.user.id == studentId) {
                         sessionStorage.setItem('offline_user', JSON.stringify(auth.user));
                         sessionStorage.setItem('offline_token', auth.token);
                         window.location.href = 'dashboard_student.php';
-                    } else {
-                        alert('Offline ለመግባት አስቀድመው አንዴ ከሰርቨሩ ጋር ተገናኝተው መግባት አለብዎት!');
+                        return;
                     }
                 }
+                alert('የኔትወርክ ግንኙነት የለም! እባክዎ ኢንተርኔትዎን ይፈትሹ።');
+                if (loginBtn) { loginBtn.disabled = false; loginBtn.innerText = 'ግባ'; }
             });
         }
     </script>

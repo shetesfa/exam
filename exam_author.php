@@ -631,8 +631,17 @@ $page_title = "የፈተና ዝግጅትና መላኪያ ማዕከል";
 
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
-            .sticky-actions { flex-direction: column; align-items: stretch; }
+            .sticky-actions { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; }
+            .sticky-actions > div { width: 100%; flex-direction: column; }
             .sticky-actions .btn { width: 100%; }
+            .options-grid { grid-template-columns: 1fr; }
+            .type-picker-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding: 8px 6px; }
+            .btn-type-pill { white-space: nowrap; flex-shrink: 0; }
+            .q-header { flex-direction: column; align-items: stretch; gap: 10px; }
+            .q-header > div { justify-content: space-between; width: 100%; }
+            .stats-bar { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .header-card { padding: 16px 14px; }
+            .card { padding: 16px 12px; }
         }
     </style>
 </head>

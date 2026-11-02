@@ -1,6 +1,11 @@
 <?php
 require_once 'db.php';
 
+// Clear remember me cookie and revoke token
+if (function_exists('clearRememberMeCookie')) {
+    clearRememberMeCookie($conn);
+}
+
 // Revoke all offline tokens for the current user
 $user_id = intval($_SESSION['user_id'] ?? 0);
 if ($user_id > 0) {

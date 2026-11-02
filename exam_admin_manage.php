@@ -362,6 +362,17 @@ $page_title = "የትምህርት ክፍል የፈተና ግምገማና ማተ�
             justify-content: center;
             padding: 16px;
         }
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .header-card { padding: 16px 14px; flex-direction: column; align-items: flex-start; }
+            .header-card > div { width: 100%; }
+            .filter-form { flex-direction: column; align-items: stretch; }
+            .filter-form > div { width: 100%; }
+            .filter-form select, .filter-form input { width: 100%; box-sizing: border-box; }
+            .card { padding: 16px 12px; }
+            .exam-table th, .exam-table td { padding: 10px 8px; font-size: 0.84rem; }
+        }
+
         .modal-box {
             background: #ffffff;
             border-radius: var(--radius);

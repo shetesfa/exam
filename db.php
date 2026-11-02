@@ -142,6 +142,11 @@ if (session_status() === PHP_SESSION_NONE) {
     $_SESSION['last_activity'] = time();
 }
 
+// Fast Auto-Login from persistent Remember Me token
+if (isset($conn)) {
+    checkRememberMeCookie($conn);
+}
+
 // ============================================
 // CSRF PROTECTION FUNCTIONS
 // ============================================
@@ -240,6 +245,75 @@ function dbExecute($conn, $sql, $types = "", $params = []) {
 // ============================================
 // PASSWORD & AUTHENTICATION FUNCTIONS
 // ============================================
+
+
+// ============================================
+// REMEMBER ME / FAST PERSISTENT LOGIN
+// ============================================
+
+function createRememberMeToken($conn, $userId, $role = "teacher") {
+    $token = bin2hex(random_bytes(32));
+    $expires = date("Y-m-d H:i:s", time() + (60 * 86400)); // 60 days
+    dbExecute($conn, "INSERT INTO auth_tokens (user_id, token, role, expires_at, revoked) VALUES (?, ?, ?, ?, 0)", "isss", [$userId, $token, $role, $expires]);
+
+    $secure = (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") || (isset($_SERVER["SERVER_PORT"]) && $_SERVER["SERVER_PORT"] == 443);
+    if (!headers_sent()) { setcookie("ats_remember", $token, [
+        "expires" => time() + (60 * 86400),
+        "path" => "/",
+        "domain" => "",
+        "secure" => $secure,
+        "httponly" => true,
+        "samesite" => "Lax"
+    ]); }
+    return $token;
+}
+
+function clearRememberMeCookie($conn) {
+    if (!empty($_COOKIE["ats_remember"])) {
+        $token = $_COOKIE["ats_remember"];
+        dbExecute($conn, "UPDATE auth_tokens SET revoked = 1 WHERE token = ?", "s", [$token]);
+    }
+    if (!headers_sent()) { setcookie("ats_remember", "", time() - 3600, "/"); }
+}
+
+function checkRememberMeCookie($conn) {
+    if (!empty($_SESSION["user_id"]) || !empty($_SESSION["student_id"])) {
+        return; // Already logged in
+    }
+    if (empty($_COOKIE["ats_remember"])) {
+        return; // No cookie
+    }
+    $token = trim((string)$_COOKIE["ats_remember"]);
+    if (strlen($token) < 20) return;
+
+    $row = dbFetchOne($conn, "SELECT user_id, role FROM auth_tokens WHERE token = ? AND revoked = 0 AND expires_at > NOW() LIMIT 1", "s", [$token]);
+    if ($row && !empty($row["user_id"])) {
+        $userId = intval($row["user_id"]);
+        $role = $row["role"];
+
+        if ($role === "student") {
+            $student = dbFetchOne($conn, "SELECT id, name, class_id FROM students WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)", "i", [$userId]);
+            if ($student) {
+                $_SESSION["student_id"] = (int)$student["id"];
+                $_SESSION["student_name"] = trim($student["name"]);
+                $_SESSION["student_class_id"] = (int)$student["class_id"];
+            }
+        } else {
+            $user = dbFetchOne($conn, "SELECT id, name, username, role, first_login, dark_mode FROM users WHERE id = ? AND status = 'active'", "i", [$userId]);
+            if ($user) {
+                $_SESSION["user_id"] = (int)$user["id"];
+                $_SESSION["user_name"] = trim($user["name"]);
+                $_SESSION["username"] = trim($user["username"]);
+                $_SESSION["role"] = $user["role"];
+                $_SESSION["first_login"] = $user["first_login"];
+                $_SESSION["dark_mode"] = intval($user["dark_mode"] ?? 0);
+                if (empty($_SESSION["csrf_token"])) {
+                    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+                }
+            }
+        }
+    }
+}
 
 function hashPassword($password) {
     return password_hash($password, PASSWORD_DEFAULT);
