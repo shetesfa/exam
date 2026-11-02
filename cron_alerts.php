@@ -17,9 +17,12 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/services/push/VapidManager.php';
 require_once __DIR__ . '/services/push/WebPushService.php';
 
-// Ensure exam tables exist
+// Ensure required tables & columns exist across all MySQL/MariaDB engines
 if (function_exists('ensureExamTablesExist')) {
     @ensureExamTablesExist($conn);
+}
+if (function_exists('ensureNotificationPushColumn')) {
+    @ensureNotificationPushColumn($conn);
 }
 
 // --------------------------------------------------------------------------

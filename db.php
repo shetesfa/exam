@@ -1319,7 +1319,10 @@ function ensureNotificationPushColumn($conn) {
     static $checked = false;
     if ($checked || !$conn) return;
     $checked = true;
-    @dbExecute($conn, "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_sent TINYINT(1) NOT NULL DEFAULT 0");
+    $chk = @dbFetchOne($conn, "SHOW COLUMNS FROM notifications LIKE 'push_sent'");
+    if (!$chk) {
+        @dbExecute($conn, "ALTER TABLE notifications ADD COLUMN push_sent TINYINT(1) NOT NULL DEFAULT 0");
+    }
 }
 
 function checkAutomatedSchoolAlerts($conn) {
