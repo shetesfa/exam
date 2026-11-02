@@ -205,33 +205,33 @@ if (isset($_GET['msg']) && $_GET['msg'] === 'student_logout') {
         }
 
         .logo {
-            width: 96px;
-            height: 96px;
-            margin: 0 auto 14px;
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 10px;
             background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
-            border-radius: 50%;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 3.5px solid var(--brown-dark);
-            box-shadow: 0 8px 20px rgba(92, 38, 7, 0.28);
+            border: 2px solid var(--brown-dark);
+            box-shadow: 0 4px 12px rgba(92, 38, 7, 0.25);
         }
 
         .logo img {
-            width: 76px;
-            height: 76px;
-            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
             object-fit: cover;
-            border: 2px solid white;
+            border: 1.5px solid white;
         }
 
         .logo-icon {
-            font-size: 42px;
+            font-size: 24px;
             color: var(--brown-dark);
             background: white;
-            width: 78px;
-            height: 78px;
-            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;

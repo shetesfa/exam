@@ -2,7 +2,7 @@
  * sw.js - Service Worker for PWA (v4)
  * Provides offline application shell, safe caching, and Web Push notifications.
  */
-const CACHE_NAME = 'exam-pwa-v16';
+const CACHE_NAME = 'exam-pwa-v17';
 
 // Dynamic base path detection derived from registration scope
 const BASE_PATH = (self.registration && self.registration.scope)
@@ -22,11 +22,14 @@ const SHELL_URLS = [
     BASE_PATH + '/assets/js/sync-manager.js',
     BASE_PATH + '/assets/js/push-notifications.js',
     BASE_PATH + '/assets/js/offline-calendar-alerts.js',
-    BASE_PATH + '/offline.html',
+    BASE_PATH + '/student_login.php',
     BASE_PATH + '/calendar_view.php',
     BASE_PATH + '/dashboard_attendance.php',
     BASE_PATH + '/lesson_plan_editor.php',
     BASE_PATH + '/dashboard_teacher.php',
+    BASE_PATH + '/dashboard_admin.php',
+    BASE_PATH + '/dashboard_student.php',
+    BASE_PATH + '/offline.html',
     BASE_PATH + '/print_orthodox_calendar.php'
 ];
 
@@ -97,7 +100,15 @@ self.addEventListener('fetch', (event) => {
                     match = await caches.match(url.pathname, { ignoreSearch: true });
                     if (match) return match;
 
-                    // 4. Fallback strictly to offline.html — NEVER guess another role's dashboard
+                    // 4. Match with BASE_PATH prepended
+                    match = await caches.match(BASE_PATH + url.pathname, { ignoreSearch: true });
+                    if (match) return match;
+
+                    // 5. If this is a page navigation, return the cached page shell to keep same UI experience
+                    let shellMatch = await caches.match(BASE_PATH + '/index.php');
+                    if (shellMatch) return shellMatch;
+
+                    // 6. Last resort fallback
                     return caches.match(BASE_PATH + '/offline.html');
                 })
         );

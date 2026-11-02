@@ -207,17 +207,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .logo-circle {
-            width: 80px;
-            height: 80px;
+            width: 52px;
+            height: 52px;
             background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
-            border-radius: 50%;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 15px;
-            font-size: 32px;
+            margin: 0 auto 10px;
+            font-size: 24px;
             color: var(--brown-dark);
-            border: 4px solid var(--brown-dark);
+            border: 2px solid var(--brown-dark);
+            box-shadow: 0 4px 12px rgba(92, 38, 7, 0.25);
         }
 
         h1 { color: var(--brown-dark); font-size: 20px; margin-bottom: 5px; }
