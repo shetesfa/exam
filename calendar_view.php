@@ -293,6 +293,22 @@ if ($role !== 'admin' && !empty($my_class_ids)) {
 $raw_events_sql .= " ORDER BY e.event_date ASC, e.priority DESC, e.id ASC";
 $raw_month_events = dbFetchAll($conn, $raw_events_sql, $raw_types, $raw_params);
 
+// Upcoming School News & Exams (High-priority notice bulletin for students and teachers)
+$upcoming_school_news = dbFetchAll(
+    $conn,
+    "SELECT e.*, d.name_am AS target_division, g.name_am AS target_grade, c.name AS target_class 
+     FROM calendar_events e 
+     LEFT JOIN calendar_event_targets t ON t.event_id = e.id 
+     LEFT JOIN divisions d ON t.division_id = d.id 
+     LEFT JOIN grades g ON t.grade_id = g.id 
+     LEFT JOIN classes c ON t.class_id = c.id 
+     WHERE e.is_deleted = 0 
+       AND e.event_date >= CURDATE() 
+       AND e.event_type IN ('exam', 'assessment', 'important', 'announcement', 'meeting')
+     ORDER BY e.event_date ASC 
+     LIMIT 6"
+);
+
 // Canonical Major Annual Church Feasts for this month
 $month_annual_holidays = [];
 for ($d = 1; $d <= $days_in_month; $d++) {
@@ -332,6 +348,8 @@ $total_events_month = count($raw_month_events) + $annual_holiday_count;
 $month_events = [];
 foreach ($raw_month_events as $ev) {
     if ($filter_type === 'all') {
+        $month_events[] = $ev;
+    } elseif ($filter_type === 'school' && in_array($ev['event_type'], ['exam', 'assessment', 'important', 'announcement', 'meeting'])) {
         $month_events[] = $ev;
     } elseif ($filter_type === 'exam' && $ev['event_type'] === 'exam') {
         $month_events[] = $ev;
@@ -1862,6 +1880,9 @@ $next_week_eth = getEthiopianDateFromGregorian(date('Y-m-d', $next_week_day_ts))
                 </div>
 
                 <div class="cal-filter-bar">
+                    <a href="<?php echo buildCalUrl($selected_eth_month, $selected_eth_year, null, 'school'); ?>" class="cal-filter-pill <?php echo $filter_type === 'school' ? 'active' : ''; ?>" style="font-weight:800; border-color:#F59E0B;">
+                        📢 የት/ቤት ዜናና ፈተና (<?php echo $exam_count; ?>)
+                    </a>
                     <a href="<?php echo buildCalUrl($selected_eth_month, $selected_eth_year, null, 'all'); ?>" class="cal-filter-pill <?php echo $filter_type === 'all' ? 'active' : ''; ?>">
                         ሁሉም (<?php echo $total_events_month; ?>)
                     </a>
@@ -1890,6 +1911,60 @@ $next_week_eth = getEthiopianDateFromGregorian(date('Y-m-d', $next_week_day_ts))
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- School News & Exams Notice Board (Notice Bulletin) -->
+            <?php if (!empty($upcoming_school_news)): ?>
+            <div class="cal-school-news-bulletin" style="background: linear-gradient(135deg, #FFFDF5 0%, #FEF3C7 100%); border-bottom: 2px solid #D97706; padding: 14px 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div style="font-size: 15px; font-weight: 800; color: #78350F; display: flex; align-items: center; gap: 8px;">
+                        <span>📢</span>
+                        <span>የሰንበት ት/ቤት ዜናዎች እና የፈተና መርሃግብር (School News & Exams)</span>
+                    </div>
+                    <span style="font-size: 11.5px; background: #FDE68A; color: #78350F; padding: 3px 10px; border-radius: 12px; font-weight: 700;">
+                        መጪ ፈተናዎችና አስፈላጊ ቀናት (<?php echo count($upcoming_school_news); ?>)
+                    </span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px;">
+                    <?php foreach ($upcoming_school_news as $snews): 
+                        $s_type = $snews['event_type'];
+                        $is_exam_type = ($s_type === 'exam' || $s_type === 'assessment');
+                        $bg_card = $is_exam_type ? '#FEF2F2' : '#FFFFFF';
+                        $border_card = $is_exam_type ? '#F87171' : '#E5E7EB';
+                        $badge_color = $is_exam_type ? '#DC2626' : '#1D4ED8';
+                        $badge_label = ($s_type === 'exam') ? '📝 ፈተና' : (($s_type === 'assessment') ? '📋 ምዘና' : '📢 ዜና');
+                        
+                        $d_diff = (new DateTime('today'))->diff(new DateTime($snews['event_date']))->days;
+                        $d_label = ($d_diff === 0) ? 'ዛሬ' : (($d_diff === 1) ? 'ነገ' : "በ{$d_diff} ቀን ውስጥ");
+                    ?>
+                    <div style="background: <?php echo $bg_card; ?>; border: 1.5px solid <?php echo $border_card; ?>; border-radius: 10px; padding: 10px 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-size: 11px; font-weight: 800; color: white; background: <?php echo $badge_color; ?>; padding: 2px 8px; border-radius: 10px;">
+                                <?php echo $badge_label; ?>
+                            </span>
+                            <span style="font-size: 11px; font-weight: 700; color: #B45309; background: #FEF3C7; padding: 2px 6px; border-radius: 6px;">
+                                ⏳ <?php echo $d_label; ?>
+                            </span>
+                        </div>
+                        <div style="font-size: 13.5px; font-weight: 800; color: #1F2937; margin-bottom: 3px;">
+                            <?php echo htmlspecialchars($snews['title'], ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                        <?php if (!empty($snews['description'])): ?>
+                        <div style="font-size: 11.5px; color: #4B5563; line-height: 1.35; margin-bottom: 4px;">
+                            <?php echo htmlspecialchars(mb_strimwidth($snews['description'], 0, 110, '...'), ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                        <?php endif; ?>
+                        <div style="font-size: 10.5px; color: #6B7280; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+                            <span>📅 <?php echo htmlspecialchars($snews['event_date'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            <?php if (!empty($snews['target_class'])): ?>
+                            <span>🎯 <?php echo htmlspecialchars($snews['target_class'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- View Mode 1: Month Calendar Paper Grid -->
             <?php if ($view_mode === 'month'): ?>

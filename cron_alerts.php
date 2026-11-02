@@ -75,43 +75,12 @@ $cronReport = [
 ];
 
 /**
- * A. Ethiopian Feast Day Alerts
+ * A. Ethiopian Feast Day Alerts (Disabled as per user preference: focus on real school news & exams, no repeated welcome/greeting blasts)
  */
 function runFeastAlerts($conn, &$cronReport) {
-    $today_eth = getCurrentEthiopianDate();
-    $ey = intval($today_eth['year']);
-    $em = intval($today_eth['month']);
-    $ed = intval($today_eth['day']);
-
-    $special_feasts = [
-        3  => 'ቅዱስ ሩፋኤል ሊቀ መላእክት',
-        7  => 'ሥላሴ (አምላከ ቅዱሳን)',
-        12 => 'ቅዱስ ሚካኤል ሊቀ መላእክት',
-        16 => 'ኪዳነ ምሕረት (እመቤታችን ቃል ኪዳን)',
-        19 => 'ቅዱስ ገብርኤል ሊቀ መላእክት',
-        21 => 'እመቤታችን ቅድስት ድንግል ማርያም',
-        23 => 'ቅዱስ ጊዮርጊስ ሰማዕት',
-        26 => 'አቡነ ሐብተ ማርያም ጻድቅ',
-        27 => 'መድኃኔዓለም አምላካችን',
-        29 => 'በዓለ ወልድ (እግዚአብሔር አብ/ወልድ)'
-    ];
-
-    if (isset($special_feasts[$ed])) {
-        $feastName = $special_feasts[$ed];
-        $marker = "feast_greeting:{$ey}:{$em}:{$ed}";
-        $chk = dbFetchOne($conn, "SELECT id FROM notifications WHERE related_page = ?", "s", [$marker]);
-        if (!$chk) {
-            $title = "⛪ የዕለቱ በዓል ማሳሰቢያ";
-            $message = "እንኳን አደረሳችሁ ለ{$feastName} ዕለት! — አጸደ ትጉሃን ሰንበት ትምህርት ቤት";
-            $notifId = createNotification($conn, $title, $message, [], 'normal', null, $marker);
-            $cronReport['notifications_created']++;
-            $cronReport['actions'][] = "የበዓል ማሳሰቢያ ተፈጠረ: {$feastName} (ቀን {$ed})";
-        } else {
-            $cronReport['actions'][] = "የዕለቱ በዓል ማሳሰቢያ ({$feastName}) ቀደም ሲል ተልኳል።";
-        }
-    } else {
-        $cronReport['actions'][] = "ዛሬ ልዩ የበዓል ሰላምታ ቀን አይደለም (የኢትዮጵያ ቀን {$ed})።";
-    }
+    // Repeated holiday welcome greetings disabled to prevent notification fatigue.
+    // The calendar page itself displays church saints and feast markers, while push alerts are reserved exclusively for school news & exams.
+    $cronReport['actions'][] = "የበዓላት አጠቃላይ ሰላምታ ማሳወቂያ እንዲጠፋ ተደርጓል (ማሳወቂያዎች ለት/ቤት ዜናዎች እና ፈተናዎች ብቻ እንዲሆኑ)።";
 }
 
 /**
@@ -173,24 +142,37 @@ function runCalendarAndExamAlerts($conn, &$cronReport) {
     $tomorrowDt->modify('+1 day');
     $tomorrow = $tomorrowDt->format('Y-m-d');
 
-    // 1. Check upcoming calendar_events
+    // 1. Check upcoming school news, exams, and assessments (Holiday welcome messages excluded)
     $events = dbFetchAll(
         $conn,
-        "SELECT id, title, description, event_type, event_date, priority 
+        "SELECT id, title, description, event_type, event_date, priority, reminder_days_before 
          FROM calendar_events 
-         WHERE (event_date = ? OR event_date = ?) AND (is_deleted = 0 OR is_deleted IS NULL)",
-        "ss",
-        [$today, $tomorrow]
+         WHERE event_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY) 
+           AND event_type IN ('exam', 'assessment', 'important', 'announcement', 'meeting', 'teaching', 'revision')
+           AND (is_deleted = 0 OR is_deleted IS NULL)
+         ORDER BY event_date ASC"
     );
 
     foreach ($events as $ev) {
-        $isToday = ($ev['event_date'] === $today);
-        $dayLabel = $isToday ? "የዛሬ" : "የነገ";
+        $evDate = $ev['event_date'];
+        $diffDays = (new DateTime($today))->diff(new DateTime($evDate))->days;
+        $dayLabel = ($diffDays === 0) ? "የዛሬ" : (($diffDays === 1) ? "የነገ" : "የ{$diffDays} ቀን በኋላ");
         $marker = "cal_event_{$ev['id']}:{$ev['event_date']}";
         
         $chk = dbFetchOne($conn, "SELECT id FROM notifications WHERE related_page = ?", "s", [$marker]);
         if (!$chk) {
-            $title = "📅 {$dayLabel} ፕሮግራም ማስታወሻ፡ " . $ev['title'];
+            $prefix = "📢 የት/ቤት ዜና ማስታወቂያ፡ ";
+            if ($ev['event_type'] === 'exam') {
+                $prefix = "📝 የፈተና ማስታወሻ ({$dayLabel})፡ ";
+            } elseif ($ev['event_type'] === 'assessment') {
+                $prefix = "📋 የምዘና ማስታወሻ ({$dayLabel})፡ ";
+            } elseif ($ev['event_type'] === 'important') {
+                $prefix = "⚠️ አስፈላጊ ማስታወቂያ ({$dayLabel})፡ ";
+            } elseif ($ev['event_type'] === 'announcement') {
+                $prefix = "📢 አዲስ ዜና ({$dayLabel})፡ ";
+            }
+
+            $title = $prefix . $ev['title'];
             $msg = ($ev['description'] ? $ev['description'] . " — " : "") . "ቀን፡ {$ev['event_date']} (አጸደ ትጉሃን)";
             
             // Gather targets
@@ -208,9 +190,9 @@ function runCalendarAndExamAlerts($conn, &$cronReport) {
                 }
             }
 
-            createNotification($conn, $title, $msg, $targets, $ev['priority'] ?? 'normal', $ev['id'], $marker);
+            createNotification($conn, $title, $msg, $targets, $ev['priority'] ?? 'high', $ev['id'], $marker);
             $cronReport['notifications_created']++;
-            $cronReport['actions'][] = "የካሌንደር ዝግጅት ማሳወቂያ ተፈጠረ፡ {$ev['title']} ({$dayLabel})";
+            $cronReport['actions'][] = "የዜና/ፈተና ማሳወቂያ ተፈጠረ፡ {$ev['title']} ({$dayLabel})";
         }
     }
 
