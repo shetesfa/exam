@@ -1003,6 +1003,7 @@ function createNotification($conn, $title, $message, $targets = [], $priority = 
         }
     }
 
+    @dbExecute($conn, "UPDATE notifications SET push_sent = 1 WHERE id = ?", "i", [$notifId]);
     return $notifId;
 }
 
@@ -1314,7 +1315,15 @@ function setUserDarkMode($conn, $userId, $mode, $isStudent = false) {
 // AUTOMATED CHURCH FEAST & SUNDAY TEACHER ALERTS
 // ============================================
 
+function ensureNotificationPushColumn($conn) {
+    static $checked = false;
+    if ($checked || !$conn) return;
+    $checked = true;
+    @dbExecute($conn, "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_sent TINYINT(1) NOT NULL DEFAULT 0");
+}
+
 function checkAutomatedSchoolAlerts($conn) {
+    ensureNotificationPushColumn($conn);
     if (!$conn) return false;
 
     // 1. Church Feast Day Greetings (Days: 3, 16, 21, 23, 26, 27)

@@ -78,6 +78,14 @@ $pending_exams_count = 0;
 $pex = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM exams WHERE status = 'submitted'");
 if ($pex) $pending_exams_count = intval($pex['cnt']);
 
+$push_subs_count = 0;
+$psc = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM push_subscriptions");
+if ($psc) $push_subs_count = intval($psc['cnt']);
+
+$today_notifs_count = 0;
+$tnc = dbFetchOne($conn, "SELECT COUNT(*) as cnt FROM notifications WHERE DATE(created_at) = CURDATE()");
+if ($tnc) $today_notifs_count = intval($tnc['cnt']);
+
 $nav_active = 'dashboard_admin';
 ?>
 <!DOCTYPE html>
@@ -347,6 +355,23 @@ $nav_active = 'dashboard_admin';
                 </a>
                 <a href="exam_author.php?action=new" style="background:white; color:#1e3a8a; padding:8px 16px; border-radius:20px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
                     ➕ አዲስ ፈተና
+                </a>
+            </div>
+        </div>
+
+        <!-- Automated Background Alerts & Cron Banner -->
+        <div style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); color:white; border-radius:14px; padding:16px 20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 4px 14px rgba(4,120,87,0.2);">
+            <div>
+                <h3 style="margin:0 0 4px 0; font-size:16px; color:#A7F3D0; display:flex; align-items:center; gap:8px;">
+                    🔔 ራስ-ሰር የጀርባ ማሳወቂያዎች እና ክሮን (Automatic Alerts)
+                </h3>
+                <p style="margin:0; font-size:12px; opacity:0.9;">
+                    የበዓላት ሰላምታ፣ የእሁድ 10:50 ማስታወሻና የካሌንደር ዝግጅቶች አፑ ሳይከፈት በጀርባ ይላካሉ (<?= $push_subs_count ?> መሳሪያዎች ተመዝግበዋል)።
+                </p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="cron_alerts.php" style="background:#A7F3D0; color:#064E3B; padding:8px 16px; border-radius:20px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                    ⚙️ የክሮን ማዕከል / አሁን አስኪድ
                 </a>
             </div>
         </div>

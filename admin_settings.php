@@ -17,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
             'admin_phone_2' => trim($_POST['admin_phone_2'] ?? ''),
             'admin_title' => trim($_POST['admin_title'] ?? ''),
             'youth_can_create_plans' => isset($_POST['youth_can_create_plans']) ? '1' : '0',
-            'youth_can_write_attendance' => isset($_POST['youth_can_write_attendance']) ? '1' : '0'
+            'youth_can_write_attendance' => isset($_POST['youth_can_write_attendance']) ? '1' : '0',
+            'cron_secret_token' => trim($_POST['cron_secret_token'] ?? 'atsede_cron_2026_secure')
         ];
         
         $success = true;
@@ -59,6 +60,7 @@ $phone2 = $current_settings['admin_phone_2'] ?? '';
 $title = $current_settings['admin_title'] ?? '';
 $youth_can_create_plans = ($current_settings['youth_can_create_plans'] ?? '0') === '1';
 $youth_can_write_attendance = ($current_settings['youth_can_write_attendance'] ?? '0') === '1';
+$cron_token = $current_settings['cron_secret_token'] ?? 'atsede_cron_2026_secure';
 $nav_active = 'admin_settings';
 ?>
 <!DOCTYPE html>
@@ -329,6 +331,39 @@ $nav_active = 'admin_settings';
                         </label>
                         <div class="permission-hint">
                             ሲጠፋ፦ የወጣቶች መምህራን የተማሪዎች አቴንዳንስ ማየት ብቻ ይችላሉ፤ መጻፍ ወይም ማረም አይችሉም።
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div style="margin-top:24px; padding-top:18px; border-top:2px solid var(--gold-pale);">
+                    <div style="font-weight:700; color:var(--brown-dark); font-size:16px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                        <span>🔔</span> ራስ-ሰር የጀርባ ማሳወቂያዎች እና ክሮን (Background Cron Job)
+                    </div>
+                    <p class="settings-help-text" style="font-size:13px; margin-bottom:14px; line-height:1.5;">
+                        አፑ ተዘግቶ በነበረበት ጊዜም የበዓላት ሰላምታ፣ የእሁድ 10:50 ማስታወሻና የካሌንደር ዝግጅቶች በሰዓታቸው እንዲላኩ የሚያስችል የጀርባ አሰራር።
+                    </p>
+
+                    <div class="form-group">
+                        <label>የክሮን የደህንነት ቶከን (Secret Cron Token)</label>
+                        <input type="text" name="cron_secret_token" class="form-control" 
+                               value="<?php echo htmlspecialchars($cron_token); ?>" 
+                               placeholder="atsede_cron_2026_secure">
+                    </div>
+
+                    <?php
+                        $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+                        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $dir = dirname($_SERVER['REQUEST_URI'] ?? '/exam');
+                        $cronUrl = $proto . "://" . $host . rtrim($dir, '/') . "/cron_alerts.php?token=" . urlencode($cron_token);
+                    ?>
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:16px;">
+                        <div style="font-size:12px; font-weight:600; color:#475569; margin-bottom:4px;">የቀጥታ Webhook አገናኝ (ለ cPanel Cron ወይም cron-job.org)፦</div>
+                        <code style="word-break:break-all; font-size:12px; color:#1e3a8a;"><?php echo htmlspecialchars($cronUrl); ?></code>
+                        <div style="margin-top:8px;">
+                            <a href="cron_alerts.php?token=<?php echo urlencode($cron_token); ?>" target="_blank" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#065f46; text-decoration:none;">
+                                <span>⚙️</span> የክሮን ሁኔታን ፈትሽ / አሁን አስኪድ &rarr;
+                            </a>
                         </div>
                     </div>
                 </div>

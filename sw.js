@@ -2,7 +2,7 @@
  * sw.js - Service Worker for PWA (v4)
  * Provides offline application shell, safe caching, and Web Push notifications.
  */
-const CACHE_NAME = 'exam-pwa-v19';
+const CACHE_NAME = 'exam-pwa-v20';
 
 // Dynamic base path detection derived from registration scope
 const BASE_PATH = (self.registration && self.registration.scope)
@@ -134,11 +134,64 @@ self.addEventListener('fetch', (event) => {
 });
 
 // ============================================
-// BACKGROUND SYNC (Phase 2.3)
+// BACKGROUND SYNC & PERIODIC ALERTS (Phase 2.3)
 // ============================================
 
+async function checkBackgroundAlerts() {
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        const lastIdResp = await cache.match('/__pwa_last_alert_id');
+        let lastId = 0;
+        if (lastIdResp) {
+            const txt = await lastIdResp.text();
+            lastId = parseInt(txt, 10) || 0;
+        }
+
+        const endpoint = BASE_PATH + '/api/check_background_alerts.php?since_id=' + lastId;
+        const res = await fetch(endpoint, { cache: 'no-store' });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.notifications) && data.notifications.length > 0) {
+            let maxId = lastId;
+
+            for (const notif of data.notifications) {
+                if (notif.id > maxId) maxId = notif.id;
+
+                const options = {
+                    body: notif.body,
+                    icon: BASE_PATH + '/images/icon.png',
+                    badge: BASE_PATH + '/images/icon.png',
+                    vibrate: [200, 100, 200],
+                    data: {
+                        url: notif.url || BASE_PATH + '/notifications.php'
+                    },
+                    actions: [
+                        { action: 'open', title: 'ክፈት' }
+                    ]
+                };
+
+                await self.registration.showNotification(notif.title, options);
+            }
+
+            // Save maxId to cache
+            await cache.put(new Request('/__pwa_last_alert_id'), new Response(maxId.toString()));
+
+            // Notify open tabs if any
+            const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+            windowClients.forEach((client) => {
+                client.postMessage({ type: 'NEW_BACKGROUND_NOTIFICATION', count: data.notifications.length });
+            });
+        }
+    } catch (e) {
+        // Silent catch for background failures
+    }
+}
+
 self.addEventListener('sync', (event) => {
-    if (event.tag === 'exam-sync' || event.tag === 'sync-changes') {
+    if (event.tag === 'check-alerts' || event.tag === 'check-notifications') {
+        event.waitUntil(checkBackgroundAlerts());
+    } else if (event.tag === 'exam-sync' || event.tag === 'sync-changes') {
         event.waitUntil(
             self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
                 windowClients.forEach((client) => {
@@ -146,6 +199,12 @@ self.addEventListener('sync', (event) => {
                 });
             })
         );
+    }
+});
+
+self.addEventListener('periodicsync', (event) => {
+    if (event.tag === 'check-alerts' || event.tag === 'check-notifications') {
+        event.waitUntil(checkBackgroundAlerts());
     }
 });
 

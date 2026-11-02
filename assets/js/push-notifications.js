@@ -1,7 +1,7 @@
 /**
  * push-notifications.js
  * Client-side Web Push notification manager for Atsede Tiguhan Sunday School.
- * Handles VAPID key exchange, ServiceWorker push subscription, and testing.
+ * Handles VAPID key exchange, ServiceWorker push subscription, Periodic Sync, and testing.
  */
 
 function urlBase64ToUint8Array(base64String) {
@@ -48,14 +48,47 @@ const PushNotifications = {
 
             if (this._subscribed) {
                 this.updateUI('subscribed');
+                this.registerPeriodicSync();
             } else if (Notification.permission === 'denied') {
                 this.updateUI('denied');
             } else {
                 this.updateUI('unsubscribed');
             }
+
+            // Listen for background worker messages
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'NEW_BACKGROUND_NOTIFICATION') {
+                        const badge = document.querySelector('.notif-badge, #notification-badge');
+                        if (badge) {
+                            badge.style.display = 'inline-block';
+                            let cur = parseInt(badge.textContent, 10) || 0;
+                            badge.textContent = (cur + event.data.count).toString();
+                        }
+                    }
+                });
+            }
         } catch (err) {
             console.warn('[Push] Error checking subscription:', err);
             this.updateUI('unsubscribed');
+        }
+    },
+
+    async registerPeriodicSync() {
+        if (!('serviceWorker' in navigator)) return;
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            if ('periodicSync' in reg) {
+                const status = await navigator.permissions.query({ name: 'periodic-background-sync' }).catch(() => null);
+                if (!status || status.state === 'granted') {
+                    await reg.periodicSync.register('check-alerts', {
+                        minInterval: 15 * 60 * 1000 // Inquire every 15 minutes in background
+                    });
+                    console.log('[Push] Periodic background sync registered.');
+                }
+            }
+        } catch (e) {
+            // Periodic sync not permitted or unhandled
         }
     },
 
@@ -111,6 +144,7 @@ const PushNotifications = {
             if (saveData.success) {
                 this._subscribed = true;
                 this.updateUI('subscribed');
+                this.registerPeriodicSync();
                 alert('✅ የቀጥታ የስልክ ማሳወቂያ በትክክል በርቷል!');
                 return true;
             } else {
@@ -207,6 +241,7 @@ const PushNotifications = {
             if (saveData.success) {
                 this._subscribed = true;
                 this.updateUI('subscribed');
+                this.registerPeriodicSync();
                 return true;
             }
         } catch (e) {
