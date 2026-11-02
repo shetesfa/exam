@@ -184,13 +184,44 @@ if (isset($_GET['edit'])) {
     $editing_plan = dbFetchOne($conn, "SELECT * FROM lesson_plans WHERE id = ? AND teacher_id = ?", "ii", [intval($_GET['edit']), $teacher_id]);
 }
 
+// Filter inputs from URL
+$initial_class_filter = intval($_GET['class_id'] ?? 0);
+$initial_month_filter = intval($_GET['month'] ?? 0);
+
+// Get all distinct classes available for this teacher
+$teacher_all_classes = [];
+foreach ($teacher_classes_map as $cid => $cinfo) {
+    $teacher_all_classes[$cid] = $cinfo['class_name'];
+}
+$plan_class_rows = dbFetchAll($conn, "SELECT DISTINCT lp.class_id, c.name as class_name FROM lesson_plans lp JOIN classes c ON lp.class_id = c.id WHERE lp.teacher_id = ? AND lp.is_deleted = 0", "i", [$teacher_id]);
+foreach ($plan_class_rows as $pcr) {
+    $cid = intval($pcr['class_id']);
+    if (!isset($teacher_all_classes[$cid])) {
+        $teacher_all_classes[$cid] = $pcr['class_name'];
+    }
+}
+ksort($teacher_all_classes);
+
+// Fetch all plans for this teacher ordered by class name, month, and day
 $my_plans = dbFetchAll(
     $conn,
     "SELECT lp.*, c.name as class_name FROM lesson_plans lp JOIN classes c ON lp.class_id = c.id
-     WHERE lp.teacher_id = ? AND lp.is_deleted = 0 ORDER BY lp.updated_at DESC LIMIT 50",
+     WHERE lp.teacher_id = ? AND lp.is_deleted = 0 ORDER BY c.name ASC, lp.ethiopian_month ASC, lp.ethiopian_day ASC, lp.id ASC",
     "i",
     [$teacher_id]
 );
+
+// Group plans by class and collect counts for filters
+$plans_by_class = [];
+$class_counts = [];
+$month_counts = [];
+foreach ($my_plans as $p) {
+    $cid = intval($p['class_id']);
+    $m = intval($p['ethiopian_month']);
+    $plans_by_class[$cid][] = $p;
+    $class_counts[$cid] = ($class_counts[$cid] ?? 0) + 1;
+    $month_counts[$m] = ($month_counts[$m] ?? 0) + 1;
+}
 
 $status_labels = [
     'submitted' => '📄 የተቀመጠ ዕቅድ',
@@ -382,6 +413,155 @@ textarea { resize:vertical; }
         font-size: 14px;
         border-radius: 8px;
     }
+}
+
+/* Plan Filter & Class Tabs Styles */
+.plan-filter-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    border: 1px solid #E2E8F0;
+}
+.class-filter-tabs-wrapper {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    scrollbar-width: thin;
+}
+.class-filter-tabs-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+.class-filter-tabs-wrapper::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 10px;
+}
+.class-filter-tabs {
+    display: inline-flex;
+    gap: 8px;
+}
+.class-tab-pill {
+    background: #F1F5F9;
+    border: 1.5px solid #CBD5E1;
+    color: #475569;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+}
+.class-tab-pill:hover {
+    background: #E2E8F0;
+    color: var(--brown-dark);
+}
+.class-tab-pill.active {
+    background: var(--brown-dark);
+    border-color: var(--brown-dark);
+    color: #FFF8DC;
+    box-shadow: 0 2px 6px rgba(139,69,19,0.3);
+}
+.class-tab-pill .badge {
+    background: rgba(0,0,0,0.08);
+    color: inherit;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 800;
+}
+.class-tab-pill.active .badge {
+    background: var(--gold-primary);
+    color: var(--brown-dark);
+}
+.filter-controls-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #FFFDF7;
+    border: 1px solid #FDE68A;
+    padding: 10px 14px;
+    border-radius: 10px;
+}
+.filter-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 220px;
+}
+.filter-select {
+    padding: 8px 12px;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #334155;
+    background: white;
+    cursor: pointer;
+}
+.btn-reset-filters {
+    background: white;
+    border: 1px solid #CBD5E1;
+    color: #64748B;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+.btn-reset-filters:hover {
+    background: #FEE2E2;
+    border-color: #F87171;
+    color: #B91C1C;
+}
+
+/* Class Grouped Section Styles */
+.class-plan-section {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 22px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    border: 1px solid #E2E8F0;
+    transition: all 0.25s ease;
+}
+.class-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid #F1F5F9;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.class-section-title {
+    color: var(--brown-dark);
+    font-size: 17px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.class-section-badge {
+    background: var(--gold-pale);
+    color: var(--brown-dark);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid #FDE68A;
 }
 
 .subject-input-field {
@@ -1037,111 +1217,199 @@ body.dark-mode .warning-card,
     </div>
     <?php endif; ?>
 
-    <!-- Lesson plans table matching the paper headers -->
-    <div class="card">
+    <!-- Lesson plans section with Class Tabs & Month Filter -->
+    <div class="plan-filter-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-            <h2 style="color:var(--brown-dark);">📋 የዕቅዶች ዝርዝር</h2>
-            <span style="font-size:13px; color:#666; font-weight:600;"><?php echo count($my_plans); ?> ዕቅዶች</span>
+            <h2 style="color:var(--brown-dark); font-size:19px; display:flex; align-items:center; gap:8px;">
+                📋 የዕቅዶች ዝርዝር
+            </h2>
+            <span style="font-size:13px; color:#666; font-weight:700;" id="totalPlansBadge">
+                <?php echo count($my_plans); ?> ዕቅዶች
+            </span>
         </div>
 
+        <!-- Class Filter Tabs (Separated view per class) -->
+        <div style="margin-bottom:10px;">
+            <div style="font-size:12px; font-weight:700; color:#5C2607; margin-bottom:6px;">
+                🏫 ክፍል ይምረጡ (ለየብቻ ለማየት)፦
+            </div>
+            <div class="class-filter-tabs-wrapper">
+                <div class="class-filter-tabs">
+                    <button type="button" class="class-tab-pill <?php echo ($initial_class_filter === 0) ? 'active' : ''; ?>" data-class="0" onclick="filterPlansByClass(0)">
+                        🌟 ሁሉም ክፍሎች <span class="badge" id="badge_class_0"><?php echo count($my_plans); ?></span>
+                    </button>
+                    <?php foreach ($teacher_all_classes as $cid => $cname): 
+                        $cnt = $class_counts[$cid] ?? 0;
+                    ?>
+                    <button type="button" class="class-tab-pill <?php echo ($initial_class_filter === $cid) ? 'active' : ''; ?>" data-class="<?php echo $cid; ?>" onclick="filterPlansByClass(<?php echo $cid; ?>)">
+                        📖 <?php echo htmlspecialchars($cname); ?> <span class="badge" id="badge_class_<?php echo $cid; ?>"><?php echo $cnt; ?></span>
+                    </button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Month and Reset Filter Bar -->
+        <div class="filter-controls-bar">
+            <div class="filter-select-wrapper">
+                <label for="monthFilterSelect" style="font-size:12.5px; font-weight:700; color:#5C2607; white-space:nowrap;">
+                    📅 በወር አጣራ፦
+                </label>
+                <select id="monthFilterSelect" class="filter-select" onchange="filterPlansByMonth(this.value)">
+                    <option value="0">🗓️ ሁሉም ወራት (<?php echo count($my_plans); ?>)</option>
+                    <?php foreach ($ethiopianMonths as $mNum => $mName): 
+                        $mCnt = $month_counts[$mNum] ?? 0;
+                    ?>
+                    <option value="<?php echo $mNum; ?>" <?php echo ($initial_month_filter === $mNum) ? 'selected' : ''; ?>>
+                        <?php echo $mName; ?><?php if ($mCnt > 0): ?> (<?php echo $mCnt; ?> ዕቅድ)<?php endif; ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <button type="button" class="btn-reset-filters" onclick="resetAllFilters()">
+                🔄 ሁሉንም አሳይ (Reset)
+            </button>
+        </div>
+    </div>
+
+    <!-- Container for Class-grouped Plans -->
+    <div id="plansGroupedContainer">
         <?php if (empty($my_plans)): ?>
-            <p style="color:#999; text-align:center; padding:30px;">ምንም ዕቅድ አልተገኘም። ከላይ ያለውን ፎርም በመጠቀም አዲስ ዕቅድ ያስገቡ።</p>
+            <div class="card" style="text-align:center; padding:40px; color:#999;">
+                <p style="font-size:16px;">ምንም ዕቅድ አልተገኘም። ከላይ ያለውን ፎርም በመጠቀም አዲስ ዕቅድ ያስገቡ።</p>
+            </div>
         <?php else: ?>
-        <div class="table-responsive">
-            <table class="paper-table">
-                <thead>
-                    <tr>
-                        <th style="width:90px;">ወር</th>
-                        <th style="width:95px;">ሳምንት</th>
-                        <th style="width:110px;">ምዕራፍ</th>
-                        <th>ንዑስ ርዕስ</th>
-                        <th>የትምህርቱ ዓላማ</th>
-                        <th>መርጃ መሳሪያ</th>
-                        <th>ምዘና</th>
-                        <th style="width:110px;">ሁኔታ</th>
-                        <th style="width:80px;">ተግባር</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($my_plans as $p): ?>
-                    <tr>
-                        <td style="text-align:center;"><strong><?php echo $ethiopianMonths[$p['ethiopian_month']] ?? $p['ethiopian_month']; ?></strong></td>
-                        <td style="text-align:center;"><?php echo htmlspecialchars($p['week_number'] ?: '—'); ?></td>
-                        <td><?php echo htmlspecialchars($p['chapter'] ?: '—'); ?></td>
-                        <td>
-                            <strong><?php echo htmlspecialchars($p['sub_topic'] ?: $p['topic']); ?></strong>
-                            <div style="font-size:11px; color:#666; margin-top:3px;">
-                                <?php echo htmlspecialchars($p['class_name']); ?>
-                                <?php if ($p['subject']): ?> · <?php echo htmlspecialchars($p['subject']); ?><?php endif; ?>
-                                · <?php echo $p['ethiopian_year']; ?> ዓ.ም
+            <?php 
+            // Render each class in its own distinct section so classes are cleanly separated
+            foreach ($teacher_all_classes as $cid => $cname): 
+                $classPlans = $plans_by_class[$cid] ?? [];
+                if (empty($classPlans)) continue;
+            ?>
+            <div class="class-plan-section" data-class-id="<?php echo $cid; ?>">
+                <div class="class-section-header">
+                    <div class="class-section-title">
+                        <span>📖 <?php echo htmlspecialchars($cname); ?></span>
+                        <span class="class-section-badge" id="section_badge_<?php echo $cid; ?>">
+                            <?php echo count($classPlans); ?> ዕቅዶች
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Desktop Table for this class -->
+                <div class="table-responsive">
+                    <table class="paper-table">
+                        <thead>
+                            <tr>
+                                <th style="width:90px;">ወር</th>
+                                <th style="width:95px;">ሳምንት</th>
+                                <th style="width:110px;">ምዕራፍ</th>
+                                <th>ንዑስ ርዕስ</th>
+                                <th>የትምህርቱ ዓላማ</th>
+                                <th>መርጃ መሳሪያ</th>
+                                <th>ምዘና</th>
+                                <th style="width:110px;">ሁኔታ</th>
+                                <th style="width:80px;">ተግባር</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($classPlans as $p): ?>
+                            <tr class="plan-row-item" data-class-id="<?php echo $p['class_id']; ?>" data-month="<?php echo $p['ethiopian_month']; ?>">
+                                <td style="text-align:center;"><strong><?php echo $ethiopianMonths[$p['ethiopian_month']] ?? $p['ethiopian_month']; ?></strong></td>
+                                <td style="text-align:center;"><?php echo htmlspecialchars($p['week_number'] ?: '—'); ?></td>
+                                <td><?php echo htmlspecialchars($p['chapter'] ?: '—'); ?></td>
+                                <td>
+                                    <strong><?php echo htmlspecialchars($p['sub_topic'] ?: $p['topic']); ?></strong>
+                                    <div style="font-size:11px; color:#666; margin-top:3px;">
+                                        <?php if ($p['subject']): ?><strong><?php echo htmlspecialchars($p['subject']); ?></strong> · <?php endif; ?>
+                                        <?php echo $p['ethiopian_year']; ?> ዓ.ም
+                                    </div>
+                                    <?php if (!empty($p['admin_feedback'])): ?>
+                                        <div class="feedback-box">
+                                            <strong>አስተያየት:</strong> <?php echo htmlspecialchars($p['admin_feedback']); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo nl2br(htmlspecialchars($p['objective'] ?: '—')); ?></td>
+                                <td><?php echo nl2br(htmlspecialchars($p['materials'] ?: '—')); ?></td>
+                                <td><?php echo nl2br(htmlspecialchars($p['evaluation'] ?: '—')); ?></td>
+                                <td style="text-align:center;">
+                                    <span class="status-badge"><?php echo $status_labels[$p['status']] ?? $p['status']; ?></span>
+                                </td>
+                                <td style="text-align:center;">
+                                    <a href="?edit=<?php echo $p['id']; ?>" class="btn-action-edit">✏️ አርትዕ</a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile Cards for this class (< 768px) -->
+                <div class="plans-mobile-cards">
+                    <?php foreach ($classPlans as $p): ?>
+                    <div class="plan-card-mobile plan-card-item <?php echo (isset($editing_plan) && $editing_plan && $editing_plan['id'] == $p['id']) ? 'active-edit' : ''; ?>" data-class-id="<?php echo $p['class_id']; ?>" data-month="<?php echo $p['ethiopian_month']; ?>">
+                        <div class="plan-card-header">
+                            <div>
+                                <div class="plan-card-class">📖 <?php echo htmlspecialchars($p['class_name']); ?></div>
+                                <div class="plan-card-meta">
+                                    📅 <?php echo $ethiopianMonths[$p['ethiopian_month']] ?? $p['ethiopian_month']; ?> · <?php echo htmlspecialchars($p['week_number'] ?: 'ሳምንት አልተጠቀሰም'); ?>
+                                    <?php if ($p['subject']): ?> · <strong><?php echo htmlspecialchars($p['subject']); ?></strong><?php endif; ?>
+                                </div>
                             </div>
-                            <?php if (!empty($p['admin_feedback'])): ?>
-                                <div class="feedback-box">
-                                    <strong>አስተያየት:</strong> <?php echo htmlspecialchars($p['admin_feedback']); ?>
+                            <span class="status-badge"><?php echo $status_labels[$p['status']] ?? $p['status']; ?></span>
+                        </div>
+                        <div class="plan-card-body">
+                            <?php if ($p['chapter']): ?>
+                                <div class="plan-card-detail-row">
+                                    <span class="plan-card-detail-label">ምዕራፍ፦</span>
+                                    <span><?php echo htmlspecialchars($p['chapter']); ?></span>
                                 </div>
                             <?php endif; ?>
-                        </td>
-                        <td><?php echo nl2br(htmlspecialchars($p['objective'] ?: '—')); ?></td>
-                        <td><?php echo nl2br(htmlspecialchars($p['materials'] ?: '—')); ?></td>
-                        <td><?php echo nl2br(htmlspecialchars($p['evaluation'] ?: '—')); ?></td>
-                        <td style="text-align:center;">
-                            <span class="status-badge"><?php echo $status_labels[$p['status']] ?? $p['status']; ?></span>
-                        </td>
-                        <td style="text-align:center;">
+                            <div class="plan-card-detail-row">
+                                <span class="plan-card-detail-label">ርዕስ፦</span>
+                                <strong class="plan-card-topic"><?php echo htmlspecialchars($p['sub_topic'] ?: $p['topic']); ?></strong>
+                            </div>
+                            <?php if ($p['objective']): ?>
+                                <div class="plan-card-detail-row">
+                                    <span class="plan-card-detail-label">ዓላማ፦</span>
+                                    <span style="color:#475569;"><?php echo htmlspecialchars($p['objective']); ?></span>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!empty($p['admin_feedback'])): ?>
+                                <div class="feedback-box">
+                                    <strong>💬 አስተያየት:</strong> <?php echo htmlspecialchars($p['admin_feedback']); ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="plan-card-actions">
                             <a href="?edit=<?php echo $p['id']; ?>" class="btn-action-edit">✏️ አርትዕ</a>
-                        </td>
-                    </tr>
+                            <?php if (!empty($p['paper_photo_path']) && file_exists($p['paper_photo_path'])): ?>
+                                <a href="<?php echo htmlspecialchars($p['paper_photo_path']); ?>" target="_blank" class="btn-action-edit btn-photo-view">📷 ፎቶ እይ</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+                </div>
 
-        <!-- Mobile View Cards (< 768px) -->
-        <div class="plans-mobile-cards">
-            <?php foreach ($my_plans as $p): ?>
-            <div class="plan-card-mobile <?php echo (isset($editing_plan) && $editing_plan && $editing_plan['id'] == $p['id']) ? 'active-edit' : ''; ?>">
-                <div class="plan-card-header">
-                    <div>
-                        <div class="plan-card-class">📖 <?php echo htmlspecialchars($p['class_name']); ?></div>
-                        <div class="plan-card-meta">
-                            📅 <?php echo $ethiopianMonths[$p['ethiopian_month']] ?? $p['ethiopian_month']; ?> · <?php echo htmlspecialchars($p['week_number'] ?: 'ሳምንት አልተጠቀሰም'); ?>
-                            <?php if ($p['subject']): ?> · <strong><?php echo htmlspecialchars($p['subject']); ?></strong><?php endif; ?>
-                        </div>
-                    </div>
-                    <span class="status-badge"><?php echo $status_labels[$p['status']] ?? $p['status']; ?></span>
-                </div>
-                <div class="plan-card-body">
-                    <?php if ($p['chapter']): ?>
-                        <div class="plan-card-detail-row">
-                            <span class="plan-card-detail-label">ምዕራፍ፦</span>
-                            <span><?php echo htmlspecialchars($p['chapter']); ?></span>
-                        </div>
-                    <?php endif; ?>
-                    <div class="plan-card-detail-row">
-                        <span class="plan-card-detail-label">ርዕስ፦</span>
-                        <strong class="plan-card-topic"><?php echo htmlspecialchars($p['sub_topic'] ?: $p['topic']); ?></strong>
-                    </div>
-                    <?php if ($p['objective']): ?>
-                        <div class="plan-card-detail-row">
-                            <span class="plan-card-detail-label">ዓላማ፦</span>
-                            <span style="color:#475569;"><?php echo htmlspecialchars($p['objective']); ?></span>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($p['admin_feedback'])): ?>
-                        <div class="feedback-box">
-                            <strong>💬 አስተያየት:</strong> <?php echo htmlspecialchars($p['admin_feedback']); ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-                <div class="plan-card-actions">
-                    <a href="?edit=<?php echo $p['id']; ?>" class="btn-action-edit">✏️ አርትዕ</a>
-                    <?php if (!empty($p['paper_photo_path']) && file_exists($p['paper_photo_path'])): ?>
-                        <a href="<?php echo htmlspecialchars($p['paper_photo_path']); ?>" target="_blank" class="btn-action-edit btn-photo-view">📷 ፎቶ እይ</a>
-                    <?php endif; ?>
+                <!-- Empty state for this specific class if filtered month has no items -->
+                <div class="class-empty-month-msg" style="display:none; text-align:center; padding:20px; color:#94A3B8; font-size:13.5px; font-weight:600;">
+                    🍂 በዚህ ክፍል ለተመረጠው ወር የተዘጋጀ ዕቅድ የለም።
                 </div>
             </div>
             <?php endforeach; ?>
-        </div>
+
+            <!-- Global empty message if no plan matches both class & month -->
+            <div id="noMatchingPlansMsg" style="display:none;" class="card">
+                <div style="text-align:center; padding:35px 20px; color:#64748B;">
+                    <div style="font-size:32px; margin-bottom:8px;">🔍</div>
+                    <p style="font-size:15px; font-weight:700; color:#334155; margin-bottom:6px;">ለተመረጠው ማጣሪያ ምንም ዕቅድ አልተገኘም</p>
+                    <p style="font-size:13px; margin-bottom:14px;">እባክዎ ሌላ ወር ወይም ክፍል ይምረጡ ወይም ማጣሪያውን ያጽዱ።</p>
+                    <button type="button" class="btn-reset-filters" style="margin:0 auto;" onclick="resetAllFilters()">
+                        🔄 ሁሉንም ዕቅዶች መልስ
+                    </button>
+                </div>
+            </div>
         <?php endif; ?>
     </div>
 </div>
@@ -1707,10 +1975,155 @@ function setupDraftAutoSave() {
     }
 }
 
+// Plan Filtering System (Class Tabs & Month Filtering)
+let currentClassFilter = <?php echo $initial_class_filter; ?>;
+let currentMonthFilter = <?php echo $initial_month_filter; ?>;
+
+function applyPlanFilters() {
+    let totalVisiblePlans = 0;
+    const sections = document.querySelectorAll('.class-plan-section');
+    
+    sections.forEach(section => {
+        const secClassId = parseInt(section.getAttribute('data-class-id'), 10);
+        let classMatches = (currentClassFilter === 0 || secClassId === currentClassFilter);
+
+        if (!classMatches) {
+            section.style.display = 'none';
+            return;
+        }
+
+        // Inside this matching section, filter rows & mobile cards by month
+        let visibleInThisClass = 0;
+        const rows = section.querySelectorAll('.plan-row-item');
+        const cards = section.querySelectorAll('.plan-card-item');
+
+        rows.forEach(row => {
+            const rowMonth = parseInt(row.getAttribute('data-month'), 10);
+            if (currentMonthFilter === 0 || rowMonth === currentMonthFilter) {
+                row.style.display = '';
+                visibleInThisClass++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        cards.forEach(card => {
+            const cardMonth = parseInt(card.getAttribute('data-month'), 10);
+            if (currentMonthFilter === 0 || cardMonth === currentMonthFilter) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        const emptyMsg = section.querySelector('.class-empty-month-msg');
+        const tableWrap = section.querySelector('.table-responsive');
+        const mobileCardsWrap = section.querySelector('.plans-mobile-cards');
+
+        if (visibleInThisClass === 0) {
+            if (emptyMsg) emptyMsg.style.display = 'block';
+            if (tableWrap) tableWrap.style.display = 'none';
+            if (mobileCardsWrap) mobileCardsWrap.style.display = 'none';
+        } else {
+            if (emptyMsg) emptyMsg.style.display = 'none';
+            if (tableWrap) tableWrap.style.display = '';
+            if (mobileCardsWrap) mobileCardsWrap.style.display = '';
+            section.style.display = 'block';
+            totalVisiblePlans += visibleInThisClass;
+        }
+
+        // Update section badge
+        const secBadge = section.querySelector('.class-section-badge');
+        if (secBadge) {
+            secBadge.textContent = `${visibleInThisClass} ዕቅዶች`;
+        }
+    });
+
+    // Update global counter and no-matching message
+    const totalBadge = document.getElementById('totalPlansBadge');
+    if (totalBadge) {
+        totalBadge.textContent = `${totalVisiblePlans} ዕቅዶች`;
+    }
+
+    const noMatchingMsg = document.getElementById('noMatchingPlansMsg');
+    if (noMatchingMsg) {
+        noMatchingMsg.style.display = (totalVisiblePlans === 0) ? 'block' : 'none';
+    }
+
+    // Update URL query parameters cleanly without reload
+    try {
+        const url = new URL(window.location);
+        if (currentClassFilter > 0) {
+            url.searchParams.set('class_id', currentClassFilter);
+        } else {
+            url.searchParams.delete('class_id');
+        }
+        if (currentMonthFilter > 0) {
+            url.searchParams.set('month', currentMonthFilter);
+        } else {
+            url.searchParams.delete('month');
+        }
+        window.history.replaceState({}, '', url);
+    } catch(e) {}
+}
+
+function filterPlansByClass(classId) {
+    currentClassFilter = parseInt(classId, 10);
+    // Update active tab style
+    document.querySelectorAll('.class-tab-pill').forEach(btn => {
+        if (parseInt(btn.getAttribute('data-class'), 10) === currentClassFilter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Also sync the form's class selector if in "Add" mode
+    const formClassSelect = document.getElementById('field_class_id');
+    if (formClassSelect && currentClassFilter > 0 && !<?php echo isset($editing_plan) && $editing_plan ? 'true' : 'false'; ?>) {
+        for (let i = 0; i < formClassSelect.options.length; i++) {
+            if (parseInt(formClassSelect.options[i].value, 10) === currentClassFilter) {
+                formClassSelect.selectedIndex = i;
+                if (typeof onClassChange === 'function') onClassChange();
+                break;
+            }
+        }
+    }
+
+    applyPlanFilters();
+}
+
+function filterPlansByMonth(monthNum) {
+    currentMonthFilter = parseInt(monthNum, 10);
+    const select = document.getElementById('monthFilterSelect');
+    if (select && parseInt(select.value, 10) !== currentMonthFilter) {
+        select.value = currentMonthFilter;
+    }
+    applyPlanFilters();
+}
+
+function resetAllFilters() {
+    currentClassFilter = 0;
+    currentMonthFilter = 0;
+    document.querySelectorAll('.class-tab-pill').forEach(btn => {
+        if (parseInt(btn.getAttribute('data-class'), 10) === 0) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    const select = document.getElementById('monthFilterSelect');
+    if (select) select.value = '0';
+    applyPlanFilters();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadCurriculum();
     checkSavedDraft();
     setupDraftAutoSave();
+    if (currentClassFilter > 0 || currentMonthFilter > 0) {
+        applyPlanFilters();
+    }
 });
 </script>
 </body>

@@ -105,12 +105,18 @@ mysqli_set_charset($conn, "utf8mb4");
 
 // Start unified session if not started
 if (session_status() === PHP_SESSION_NONE) {
-    // Detect HTTPS - check both direct HTTPS and reverse proxy headers
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
-              ((isset($_SERVER['HTTP_X_FORWARDED_PROTO']) ? strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) : '') === 'https') ||
-              ((isset($_SERVER['HTTP_X_FORWARDED_SSL']) ? strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) : '') === 'on');
+    // Detect HTTPS - only enforce secure cookie if connection is genuinely direct HTTPS
+    // On HTTP, reverse proxies, or shared hostings, 'secure' cookie causes browsers to drop session cookies!
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+              (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+
+    @ini_set('session.gc_maxlifetime', '604800'); // 7 days
+    @ini_set('session.cookie_lifetime', '2592000'); // 30 days
+    @ini_set('session.cookie_httponly', '1');
+    @ini_set('session.use_only_cookies', '1');
+
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => 2592000, // 30 days
         'path' => '/',
         'domain' => '',
         'secure' => $secure,
@@ -119,8 +125,8 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 
-    // Session inactivity timeout (4 hours)
-    $maxIdleTime = 14400;
+    // Session inactivity timeout (extended to 24 hours for hosting stability)
+    $maxIdleTime = 86400;
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $maxIdleTime)) {
         $_SESSION = [];
         if (ini_get("session.use_cookies")) {

@@ -73,11 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if (!$csrf_valid && empty($error)) {
-        $error = "የደህንነት ማረጋገጫ አልተሳካም! እባክዎ እንደገና ይሞክሩ።";
-    } elseif (empty($error)) {
-        
-        if (empty($error) && $student_id > 0 && !empty($pin)) {
+    if (empty($error)) {
+        if ($student_id > 0 && !empty($pin)) {
             $student = dbFetchOne(
                 $conn,
                 "SELECT s.*, sl.pin as hashed_pin, sl.first_login, sl.login_attempts, sl.locked_until, sl.dark_mode,
@@ -91,58 +88,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             
             if ($student) {
-                // Check locked
-                if (!empty($student['locked_until']) && strtotime($student['locked_until']) > time()) {
-                    $lock_time = date('h:i A', strtotime($student['locked_until']));
-                    $error = "አካውንትዎ ተቆልፏል! እባክዎ $lock_time ድረስ ይጠብቁ።";
-                }
-                // Verify PIN
-                elseif (!empty($student['hashed_pin']) && password_verify($pin, $student['hashed_pin'])) {
-                    // Reset attempts
-                    dbExecute(
-                        $conn,
-                        "UPDATE student_logins SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE student_id = ?",
-                        "i",
-                        [$student_id]
-                    );
-                    
-                    $_SESSION = [];
-                    session_regenerate_id(true);
-                    $_SESSION['student_id'] = $student['id'];
-                    $_SESSION['student_name'] = $student['name'];
-                    $_SESSION['student_class'] = $student['class_name'];
-                    $_SESSION['student_class_id'] = $student['class_id'];
-                    $_SESSION['student_first_login'] = $student['first_login'] ?? 1;
-                    $_SESSION['dark_mode'] = intval($student['dark_mode'] ?? 0);
-                    
-                    if (($student['first_login'] ?? 1) == 1) {
-                        header("Location: student_change_pin.php");
+                // If account was locked, check whether the lock time has expired
+                if (!empty($student['locked_until'])) {
+                    if (strtotime($student['locked_until']) > time()) {
+                        $remaining_secs = strtotime($student['locked_until']) - time();
+                        $remaining_mins = max(1, ceil($remaining_secs / 60));
+                        $error = "አካውንትዎ ለጊዜው ተቆልፏል! እባክዎ $remaining_mins ደቂቃ ቆይተው እንደገና ይሞክሩ።";
                     } else {
-                        header("Location: dashboard_student.php");
+                        // Lock duration has passed! Reset lock and attempts to give a fresh start
+                        dbExecute($conn, "UPDATE student_logins SET login_attempts = 0, locked_until = NULL WHERE student_id = ?", "i", [$student_id]);
+                        $student['login_attempts'] = 0;
+                        $student['locked_until'] = null;
                     }
-                    exit();
-                } else {
-                    // Wrong PIN
-                    $attempts = ($student['login_attempts'] ?? 0) + 1;
-                    
-                    if ($attempts >= 10) {
-                        $lock_time = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+                }
+
+                if (empty($error)) {
+                    // Verify PIN
+                    if (!empty($student['hashed_pin']) && password_verify($pin, $student['hashed_pin'])) {
+                        // Reset attempts
                         dbExecute(
                             $conn,
-                            "UPDATE student_logins SET login_attempts = ?, locked_until = ? WHERE student_id = ?",
-                            "isi",
-                            [$attempts, $lock_time, $student_id]
+                            "UPDATE student_logins SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE student_id = ?",
+                            "i",
+                            [$student_id]
                         );
-                        $error = "በጣም ብዙ ሙከራ! አካውንትዎ ለ15 ደቂቃ ተቆልፏል።";
+                        
+                        $_SESSION = [];
+                        session_regenerate_id(true);
+                        $_SESSION['student_id'] = $student['id'];
+                        $_SESSION['student_name'] = $student['name'];
+                        $_SESSION['student_class'] = $student['class_name'];
+                        $_SESSION['student_class_id'] = $student['class_id'];
+                        $_SESSION['student_first_login'] = $student['first_login'] ?? 1;
+                        $_SESSION['dark_mode'] = intval($student['dark_mode'] ?? 0);
+                        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+                        
+                        if (($student['first_login'] ?? 1) == 1) {
+                            header("Location: student_change_pin.php");
+                        } else {
+                            header("Location: dashboard_student.php");
+                        }
+                        exit();
                     } else {
-                        dbExecute(
-                            $conn,
-                            "UPDATE student_logins SET login_attempts = ? WHERE student_id = ?",
-                            "ii",
-                            [$attempts, $student_id]
-                        );
-                        $remaining = 10 - $attempts;
-                        $error = "የተሳሳተ ፒን! $remaining ሙከራዎች ቀርተዋል።";
+                        // Wrong PIN
+                        $attempts = ($student['login_attempts'] ?? 0) + 1;
+                        $max_attempts = 10;
+                        
+                        if ($attempts >= $max_attempts) {
+                            $lock_time = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+                            dbExecute(
+                                $conn,
+                                "UPDATE student_logins SET login_attempts = ?, locked_until = ? WHERE student_id = ?",
+                                "isi",
+                                [$attempts, $lock_time, $student_id]
+                            );
+                            $error = "በጣም ብዙ ሙከራ! አካውንትዎ ለ5 ደቂቃ ተቆልፏል።";
+                        } else {
+                            dbExecute(
+                                $conn,
+                                "UPDATE student_logins SET login_attempts = ? WHERE student_id = ?",
+                                "ii",
+                                [$attempts, $student_id]
+                            );
+                            $remaining = $max_attempts - $attempts;
+                            $error = "የተሳሳተ ፒን! $remaining ሙከራዎች ቀርተዋል።";
+                        }
                     }
                 }
             } else {
