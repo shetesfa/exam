@@ -381,6 +381,86 @@ $page_title = "የትምህርት ክፍል የፈተና ግምገማና ማተ�
             padding: 24px;
             box-shadow: 0 12px 30px rgba(0,0,0,0.22);
         }
+
+        /* ── Dark Mode Enhancements ── */
+        html.dark-mode .card,
+        body.dark-mode .card,
+        [data-theme="dark"] .card,
+        html.dark-mode .stat-card,
+        body.dark-mode .stat-card,
+        [data-theme="dark"] .stat-card {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .card-header,
+        body.dark-mode .card-header,
+        [data-theme="dark"] .card-header {
+            border-color: #334155 !important;
+        }
+
+        html.dark-mode .card-header h2,
+        body.dark-mode .card-header h2,
+        [data-theme="dark"] .card-header h2 {
+            color: #FCD34D !important;
+        }
+
+        html.dark-mode .filter-form,
+        body.dark-mode .filter-form,
+        [data-theme="dark"] .filter-form {
+            background: #0F172A !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .filter-form select,
+        html.dark-mode .filter-form input,
+        body.dark-mode .filter-form select,
+        body.dark-mode .filter-form input,
+        [data-theme="dark"] .filter-form select,
+        [data-theme="dark"] .filter-form input {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+
+        html.dark-mode .stat-label,
+        body.dark-mode .stat-label,
+        [data-theme="dark"] .stat-label {
+            color: #94A3B8 !important;
+        }
+
+        html.dark-mode .stat-num[style*="color:#1e3a8a"],
+        body.dark-mode .stat-num[style*="color:#1e3a8a"],
+        [data-theme="dark"] .stat-num[style*="color:#1e3a8a"] {
+            color: #93C5FD !important;
+        }
+
+        html.dark-mode .modal-box,
+        body.dark-mode .modal-box,
+        [data-theme="dark"] .modal-box {
+            background: #1E293B !important;
+            color: #F1F5F9 !important;
+            border: 1px solid #334155 !important;
+        }
+
+        html.dark-mode .btn-outline,
+        body.dark-mode .btn-outline,
+        [data-theme="dark"] .btn-outline {
+            background: #1E293B !important;
+            color: #F1F5F9 !important;
+            border-color: #334155 !important;
+        }
+        html.dark-mode .btn-outline:hover,
+        body.dark-mode .btn-outline:hover,
+        [data-theme="dark"] .btn-outline:hover {
+            background: #334155 !important;
+        }
+
+        html.dark-mode .badge-draft { background: #78350f !important; color: #fde68a !important; }
+        html.dark-mode .badge-submitted { background: #1e3a8a !important; color: #bfdbfe !important; }
+        html.dark-mode .badge-approved { background: #064e3b !important; color: #a7f3d0 !important; }
+        html.dark-mode .badge-revision_requested { background: #7f1d1d !important; color: #fecaca !important; }
     </style>
 </head>
 <body>

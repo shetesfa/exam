@@ -45,10 +45,21 @@ if ($total_marks == 0) {
     $total_marks = floatval($exam['total_marks'] ?? 100);
 }
 
-// Prepare Exam Title from user's template
+// Clean and canonical Exam Title strictly following official user specification from image
+$raw_class = (string)($exam['class_name'] ?? 'ክፍል');
+// Strip any parentheses like (Grade 3), (እሁድ 6፡10-7፡00)
+$clean_class = preg_replace('/\(.*?\)/u', '', $raw_class);
+$clean_class = preg_replace('/\[.*?\]/u', '', $clean_class);
+$clean_class = trim(preg_replace('/\s+/u', ' ', $clean_class));
+
+$raw_subject = (string)($exam['subject_name'] ?? 'ትምህርት');
+$clean_subject = preg_replace('/\(.*?\)/u', '', $raw_subject);
+$clean_subject = trim(preg_replace('/\s+/u', ' ', $clean_subject));
+
+$class_name = $clean_class;
+$subject_name = $clean_subject;
+
 $ethiopian_year = $exam['ethiopian_year'] ?? 2018;
-$class_name = $exam['class_name'] ?? 'ክፍል';
-$subject_name = $exam['subject_name'] ?? 'ትምህርት';
 $semester_name = (($exam['semester_id'] ?? 1) == 2) ? 'የ2ኛመንፈቀ ዓመት' : 'የ1ኛመንፈቀ ዓመት';
 
 $exam_type_text = 'የአጋማሽ ፈተና';
@@ -58,13 +69,9 @@ if (($exam['exam_type'] ?? '') === 'final') {
     $exam_type_text = 'የክፍል ፈተና';
 }
 
-$official_title = !empty($exam['title']) ? (string)$exam['title'] : 
-    "የአያት መካነ ሰማዕት ቅዱስ ጊዮርጊስ ቅድስት ኪዳነ ምሕረት ወአቡነ ሀብተማርያም ቤተ ክርስቲያን አጸደ ትጉሃን ሰንበት ትምህርት ቤት የ{$ethiopian_year} ዓ.ም የ{$class_name} የ{$subject_name} {$semester_name} {$exam_type_text}";
-
-// Ensure the church and school full prefix exists if title is simple
-if (strpos($official_title, 'አጸደ ትጉሃን') === false) {
-    $official_title = "የአያት መካነ ሰማዕት ቅዱስ ጊዮርጊስ ቅድስት ኪዳነ ምሕረት ወአቡነ ሀብተማርያም ቤተ ክርስቲያን አጸደ ትጉሃን ሰንበት ትምህርት ቤት " . $official_title;
-}
+// Canonical Official Center Header (Exact match to official Church specification)
+$church_prefix = "የአያት መካነ ሰማዕት ቅዱስ ጊዮርጊስ ቅድስት ኪዳነ ምሕረት ወአቡነ ሀብተማርያም ቤተ ክርስቲያን አጸደ ትጉሃን ሰንበት ትምህርት ቤት";
+$official_title = "{$church_prefix} የ{$ethiopian_year} ዓ.ም የ{$clean_class} የ{$clean_subject} {$semester_name} {$exam_type_text}";
 
 $page_title = "የፈተና ወረቀት - " . $class_name . " " . $subject_name;
 ?>

@@ -3847,3 +3847,153 @@ body.dark-mode [class*="border-white"],
 }
 
 
+
+/* ── 16. EXAM SYSTEM & RECENT NOTICES DARK MODE FIXES ── */
+html.dark-mode .cal-school-news-bulletin,
+body.dark-mode .cal-school-news-bulletin,
+[data-theme="dark"] .cal-school-news-bulletin {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
+  border-color: #B45309 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .cal-school-news-bulletin > div > div:first-child,
+body.dark-mode .cal-school-news-bulletin > div > div:first-child,
+[data-theme="dark"] .cal-school-news-bulletin > div > div:first-child {
+  color: #FCD34D !important;
+}
+
+html.dark-mode .cal-school-news-bulletin div[style*="background"],
+body.dark-mode .cal-school-news-bulletin div[style*="background"],
+[data-theme="dark"] .cal-school-news-bulletin div[style*="background"] {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .cal-school-news-bulletin span[style*="background: #FDE68A"],
+body.dark-mode .cal-school-news-bulletin span[style*="background: #FDE68A"],
+[data-theme="dark"] .cal-school-news-bulletin span[style*="background: #FDE68A"],
+html.dark-mode .cal-school-news-bulletin span[style*="background: #FEF3C7"],
+body.dark-mode .cal-school-news-bulletin span[style*="background: #FEF3C7"] {
+  background: #334155 !important;
+  color: #FDE68A !important;
+}
+
+/* Exam Authoring & Management Portal */
+html.dark-mode .exam-builder-card,
+html.dark-mode .exam-admin-card,
+html.dark-mode .question-box,
+html.dark-mode .q-header,
+html.dark-mode .matching-row,
+html.dark-mode .option-row,
+html.dark-mode .sticky-actions,
+html.dark-mode .modal-box,
+body.dark-mode .exam-builder-card,
+body.dark-mode .exam-admin-card,
+body.dark-mode .question-box,
+body.dark-mode .q-header,
+body.dark-mode .matching-row,
+body.dark-mode .option-row,
+body.dark-mode .sticky-actions,
+body.dark-mode .modal-box,
+[data-theme="dark"] .exam-builder-card,
+[data-theme="dark"] .exam-admin-card,
+[data-theme="dark"] .question-box,
+[data-theme="dark"] .sticky-actions,
+[data-theme="dark"] .modal-box {
+  background-color: #1E293B !important;
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .question-box,
+body.dark-mode .question-box,
+[data-theme="dark"] .question-box {
+  background-color: #0F172A !important;
+  background: #0F172A !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .exam-table th,
+body.dark-mode .exam-table th,
+[data-theme="dark"] .exam-table th {
+  background-color: #0F172A !important;
+  color: #FCD34D !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .exam-table td,
+body.dark-mode .exam-table td,
+[data-theme="dark"] .exam-table td {
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .exam-table tr:hover,
+body.dark-mode .exam-table tr:hover,
+[data-theme="dark"] .exam-table tr:hover {
+  background-color: #1E293B !important;
+}
+
+html.dark-mode .type-picker-bar,
+body.dark-mode .type-picker-bar,
+[data-theme="dark"] .type-picker-bar {
+  background: #0F172A !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .btn-type-pill,
+body.dark-mode .btn-type-pill,
+[data-theme="dark"] .btn-type-pill {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #E2E8F0 !important;
+}
+
+html.dark-mode .btn-type-pill:hover,
+body.dark-mode .btn-type-pill:hover,
+[data-theme="dark"] .btn-type-pill:hover {
+  background: #334155 !important;
+  color: #FCD34D !important;
+}
+
+html.dark-mode .stats-bar,
+body.dark-mode .stats-bar,
+[data-theme="dark"] .stats-bar {
+  background: #0F172A !important;
+  border-color: #3b82f6 !important;
+  color: #93C5FD !important;
+}
+
+html.dark-mode .stat-card,
+body.dark-mode .stat-card,
+[data-theme="dark"] .stat-card {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .filter-form,
+body.dark-mode .filter-form,
+[data-theme="dark"] .filter-form {
+  background: #0F172A !important;
+  border-color: #334155 !important;
+}
+
+html.dark-mode .filter-form select,
+html.dark-mode .filter-form input,
+body.dark-mode .filter-form select,
+body.dark-mode .filter-form input,
+[data-theme="dark"] .filter-form select,
+[data-theme="dark"] .filter-form input {
+  background: #1E293B !important;
+  border-color: #334155 !important;
+  color: #F1F5F9 !important;
+}
+
+html.dark-mode .badge-draft { background: #78350f !important; color: #fde68a !important; }
+html.dark-mode .badge-submitted { background: #1e3a8a !important; color: #bfdbfe !important; }
+html.dark-mode .badge-approved { background: #064e3b !important; color: #a7f3d0 !important; }
+html.dark-mode .badge-revision_requested { background: #7f1d1d !important; color: #fecaca !important; }

@@ -113,13 +113,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($action === 'save' || $act
         $error = "እባክዎ ክፍል እና የትምህርት ዓይነት በትክክል ይምረጡ!";
     } else {
         $class_info = dbFetchOne($conn, "SELECT name FROM classes WHERE id = ?", "i", [$class_id]);
-        $c_name = $class_info ? $class_info['name'] : "ክፍል";
-        $sem_name = ($exam_semester_id == 2) ? "2ኛ መንፈቀ ዓመት" : "1ኛ መንፈቀ ዓመት";
+        $raw_c_name = $class_info ? $class_info['name'] : "ክፍል";
+        
+        // Clean class name: strip parentheses like (Grade 3), (እሁድ...)
+        $c_name = preg_replace('/\(.*?\)/u', '', $raw_c_name);
+        $c_name = preg_replace('/\[.*?\]/u', '', $c_name);
+        $c_name = trim(preg_replace('/\s+/u', ' ', $c_name));
+
+        $sub_clean = preg_replace('/\(.*?\)/u', '', $subject_name);
+        $sub_clean = trim(preg_replace('/\s+/u', ' ', $sub_clean));
+
+        $sem_name = ($exam_semester_id == 2) ? "2ኛመንፈቀ ዓመት" : "1ኛመንፈቀ ዓመት";
         $type_label = ($exam_type === 'final') ? "የማጠቃለያ ፈተና" : (($exam_type === 'quiz') ? "የክፍል ፈተና" : "የአጋማሽ ፈተና");
 
-        if (empty($title)) {
-            $title = "የ{$ethiopian_year} ዓ.ም የ{$c_name} የ{$subject_name} የ{$sem_name} {$type_label}";
-        }
+        // Always enforce clean, standardized title without extra schedules or English labels
+        $title = "የ{$ethiopian_year} ዓ.ም የ{$c_name} የ{$sub_clean} የ{$sem_name} {$type_label}";
 
         $new_status = ($action === 'submit_to_admin') ? 'submitted' : 'draft';
 
@@ -573,6 +581,100 @@ $page_title = "የፈተና ዝግጅትና መላኪያ ማዕከል";
             background-color: #f8fafc;
         }
 
+        /* ============================================================
+           DARK MODE OVERRIDES FOR EXAM AUTHOR
+           ============================================================ */
+        html.dark-mode body, body.dark-mode {
+            background-color: #0B1120 !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .card, body.dark-mode .card,
+        html.dark-mode .header-card, body.dark-mode .header-card,
+        html.dark-mode .sticky-actions, body.dark-mode .sticky-actions,
+        html.dark-mode .modal-box, body.dark-mode .modal-box {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+        }
+        html.dark-mode .header-card {
+            background: linear-gradient(135deg, #0F172A, #1E293B) !important;
+            border-color: #334155 !important;
+        }
+        html.dark-mode .header-title h1, body.dark-mode .header-title h1 {
+            color: #FCD34D !important;
+        }
+        html.dark-mode .header-title p, body.dark-mode .header-title p,
+        html.dark-mode small, body.dark-mode small {
+            color: #94A3B8 !important;
+        }
+        html.dark-mode .question-box, body.dark-mode .question-box {
+            background: #0F172A !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .q-header, body.dark-mode .q-header {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .form-control, body.dark-mode .form-control,
+        html.dark-mode input[type="text"], body.dark-mode input[type="text"],
+        html.dark-mode input[type="number"], body.dark-mode input[type="number"],
+        html.dark-mode select, body.dark-mode select,
+        html.dark-mode textarea, body.dark-mode textarea {
+            background: #0F172A !important;
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .form-control:focus, body.dark-mode .form-control:focus {
+            border-color: #F59E0B !important;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+        }
+        html.dark-mode label, body.dark-mode label {
+            color: #E2E8F0 !important;
+        }
+        html.dark-mode .stats-bar, body.dark-mode .stats-bar {
+            background: #0F172A !important;
+            border-color: #3b82f6 !important;
+            color: #93C5FD !important;
+        }
+        html.dark-mode .exam-table th, body.dark-mode .exam-table th {
+            background-color: #0F172A !important;
+            color: #FCD34D !important;
+            border-color: #334155 !important;
+        }
+        html.dark-mode .exam-table td, body.dark-mode .exam-table td {
+            border-color: #334155 !important;
+            color: #F1F5F9 !important;
+        }
+        html.dark-mode .exam-table tr:hover, body.dark-mode .exam-table tr:hover {
+            background-color: #1E293B !important;
+        }
+        html.dark-mode .type-picker-bar, body.dark-mode .type-picker-bar {
+            background: #0F172A !important;
+            border-color: #334155 !important;
+        }
+        html.dark-mode .btn-type-pill, body.dark-mode .btn-type-pill {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            color: #CBD5E1 !important;
+        }
+        html.dark-mode .btn-type-pill:hover, body.dark-mode .btn-type-pill:hover {
+            background: #334155 !important;
+            color: #FCD34D !important;
+        }
+        html.dark-mode .matching-row, body.dark-mode .matching-row,
+        html.dark-mode .option-row, body.dark-mode .option-row {
+            background: #0F172A !important;
+            border-color: #334155 !important;
+        }
+        html.dark-mode .btn-outline, body.dark-mode .btn-outline {
+            background: #1E293B !important;
+            border-color: #334155 !important;
+            color: #FCD34D !important;
+        }
+
         /* Stats & Marks live meter */
         .stats-bar {
             display: flex;
@@ -754,70 +856,100 @@ $page_title = "የፈተና ዝግጅትና መላኪያ ማዕከል";
                         </div>
                     <?php endif; ?>
 
-                    <div class="form-grid">
+                    <?php 
+                    $has_multiple = (count($my_classes) > 1);
+                    $first_class = !empty($my_classes) ? $my_classes[0] : null;
+                    if (!$curr_class && $first_class) {
+                        $curr_class = $first_class['class_id'];
+                    }
+                    // Clean class display name (remove (Grade X), times, etc.)
+                    $clean_first_cname = $first_class ? trim(preg_replace('/\(.*?\)/u', '', $first_class['class_name'])) : '';
+                    // Auto-detect subject if not explicitly set
+                    if (empty($curr_subject) && $first_class && !empty($first_class['assigned_subject_name'])) {
+                        $curr_subject = $first_class['assigned_subject_name'];
+                    }
+                ?>
+                <div class="form-grid">
+                    <?php if (!$has_multiple && $first_class): ?>
+                        <!-- Single Assigned Class: Auto-selected without prompting teacher -->
                         <div class="form-group">
-                            <label for="class_id">ክፍል <span style="color:red;">*</span></label>
-                            <select name="class_id" id="class_id" class="form-control" required onchange="autoFillTitle(); triggerAutoSave();">
+                            <label>ክፍል</label>
+                            <div style="background:rgba(245,158,11,0.1); border:1.5px solid #F59E0B; border-radius:10px; padding:10px 14px; font-weight:800; color:var(--text-main); font-size:0.95rem; display:flex; align-items:center; gap:8px;">
+                                <span>🏫</span>
+                                <span><?php echo htmlspecialchars($clean_first_cname); ?></span>
+                            </div>
+                            <input type="hidden" name="class_id" id="class_id" value="<?php echo $first_class['class_id']; ?>" data-name="<?php echo htmlspecialchars($clean_first_cname); ?>" data-sub="<?php echo htmlspecialchars((string)($first_class['assigned_subject_name'] ?? '')); ?>">
+                        </div>
+                    <?php else: ?>
+                        <!-- Multiple Classes: Prompt teacher to choose target class -->
+                        <div class="form-group">
+                            <label for="class_id">ክፍል ይምረጡ <span style="color:red;">*</span></label>
+                            <select name="class_id" id="class_id" class="form-control" required onchange="onClassSelected(this); triggerAutoSave();">
                                 <option value="">-- ክፍል ይምረጡ --</option>
-                                <?php foreach ($my_classes as $cls): ?>
+                                <?php foreach ($my_classes as $cls): 
+                                    $cl_clean = trim(preg_replace('/\(.*?\)/u', '', $cls['class_name']));
+                                ?>
                                     <option value="<?php echo $cls['class_id']; ?>" 
                                             data-sub="<?php echo htmlspecialchars((string)($cls['assigned_subject_name'] ?? '')); ?>"
-                                            data-name="<?php echo htmlspecialchars((string)$cls['class_name']); ?>"
+                                            data-name="<?php echo htmlspecialchars($cl_clean); ?>"
                                             <?php echo ($curr_class == $cls['class_id']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars((string)$cls['class_name']); ?>
+                                        <?php echo htmlspecialchars($cl_clean); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    <?php endif; ?>
 
-                        <div class="form-group">
-                            <label for="subject_name">የትምህርት ዓይነት <span style="color:red;">*</span></label>
-                            <input type="text" name="subject_name" id="subject_name" list="subject_suggestions" class="form-control" 
-                                   value="<?php echo htmlspecialchars((string)$curr_subject); ?>" placeholder="ለምሳሌ፦ ሥርዓተ ቤተክርስቲያን" required oninput="autoFillTitle(); triggerAutoSave();">
-                            <datalist id="subject_suggestions">
-                                <?php foreach ($system_subjects as $s_name): ?>
-                                    <option value="<?php echo htmlspecialchars((string)$s_name); ?>">
-                                <?php endforeach; ?>
-                            </datalist>
-                        </div>
+                    <!-- Subject: Selected from list or pre-assigned, teacher does not need to manually write -->
+                    <div class="form-group">
+                        <label for="subject_name">የትምህርት ዓይነት <span style="color:red;">*</span></label>
+                        <select name="subject_name" id="subject_name" class="form-control" required onchange="autoFillTitle(); triggerAutoSave();">
+                            <?php if (!empty($curr_subject)): ?>
+                                <option value="<?php echo htmlspecialchars((string)$curr_subject); ?>" selected>
+                                    <?php echo htmlspecialchars((string)$curr_subject); ?> (የተመደበ ትምህርት)
+                                </option>
+                            <?php else: ?>
+                                <option value="">-- የትምህርት ዓይነት ይምረጡ --</option>
+                            <?php endif; ?>
+                            <?php foreach ($system_subjects as $s_name): 
+                                if ($s_name === $curr_subject) continue;
+                            ?>
+                                <option value="<?php echo htmlspecialchars((string)$s_name); ?>">
+                                    <?php echo htmlspecialchars((string)$s_name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-                        <div class="form-group">
-                            <label for="ethiopian_year">የትምህርት ዘመን (ዓ.ም)</label>
-                            <input type="number" name="ethiopian_year" id="ethiopian_year" class="form-control" 
-                                   value="<?php echo htmlspecialchars((string)$curr_year); ?>" required oninput="autoFillTitle(); triggerAutoSave();">
-                        </div>
+                    <!-- Hidden Year: System directly knows current academic year -->
+                    <input type="hidden" name="ethiopian_year" id="ethiopian_year" value="<?php echo htmlspecialchars((string)$curr_year); ?>">
 
-                        <div class="form-group">
-                            <label for="semester_id">መንፈቀ ዓመት (ሰሚስተር)</label>
-                            <select name="semester_id" id="semester_id" class="form-control" onchange="autoFillTitle(); triggerAutoSave();">
-                                <option value="1" <?php echo ($curr_sem == 1) ? 'selected' : ''; ?>>1ኛ መንፈቀ ዓመት</option>
-                                <option value="2" <?php echo ($curr_sem == 2) ? 'selected' : ''; ?>>2ኛ መንፈቀ ዓመት</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="exam_type">የፈተና ዓይነት</label>
-                            <select name="exam_type" id="exam_type" class="form-control" onchange="autoFillTitle(); triggerAutoSave();">
-                                <option value="mid" <?php echo ($curr_type === 'mid') ? 'selected' : ''; ?>>የአጋማሽ ፈተና (Mid Exam)</option>
-                                <option value="final" <?php echo ($curr_type === 'final') ? 'selected' : ''; ?>>የማጠቃለያ ፈተና (Final Exam)</option>
-                                <option value="quiz" <?php echo ($curr_type === 'quiz') ? 'selected' : ''; ?>>የክፍል ፈተና (Quiz / Test)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="duration_minutes">የሚፈጀው ጊዜ (በደቂቃ)</label>
-                            <input type="number" name="duration_minutes" id="duration_minutes" class="form-control" 
-                                   value="<?php echo htmlspecialchars((string)$curr_duration); ?>" min="10" max="300" oninput="triggerAutoSave();">
-                        </div>
+                    <div class="form-group">
+                        <label for="semester_id">መንፈቀ ዓመት (ሰሚስተር)</label>
+                        <select name="semester_id" id="semester_id" class="form-control" onchange="autoFillTitle(); triggerAutoSave();">
+                            <option value="1" <?php echo ($curr_sem == 1) ? 'selected' : ''; ?>>1ኛ መንፈቀ ዓመት</option>
+                            <option value="2" <?php echo ($curr_sem == 2) ? 'selected' : ''; ?>>2ኛ መንፈቀ ዓመት</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="title">የፈተናው ይፋዊ ሙሉ ርዕስ (ራስጌ ላይ የሚወጣ)</label>
-                        <input type="text" name="title" id="title" class="form-control" 
-                               value="<?php echo htmlspecialchars((string)$curr_title); ?>" 
-                               placeholder="የ2018 ዓ.ም የ8ኛ ክፍል የሥርዓተ ቤተክርስቲያን የ2ኛመንፈቀ ዓመት የአጋማሽ ፈተና" oninput="triggerAutoSave();">
-                        <small style="color:var(--text-muted); font-size:0.83rem;">ይህ ርዕስ በፈተናው ወረቀት ራስጌ ላይ በመሃል ደምቆ ይታተማል። ከላይ ያሉትን ሲመርጡ በራሱ ይሞላል ወይም እንደፈለጉ ማስተካከል ይችላሉ።</small>
+                        <label for="exam_type">የፈተና ዓይነት</label>
+                        <select name="exam_type" id="exam_type" class="form-control" onchange="autoFillTitle(); triggerAutoSave();">
+                            <option value="mid" <?php echo ($curr_type === 'mid') ? 'selected' : ''; ?>>የአጋማሽ ፈተና (Mid Exam - 20%)</option>
+                            <option value="final" <?php echo ($curr_type === 'final') ? 'selected' : ''; ?>>የማጠቃለያ ፈተና (Final Exam - 30%)</option>
+                            <option value="quiz" <?php echo ($curr_type === 'quiz') ? 'selected' : ''; ?>>የክፍል ፈተና (Quiz / Test)</option>
+                        </select>
                     </div>
+
+                    <div class="form-group">
+                        <label for="duration_minutes">የሚፈጀው ጊዜ (በደቂቃ)</label>
+                        <input type="number" name="duration_minutes" id="duration_minutes" class="form-control" 
+                               value="<?php echo htmlspecialchars((string)$curr_duration); ?>" min="10" max="300" oninput="triggerAutoSave();">
+                    </div>
+                </div>
+
+                <!-- Hidden Canonical Title: System generates clean official title without English labels -->
+                <input type="hidden" name="title" id="title" value="<?php echo htmlspecialchars((string)$curr_title); ?>">
 
                     <div class="form-group" style="margin-bottom:0;">
                         <label for="instructions">ለተማሪዎች አጠቃላይ መመሪያ (Instructions)</label>
@@ -1138,29 +1270,66 @@ $page_title = "የፈተና ዝግጅትና መላኪያ ማዕከል";
         const AUTOSAVE_STORAGE_KEY = 'ats_exam_autosave_draft';
         let autoSaveTimer = null;
 
-        // Auto title generation
+        // Auto handle class change
+        function onClassSelected(sel) {
+            if (!sel) return;
+            const opt = sel.options[sel.selectedIndex];
+            if (opt) {
+                const sub = opt.getAttribute('data-sub') || '';
+                const subSelect = document.getElementById('subject_name');
+                if (sub && subSelect) {
+                    let matched = false;
+                    for (let i = 0; i < subSelect.options.length; i++) {
+                        if (subSelect.options[i].value === sub) {
+                            subSelect.selectedIndex = i;
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched) {
+                        const newOpt = new Option(sub + ' (የተመደበ)', sub, true, true);
+                        subSelect.add(newOpt);
+                    }
+                }
+            }
+            autoFillTitle();
+        }
+
+        // Clean, canonical auto title generation (no extra times, parentheses, or English labels)
         function autoFillTitle() {
-            const classSelect = document.getElementById('class_id');
-            const subjectInput = document.getElementById('subject_name');
+            const classEl = document.getElementById('class_id');
+            const subjectEl = document.getElementById('subject_name');
             const yearInput = document.getElementById('ethiopian_year');
             const semSelect = document.getElementById('semester_id');
             const typeSelect = document.getElementById('exam_type');
             const titleInput = document.getElementById('title');
 
-            if (!classSelect || !titleInput) return;
+            if (!classEl || !titleInput) return;
 
-            const selectedClassOption = classSelect.options[classSelect.selectedIndex];
-            const className = selectedClassOption ? selectedClassOption.getAttribute('data-name') || '' : '';
-            const subName = subjectInput ? subjectInput.value.trim() : '';
+            let rawClassName = '';
+            if (classEl.tagName === 'SELECT') {
+                const opt = classEl.options[classEl.selectedIndex];
+                rawClassName = opt ? opt.getAttribute('data-name') || opt.text || '' : '';
+            } else {
+                rawClassName = classEl.getAttribute('data-name') || classEl.value || '';
+            }
+
+            // Strip parentheses like (Grade 3), (እሁድ...)
+            let cleanClassName = rawClassName.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
+            cleanClassName = cleanClassName.replace(/\s+/g, ' ');
+
+            const rawSub = subjectEl ? subjectEl.value.trim() : '';
+            const cleanSub = rawSub.replace(/\(.*?\)/g, '').trim();
+
             const year = yearInput ? yearInput.value.trim() : '2018';
-            const sem = semSelect && semSelect.value === '2' ? '2ኛመንፈቀ ዓመት' : '1ኛመንፈቀ ዓመት';
+            const sem = (semSelect && semSelect.value === '2') ? 'የ2ኛመንፈቀ ዓመት' : 'የ1ኛመንፈቀ ዓመት';
             
             let examTypeTxt = 'የአጋማሽ ፈተና';
             if (typeSelect && typeSelect.value === 'final') examTypeTxt = 'የማጠቃለያ ፈተና';
             else if (typeSelect && typeSelect.value === 'quiz') examTypeTxt = 'የክፍል ፈተና';
 
-            if (className && subName) {
-                titleInput.value = `የ${year} ዓ.ም የ${className} የ${subName} የ${sem} ${examTypeTxt}`;
+            if (cleanClassName && cleanSub) {
+                titleInput.value = `የ${year} ዓ.ም የ${cleanClassName} የ${cleanSub} ${sem} ${examTypeTxt}`;
             }
         }
 
