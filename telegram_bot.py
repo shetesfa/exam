@@ -31,6 +31,8 @@ BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
 # የተዘጋጀው የቀጥታ የቴሌግራፍ መመሪያ አድራሻ፦
 TELEGRAPH_GUIDE_URL = "https://telegra.ph/የአጸደ-ትጉሃን-ሰንበት-ትቤት-ሲስተም-የተጠቃሚ-መመሪያ-የተሟላ-ማስተር-ዕትም-11-03-2"
 CHURCH_PORTAL_URL = "https://atsede-result.onrender.com"
+DEV_TELEGRAM = "@shetesfa"
+DEV_NAME = "ተስፋ (Tesfa)"
 
 BASE_TELEGRAM_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
@@ -164,6 +166,7 @@ def find_ai_answer(user_text):
         "• <i>«የተማሪ ውጤት እንዴት ይታያል?»</i>\n"
         "• <i>«ክትትል እንዴት ይመዘገባል?»</i>\n\n"
         f"📖 ሙሉውን የተጠቃሚ መመሪያ በቴሌግራፍ ለማንበብ፦ <a href='{TELEGRAPH_GUIDE_URL}'>እዚህ ይጫኑ</a>\n\n"
+        f"👨‍💻 <b>የቴክኒክ ድጋፍ እና አበልጻጊ፦</b> {DEV_NAME} ({DEV_TELEGRAM})\n"
         f"⛪ <b>አጸደ ትጉሃን ሰንበት ትምህርት ቤት የትምህርት ክፍል</b>\n"
         f"🌐 <a href='{CHURCH_PORTAL_URL}'>የሲስተሙ የቀጥታ ፖርታል ይክፈቱ</a>"
     )
@@ -228,6 +231,9 @@ def main():
             ],
             [
                 {"text": "⛪ የትምህርት ክፍል ፖርታል ክፈት", "url": CHURCH_PORTAL_URL}
+            ],
+            [
+                {"text": f"📞 ቴክኒክ ድጋፍ፦ {DEV_NAME} ({DEV_TELEGRAM})", "url": f"https://t.me/{DEV_TELEGRAM.replace('@', '')}"}
             ]
         ]
     }

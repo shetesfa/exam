@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 publish_master_telegraph.py - Master Telegraph Publisher:
-1. Removes any "አበልጻጊ" / developer references.
-2. Adds detailed step-by-step Exam Writing Guide (የፈተና አጻጻፍ መመሪያ).
-3. Preserves all authentic original user sections and screenshots.
-4. Publishes directly to Telegraph.
+1. Designed specifically for TEACHERS (Admin section removed).
+2. Includes detailed step-by-step Exam Writing Guide (የፈተና አጻጻፍ መመሪያ).
+3. Speed tips placed at the very top.
+4. Preserves all authentic original user sections and screenshots.
+5. Adds developer info: Tesfa / @shetesfa in the technical support contact.
+6. Edits the existing page if token/path exist, or creates a new page.
 """
 import sys
+import os
 import json
 import urllib.request
 import urllib.parse
@@ -36,8 +39,8 @@ speed_nodes = [
     {"tag": "hr"}
 ]
 
-# 3. Comprehensive Exam Writing and Admin Modules
-exam_writing_nodes = [
+# 3. Comprehensive Exam Writing and Modern Features for Teachers ONLY (No Admin section)
+teacher_exam_nodes = [
     {"tag": "hr"},
     {
         "tag": "h3",
@@ -169,37 +172,7 @@ exam_writing_nodes = [
     },
     {
         "tag": "h3",
-        "children": ["🖨️ ክፍል 7፦ የትምህርት ክፍል የፈተናዎች ግምገማና ይፋዊ ማተሚያ (Admin Exam Portal)"]
-    },
-    {
-        "tag": "ul",
-        "children": [
-            {
-                "tag": "li",
-                "children": [
-                    {"tag": "strong", "children": ["• የፈተናዎች ግምገማና ማጽደቂያ፦ "]},
-                    "መምህራን ያዘጋጇቸውን ፈተናዎች መገምገም፣ አስተያየት (Feedback) በመስጠት ማስተካከያ መጠየቅ ወይም ማጽደቅ (Approve ማድረግ)።"
-                ]
-            },
-            {
-                "tag": "li",
-                "children": [
-                    {"tag": "strong", "children": ["• ይፋዊ የፈተና ወረቀት ማተሚያ (Print-Ready A4)፦ "]},
-                    "የጸደቀውን ፈተና በሰንበት ትምህርት ቤቱ ይፋዊ አርማ፣ የተማሪ ስም፣ ክፍል፣ የክርስትና ስም፣ ቡናማ መለያ መስመር እና ይፋዊ ርዕስ በጠበቀ ደረጃ በአንድ ጠቅታ ለተማሪዎች ማተም።"
-                ]
-            },
-            {
-                "tag": "li",
-                "children": [
-                    {"tag": "strong", "children": ["• የመምህሩ የመልስ ቁልፍ (Answer Key)፦ "]},
-                    "በህትመት ገጹ ላይ «🔑 የመልስ ቁልፍ አሳይ» የሚለውን በመጫን ለአራሚዎች የሚሆን የመልስ ወረቀት በቀላሉ ማተም።"
-                ]
-            }
-        ]
-    },
-    {
-        "tag": "h3",
-        "children": ["🌙 ክፍል 8፦ የጨለማ ገጽታ (Dark Mode) እና የበዓላት ማሳወቂያዎች"]
+        "children": ["🌙 ክፍል 7፦ የጨለማ ገጽታ (Dark Mode) እና የበዓላት ማሳወቂያዎች"]
     },
     {
         "tag": "ul",
@@ -222,12 +195,13 @@ exam_writing_nodes = [
     }
 ]
 
-# 4. Clean original nodes: remove any node containing "አበልጻጊ", "ተስፋ", or phone numbers
+# 4. Clean original nodes: remove old contact footer nodes
 cleaned_orig_nodes = []
 for node in orig_nodes:
     node_str = json.dumps(node, ensure_ascii=False)
-    if 'አበልጻጊ' in node_str or 'ተስፋ' in node_str or '0943854325' in node_str or '@shetesfa' in node_str:
-        print("Removed developer reference node:", node_str[:80])
+    # Remove old contact/footer blocks
+    if 'ለበለጠ መረጃ' in node_str or '0943854325' in node_str:
+        print("Filtered out old contact node:", node_str[:80])
         continue
     cleaned_orig_nodes.append(node)
 
@@ -241,59 +215,107 @@ else:
     master_nodes.extend(speed_nodes)
     master_nodes.extend(cleaned_orig_nodes)
 
-master_nodes.extend(exam_writing_nodes)
+master_nodes.extend(teacher_exam_nodes)
 
-# Pure Church Contact footer without any "አበልጻጊ"
+# Add Developer Tesfa and Church Contact footer
 master_nodes.extend([
     {"tag": "hr"},
     {
         "tag": "blockquote",
         "children": [
-            "⛪ ለበለጠ መረጃ እና እገዛ፦\n"
-            "የአያት መካነ ሰማዕት ቅዱስ ጊዮርጊስ ቅድስት ኪዳነ ምሕረት ወአቡነ ሀብተማርያም ቤተ ክርስቲያን\n"
-            "አጸደ ትጉሃን ሰንበት ትምህርት ቤት የትምህርት ክፍል\n"
-            "የሲስተም የቀጥታ አድራሻ፦ https://atsede-result.onrender.com"
+            "⛪ አጸደ ትጉሃን ሰንበት ትምህርት ቤት የትምህርት ክፍል\n"
+            "የሲስተም የቀጥታ አድራሻ፦ https://atsede-result.onrender.com\n\n"
+            "📞 የቴክኒክ ድጋፍ እና አበልጻጊ (Technical Support & Developer)፦\n"
+            "ተስፋ (Tesfa)\n"
+            "ቴሌግራም፦ @shetesfa"
         ]
     }
 ])
 
 print(f"Total Master Nodes to publish: {len(master_nodes)}")
 
-# 5. Create Telegraph Account and Publish
-account_url = "https://api.telegra.ph/createAccount?short_name=AtsedeMaster&author_name=" + urllib.parse.quote("አጸደ ትጉሃን ሰንበት ት/ቤት")
-req = urllib.request.Request(account_url, headers={'User-Agent': 'Mozilla/5.0'})
-with urllib.request.urlopen(req) as resp:
-    acc_data = json.loads(resp.read().decode('utf-8'))
+# 5. Check if we have existing config to edit the page directly
+existing_token = None
+existing_path = None
+if os.path.exists('master_telegraph_config.json'):
+    try:
+        with open('master_telegraph_config.json', 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+            existing_token = cfg.get('token')
+            existing_path = cfg.get('path')
+    except Exception as e:
+        print(f"Could not load master config: {e}")
 
-token = acc_data['result']['access_token']
-print("Obtained Telegraph token.")
+page_updated = False
+page_url = None
 
-create_url = "https://api.telegra.ph/createPage"
-payload = {
-    "access_token": token,
-    "title": "የአጸደ ትጉሃን ሰንበት ት/ቤት ሲስተም የተጠቃሚ መመሪያ (የተሟላ ማስተር ዕትም)",
-    "author_name": "አጸደ ትጉሃን ሰንበት ት/ቤት",
-    "author_url": "https://atsede-result.onrender.com",
-    "content": json.dumps(master_nodes, ensure_ascii=False),
-    "return_content": False
-}
+if existing_token and existing_path:
+    print(f"Attempting to edit existing page: {existing_path}...")
+    edit_url = "https://api.telegra.ph/editPage"
+    edit_payload = {
+        "access_token": existing_token,
+        "path": existing_path,
+        "title": "የአጸደ ትጉሃን ሰንበት ት/ቤት ሲስተም የተጠቃሚ መመሪያ (የተሟላ ማስተር ዕትም)",
+        "author_name": "አጸደ ትጉሃን | ተስፋ (@shetesfa)",
+        "author_url": "https://t.me/shetesfa",
+        "content": json.dumps(master_nodes, ensure_ascii=False),
+        "return_content": False
+    }
+    try:
+        data = urllib.parse.urlencode(edit_payload).encode('utf-8')
+        req = urllib.request.Request(edit_url, data=data, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as resp:
+            res_data = json.loads(resp.read().decode('utf-8'))
+            if res_data.get('ok'):
+                page_url = res_data['result']['url']
+                page_updated = True
+                print("="*70)
+                print("🎉 ነባሩ የቴሌግራፍ ገጽ በተሳካ ሁኔታ ተሻሽሏል (Updated via editPage)!")
+                print(f"🔗 የቀጥታ አድራሻ፦ {page_url}")
+                print("="*70)
+            else:
+                print("editPage response not ok:", res_data)
+    except Exception as e:
+        print(f"Failed to editPage: {e}")
 
-data = urllib.parse.urlencode(payload).encode('utf-8')
-req = urllib.request.Request(create_url, data=data, headers={'User-Agent': 'Mozilla/5.0'})
-with urllib.request.urlopen(req) as resp:
-    res_data = json.loads(resp.read().decode('utf-8'))
-    if res_data.get('ok'):
-        page_url = res_data['result']['url']
-        print("="*70)
-        print("🎉 ማስተር የቴሌግራፍ መመሪያው ያለ ምንም አበልጻጊ ስም በተሳካ ሁኔታ ታትሟል!")
-        print(f"🔗 የቀጥታ አድራሻ (Live Master URL)፦ {page_url}")
-        print("="*70)
+# If edit failed or didn't exist, create a new page
+if not page_updated:
+    print("Creating a new Telegraph page...")
+    account_url = "https://api.telegra.ph/createAccount?short_name=AtsedeMaster&author_name=" + urllib.parse.quote("አጸደ ትጉሃን | ተስፋ")
+    req = urllib.request.Request(account_url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req) as resp:
+        acc_data = json.loads(resp.read().decode('utf-8'))
 
-        with open('master_telegraph_config.json', 'w', encoding='utf-8') as f:
-            json.dump({
-                "token": token,
-                "url": page_url,
-                "path": res_data['result']['path']
-            }, f, ensure_ascii=False, indent=2)
-    else:
-        print("Telegraph createPage failed:", res_data)
+    token = acc_data['result']['access_token']
+    print("Obtained new Telegraph token.")
+
+    create_url = "https://api.telegra.ph/createPage"
+    payload = {
+        "access_token": token,
+        "title": "የአጸደ ትጉሃን ሰንበት ት/ቤት ሲስተም የተጠቃሚ መመሪያ (የተሟላ ማስተር ዕትም)",
+        "author_name": "አጸደ ትጉሃን | ተስፋ (@shetesfa)",
+        "author_url": "https://t.me/shetesfa",
+        "content": json.dumps(master_nodes, ensure_ascii=False),
+        "return_content": False
+    }
+
+    data = urllib.parse.urlencode(payload).encode('utf-8')
+    req = urllib.request.Request(create_url, data=data, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req) as resp:
+        res_data = json.loads(resp.read().decode('utf-8'))
+        if res_data.get('ok'):
+            page_url = res_data['result']['url']
+            path = res_data['result']['path']
+            print("="*70)
+            print("🎉 አዲስ ማስተር የቴሌግራፍ መመሪያ በተሳካ ሁኔታ ታትሟል!")
+            print(f"🔗 የቀጥታ አድራሻ (Live Master URL)፦ {page_url}")
+            print("="*70)
+
+            with open('master_telegraph_config.json', 'w', encoding='utf-8') as f:
+                json.dump({
+                    "token": token,
+                    "url": page_url,
+                    "path": path
+                }, f, ensure_ascii=False, indent=2)
+        else:
+            print("Telegraph createPage failed:", res_data)
