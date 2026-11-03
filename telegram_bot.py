@@ -29,7 +29,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
 
 # የተዘጋጀው የቀጥታ የቴሌግራፍ መመሪያ አድራሻ፦
-TELEGRAPH_GUIDE_URL = "https://telegra.ph/የአጸደ-ትጉሃን-ሰንበት-ትቤት-ሲስተም-አጠቃቀም-መመሪያ-ዘመናዊ-ዕትም-11-03"
+TELEGRAPH_GUIDE_URL = "https://telegra.ph/የአጸደ-ትጉሃን-ሰንበት-ትቤት-ሲስተም-የተጠቃሚ-መመሪያ-የተሟላ-ማስተር-ዕትም-11-03"
 DEV_TELEGRAM = "@shetesfa"
 DEV_PHONE = "0943854325"
 
