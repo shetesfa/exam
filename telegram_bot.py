@@ -29,9 +29,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
 
 # የተዘጋጀው የቀጥታ የቴሌግራፍ መመሪያ አድራሻ፦
-TELEGRAPH_GUIDE_URL = "https://telegra.ph/የአጸደ-ትጉሃን-ሰንበት-ትቤት-ሲስተም-የተጠቃሚ-መመሪያ-የተሟላ-ማስተር-ዕትም-11-03"
-DEV_TELEGRAM = "@shetesfa"
-DEV_PHONE = "0943854325"
+TELEGRAPH_GUIDE_URL = "https://telegra.ph/የአጸደ-ትጉሃን-ሰንበት-ትቤት-ሲስተም-የተጠቃሚ-መመሪያ-የተሟላ-ማስተር-ዕትም-11-03-2"
+CHURCH_PORTAL_URL = "https://atsede-result.onrender.com"
 
 BASE_TELEGRAM_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
@@ -165,7 +164,8 @@ def find_ai_answer(user_text):
         "• <i>«የተማሪ ውጤት እንዴት ይታያል?»</i>\n"
         "• <i>«ክትትል እንዴት ይመዘገባል?»</i>\n\n"
         f"📖 ሙሉውን የተጠቃሚ መመሪያ በቴሌግራፍ ለማንበብ፦ <a href='{TELEGRAPH_GUIDE_URL}'>እዚህ ይጫኑ</a>\n\n"
-        f"📞 ለተጨማሪ እገዛ፦ {DEV_TELEGRAM} ({DEV_PHONE})"
+        f"⛪ <b>አጸደ ትጉሃን ሰንበት ትምህርት ቤት የትምህርት ክፍል</b>\n"
+        f"🌐 <a href='{CHURCH_PORTAL_URL}'>የሲስተሙ የቀጥታ ፖርታል ይክፈቱ</a>"
     )
 
 def send_message(chat_id, text, reply_markup=None):
@@ -227,7 +227,7 @@ def main():
                 {"text": "🎓 የተማሪዎች መመሪያ", "callback_data": "faq_student"}
             ],
             [
-                {"text": "📞 አበልጻጊውን አግኝ (@shetesfa)", "url": "https://t.me/shetesfa"}
+                {"text": "⛪ የትምህርት ክፍል ፖርታል ክፈት", "url": CHURCH_PORTAL_URL}
             ]
         ]
     }
